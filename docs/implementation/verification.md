@@ -30,9 +30,15 @@ Entra 프록시 인증 경로를 구현했습니다. 앱은 프록시가 전달�
   모두 통과했습니다. 첫 CI에서 발견한 Linux mypy의 Windows 전용 상수
   오류는 같은 커밋에서 수정했습니다. 서버 앱 이미지는 수정한 소스 묶음
   `02fabbd610af5433`으로 재빌드했고 health check를 통과했습니다.
-- 현재 DNS A 레코드와 실제 Entra 앱 등록/비밀 값이 미완료입니다. OAuth
-  프록시는 임시 비밀 값으로 기동 상태만 확인했으며, 공개 HTTPS 접속·실제
+- Entra `pydemia Projects` 단일 테넌트 앱과 전용 client secret을
+  등록해 서버 비공개 설정에 연결했습니다. 프록시의 로그인 시작 요청이
+  실제 client ID·tenant·PKCE·정확한 callback으로 302 이동함을
+  확인했습니다. DNS A 레코드가 아직 없어서 공개 HTTPS 접속·실제
   Microsoft 로그인·운영 브라우저 흐름은 **미검증**입니다.
+- 발급 당시 사용한 로컬 임시 비밀 값 파일은 `.gitignore`의 `.projects/`
+  아래에 있습니다. 서버 반영 후 정확한 파일만 삭제하려 했지만 자동 승인
+  검토가 `blocked by policy`로 거부했습니다. 다른 방법으로 우회하지
+  않았으며 로컬 사본의 수동 정리가 남습니다.
 
 저장소는 초기 커밋이 없는 작업 트리입니다. commit SHA 대신
 [파일별 SHA-256과 명령 결과](screenshots/local-checks.json)를 남겼습니다.

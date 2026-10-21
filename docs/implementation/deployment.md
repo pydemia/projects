@@ -2,8 +2,8 @@
 
 2026-10-21 현재 대상은 기존 Ubuntu 서버 `codex-devbox`와
 `projects.pydemia.ai`입니다. 이 문서는 완료된 구성과 아직 필요한 외부
-설정을 구분합니다. 실제 HTTPS·Entra 로그인은 DNS와 앱 등록이 끝난 뒤
-검증해야 합니다.
+설정을 구분합니다. Entra 앱과 서버 자격 증명은 구성됐고, 실제 HTTPS·
+로그인은 DNS가 설정된 뒤 검증해야 합니다.
 
 ## 구성과 데이터 경계
 
@@ -25,18 +25,21 @@ UID 0으로 실행하고 권한 상승·Linux capability를 제거했습니다.
 
 ## 필요한 외부 설정
 
-1. Squarespace DNS에서 `projects` A 레코드를 서버 IPv4
+1. **대기:** Squarespace DNS에서 `projects` A 레코드를 서버 IPv4
    `139.59.246.134`로 설정하고 전파를 확인합니다.
-2. Entra의 `pydemia` 테넌트에 단일 테넌트 Web 앱 `pydemia Projects`를
-   등록합니다. redirect URI는
-   `https://projects.pydemia.ai/oauth2/callback`입니다. 별도 client
-   secret을 만들어 서버 `.secrets/oauth.env`의 placeholder client ID와
-   secret을 교체합니다. 비밀 값은 채팅·로그·Git에 기록하지 않습니다.
-3. OAuth 프록시를 재시작하고 HTTPS 인증서·로그인·로그아웃·차단 계정·
-   기존 Projects 데이터 접근을 실제 브라우저에서 확인합니다.
+2. **완료:** Entra의 `pydemia` 테넌트에 단일 테넌트 Web 앱
+   `pydemia Projects`(client ID `6e82235b-8b6b-441c-a944-8a443d78b390`)
+   를 등록했습니다. redirect URI는
+   `https://projects.pydemia.ai/oauth2/callback`입니다. 전용 client
+   secret은 2027-04-19에 만료되며 서버 `.secrets/oauth.env`에 mode 0600으로
+   저장했습니다. `scripts/activate-entra.py`는 비밀 값을 표준 입력으로
+   전송하고 서버의 `deploy/activate-entra.py`가 원자적으로 설정을
+   교체합니다. 비밀 값은 채팅·로그·Git에 기록하지 않습니다.
+3. **대기:** HTTPS 인증서·로그인·로그아웃·차단 계정·기존 Projects 데이터
+   접근을 실제 브라우저에서 확인합니다.
 
 `deploy/authenticated-emails.txt`가 허용 이메일을 관리합니다. 운영
-배포의 엔트라 issuer는 실제 단일 테넌트 ID로 지정되어야 합니다. 앱
+배포의 엔트라 issuer는 실제 단일 테넌트 ID로 지정됐습니다. 앱
 등록의 redirect URI와 프록시의 URI가 정확히 일치해야 합니다.
 
 ## 재배포와 운영 확인

@@ -2,7 +2,7 @@
 
 skills.pydemia.ai의 원문 스킬로 아이디어를 요건화하고 기획·설계·구현 계획·검증을 연결하는 개인용 웹 앱입니다.
 
-현재 상태는 **로컬 MVP 검증 완료, 원격 배포·Microsoft Entra 로그인 설정 중 / 2026-10-21**입니다. React·FastAPI·PostgreSQL로 동작하며, 기본 LLM은 현재 Codex 로그인입니다. auth.json 경로 또는 inline 인증, OpenAI 호환 API를 YAML로 설정할 수 있습니다.
+현재 상태는 **로컬 MVP·GitHub CI 통과, 원격 서비스·Microsoft Entra 앱 구성 완료, DNS·실제 로그인 검증 대기 / 2026-10-21**입니다. React·FastAPI·PostgreSQL로 동작하며, 기본 LLM은 현재 Codex 로그인입니다. auth.json 경로 또는 inline 인증, OpenAI 호환 API를 YAML로 설정할 수 있습니다.
 
 - [설치·실행·검사·복구 안내](docs/implementation/README.md)
 - [LLM 설정](docs/implementation/llm-configuration.md) · [YAML 예시](projects.example.yaml)

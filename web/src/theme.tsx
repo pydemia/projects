@@ -1,5 +1,6 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
 import { ThemeScope } from "./pydemia-ui/foundation/theme-scope";
+import { NativeSelect } from "./pydemia-ui/native-select";
 import { defaultThemeSettings, resolveThemeSettings } from "./pydemia-ui/foundation/design-mode-settings";
 import { releasedDesignModes, type Appearance, type DesignModeId, type ThemeSettings } from "./pydemia-ui/foundation/design-modes";
 
@@ -46,15 +47,15 @@ export function ThemeControls() {
     const selected = releasedDesignModes.find(mode => mode.id === theme.settings.design);
     return <div className="theme-controls" role="group" aria-label="화면 스타일 설정">
         <label className="sr-only" htmlFor="design-mode">UI 모드</label>
-        <select id="design-mode" aria-label="UI 모드" value={theme.settings.design}
+        <NativeSelect id="design-mode" aria-label="UI 모드" value={theme.settings.design}
             onChange={event => theme.setDesign(event.target.value as DesignModeId)}>
             {releasedDesignModes.map(mode => <option key={mode.id} value={mode.id}>{mode.name}</option>)}
-        </select>
+        </NativeSelect>
         <label className="sr-only" htmlFor="appearance-mode">색상 테마</label>
-        <select id="appearance-mode" aria-label="색상 테마" value={theme.settings.appearance}
+        <NativeSelect id="appearance-mode" aria-label="색상 테마" value={theme.settings.appearance}
             onChange={event => theme.setAppearance(event.target.value as Appearance)}>
             <option value="light" disabled={!selected?.appearances.includes("light")}>Light</option>
             <option value="dark" disabled={!selected?.appearances.includes("dark")}>Dark</option>
-        </select>
+        </NativeSelect>
     </div>;
 }

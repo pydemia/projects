@@ -2,6 +2,37 @@
 
 2026-10-21 · Windows / Python 3.12.14 / Node 24.21.0 / PostgreSQL 17.11
 
+## 2026-10-21 전 화면 UI·UX 개편 · 로컬 검증
+
+[실행 계획](ui-ux-overhaul.md)의 AC-35~39를 기준으로 앱 외곽·프로젝트
+목록·개요·간편/정교 작업·기획/문서/테스트 목록/상세·스킬 실행·추적을
+실제 `ui.pydemia.ai` registry 컴포넌트로 재구성했다. 간편 모드는
+오늘/Inbox/예정의 자동 날짜와 한 줄 입력, 접힌 GTD/ABC 옵션으로
+줄였다. 정교 보드의 상태 선택은 revision 검사를 사용하고 구현 완료
+gate를 유지한다. 추적은 전체/재검토/연결 없음 필터를 제공한다.
+
+`docker compose up -d db`, `uv run projects migrate`, `uv run pytest`
+**156개**, Ruff check/format, mypy, `npm --prefix web run check`의
+TypeScript/Vitest **23개**, `npm --prefix web run build`와 favicon hash
+검사를 통과했다. Vitest는 브라우저 시각·키보드 사용성의 대체 근거가
+아니므로 운영 배포/실제 로그인 브라우저 판정은 별도로 기록한다.
+
+## 2026-10-21 공통 UI 화면 보완
+
+기존 배포는 공통 버튼·입력·상태 요소만 편입해 업무 화면이 이전과 거의 같았다.
+[편입 기록](ui-component-integration.md)에 적은 실제 registry source로 앱
+외곽·탐색, 간편/정교 선택, 작업 보기·검색·선택, 개요·작업 지표와 작업 분포를
+교체했다. 제품의 상태 계산·URL·PostgreSQL 모델은 유지했다.
+
+`docker compose up -d db`, `uv run projects migrate`, `uv run pytest` 135개,
+Ruff check/format, mypy, `npm --prefix web run check`의 TypeScript/Vitest
+20개와 `npm --prefix web run build`가 통과했다. 웹 테스트는 mock/DOM
+수준이며 새 registry 컨트롤의 렌더링과 기존 작업 행동을 확인한다.
+운영 브라우저에서는 실제 Entra 세션에서 새 컴포넌트가 표시되고 간편
+전환·Inbox 탭·Basic light/dark·Glassmorphism dark·개요 카드가 동작하는
+것을 확인했다. 모든 21개 모드와 모바일 폭의 수동 접근성 검수까지 통과한
+근거는 아니다.
+
 최신 사용자 결정에 따른 개인용 로컬 MVP를 구현하고 검사했습니다.
 문서는 Note 연계 전의 임시 Markdown 범위이며, Projects는 업무 관계와
 SkillRun을 소유합니다. 원래 로컬 검사 이후 GitHub CI, 공개 배포와

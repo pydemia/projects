@@ -9,6 +9,11 @@ import {
 import type { Bundle, Catalog, Item, Operation, Runtime, SkillRun } from "./models";
 import { ArtifactFields } from "./ItemFields";
 import { itemRoute } from "./Relations";
+import { Card, CardContent } from "./pydemia-ui/card";
+import { Checkbox } from "./pydemia-ui/checkbox";
+import { NativeSelect } from "./pydemia-ui/native-select";
+import { SearchInput } from "./pydemia-ui/search-input";
+import { SideNav } from "./pydemia-ui/navigation";
 import { Textarea } from "./pydemia-ui/textarea";
 import {
     ActionButton, Badge, Empty, ErrorNotice, Field, Loading, Markdown, PageHead,
@@ -33,23 +38,27 @@ export function RunsPage({ projectId, userId, route, items, catalog, runtime, on
     onChanged: () => void;
 }) {
     const runs = useResource(`runs:${projectId}`, signal => api.runs(projectId, signal));
+    const [query, setQuery] = useState("");
+    const visibleRuns = runs.status === "ready" ? runs.data.filter(run =>
+        `${operationLabels[run.operation]} ${run.instruction} ${run.status}`.toLocaleLowerCase().includes(query.toLocaleLowerCase())) : [];
     return <>
         <PageHead title="스킬 작업" description="원문 bundle과 근거를 고정해 실행하고, 결과를 검토한 뒤 선택 적용합니다.">
             <RouteLink className="button primary" patch={{ run: "", item: "" }}>+ 새 실행</RouteLink>
             <ActionButton onClick={runs.reload}>이력 새로고침</ActionButton>
         </PageHead>
         <div className="document-layout run-layout">
-            <aside className="doclist" aria-label="스킬 실행 이력"><h2>실행 이력</h2>
+            <Card className="doclist workspace-collection" aria-label="스킬 실행 이력"><CardContent><div className="workspace-list-heading"><h2>실행 이력</h2><span>{visibleRuns.length}개</span></div>
+                <SearchInput label="실행 이력 검색" value={query} onValueChange={setQuery} onSearch={() => undefined} variant="toolbar" placeholder="작업 종류·요청·상태 검색" />
                 {runs.status === "loading" && <Loading />}
                 {runs.status === "error" && <ErrorNotice error={runs.error} retry={runs.reload} />}
-                {runs.status === "ready" && <div className="doc-list-items">
+                {runs.status === "ready" && <SideNav aria-label="스킬 실행 항목" className="doc-list-items">
                     {!runs.data.length && <p className="muted">아직 실행한 작업이 없습니다.</p>}
-                    {[...runs.data].sort((a, b) => b.created_at.localeCompare(a.created_at)).map(run => <RouteLink key={run.id} patch={{ run: run.id }} className={`doc-item ${route.run === run.id ? "active" : ""}`} current={route.run === run.id}>
+                    {!!runs.data.length && !visibleRuns.length && <p className="muted">일치하는 실행 이력이 없습니다.</p>}
+                    {[...visibleRuns].sort((a, b) => b.created_at.localeCompare(a.created_at)).map(run => <RouteLink key={run.id} patch={{ run: run.id }} appearance="side" className="doc-item" current={route.run === run.id}>
                         <strong>{operationLabels[run.operation]}</strong><small className="truncate-two">{run.instruction}</small><Badge value={run.status} /><small>{dateLabel(run.created_at)}</small>
                     </RouteLink>)}
-                </div>}
-            </aside>
-            <div className="document-main">{route.run ? <RunDetail key={route.run} runId={route.run} projectId={projectId} userId={userId} items={items} onStatusChanged={runs.reload} onChanged={() => { runs.reload(); onChanged(); }} /> : <RunComposer key={`${projectId}:${route.item}`} projectId={projectId} userId={userId} targetId={route.item} items={items} catalog={catalog} runtime={runtime} onRuntimeReload={onRuntimeReload} onCreated={run => { runs.reload(); navigate({ run: run.id }); }} />}</div>
+                </SideNav>}</CardContent></Card>
+            <Card className="document-main workspace-detail"><CardContent>{route.run ? <RunDetail key={route.run} runId={route.run} projectId={projectId} userId={userId} items={items} onStatusChanged={runs.reload} onChanged={() => { runs.reload(); onChanged(); }} /> : <RunComposer key={`${projectId}:${route.item}`} projectId={projectId} userId={userId} targetId={route.item} items={items} catalog={catalog} runtime={runtime} onRuntimeReload={onRuntimeReload} onCreated={run => { runs.reload(); navigate({ run: run.id }); }} />}</CardContent></Card>
         </div>
     </>;
 }
@@ -125,7 +134,7 @@ function RunComposer({ projectId, userId, targetId, items, catalog, runtime, onR
         </div>}
         <form onSubmit={event => { void start(event); }}>
             <div className="form-grid">
-                <Field label="작업 종류"><select value={operation} onChange={event => {
+                <Field label="작업 종류"><NativeSelect value={operation} onChange={event => {
                     const next = operationSchema.parse(event.target.value);
                     if (skillText.split(/[,\s]+/).filter(Boolean).join(" ") === operationSkills(operation)) setSkillText(operationSkills(next));
                     setOperation(next);
@@ -134,15 +143,15 @@ function RunComposer({ projectId, userId, targetId, items, catalog, runtime, onR
                         (["write_document", "revise_document", "review_document"].includes(next) && chosen?.kind !== "artifact")) setTarget("");
                 }}>
                     {operationSchema.options.map(value => <option key={value} value={value}>{operationLabels[value]}</option>)}
-                </select></Field>
-                <Field label="대상"><select required={targetRequired} value={target} onChange={event => {
+                </NativeSelect></Field>
+                <Field label="대상"><NativeSelect required={targetRequired} value={target} onChange={event => {
                     setTarget(event.target.value);
                     const next = items.find(item => item.id === event.target.value);
                     if (next?.kind === "artifact") setManifest(next.data);
                 }}>
                     <option value="">{targetRequired ? operation === "analyze_idea" ? "요건화할 아이디어 선택" : "수정·검수할 임시 문서 선택" : "새 임시 Markdown 문서 · 기존 대상 없음"}</option>
                     {eligibleTargets.map(item => <option key={item.id} value={item.id}>{item.title} · r{item.revision}</option>)}
-                </select></Field>
+                </NativeSelect></Field>
             </div>
             {selectedTarget && <p className="hint">대상 기준: {selectedTarget.title} · r{selectedTarget.revision}. 결과 적용 시 서버가 이 revision을 다시 검사합니다.</p>}
             <Field label="작업 요청" hint="목적·보존할 내용·수정 범위·검수할 항목을 구체적으로 적어 주세요."><Textarea required rows={6} value={instruction} onChange={event => setInstruction(event.target.value)} placeholder="선택한 근거의 의미를 보존해 초안을 작성하고, 미확인 가정과 질문을 구분해 주세요." /></Field>
@@ -154,7 +163,10 @@ function RunComposer({ projectId, userId, targetId, items, catalog, runtime, onR
             <fieldset className="section-space"><legend>실행에 사용할 프로젝트 근거</legend><p className="hint">대상과 선택 근거를 현재 revision으로 고정합니다. 아이디어 요건화에서는 프로젝트의 기존 기능·요건도 함께 대조합니다.</p><div className="check-list source-list">
                 {items.map(item => {
                     const automatic = (operation === "analyze_idea" && (item.kind === "feature" || item.kind === "requirement")) || item.id === target;
-                    return <label key={item.id}><input type="checkbox" checked={automatic || sourceIds.includes(item.id)} disabled={automatic} onChange={event => setSourceIds(event.target.checked ? [...sourceIds, item.id] : sourceIds.filter(id => id !== item.id))} /><span>{item.title}<small>{shortId(item.id)} · r{item.revision}{automatic ? " · 자동 포함" : ""}</small></span></label>;
+                    return <Checkbox key={item.id} variant="card" label={item.title}
+                        description={`${shortId(item.id)} · r${item.revision}${automatic ? " · 자동 포함" : ""}`}
+                        checked={automatic || sourceIds.includes(item.id)} disabled={automatic}
+                        onCheckedChange={checked => setSourceIds(checked === true ? [...sourceIds, item.id] : sourceIds.filter(id => id !== item.id))} />;
                 })}
                 {!items.length && <p className="muted">프로젝트 근거 없이 요청한 내용으로 실행합니다. 확인이 필요한 부분은 결과에서 검토해 주세요.</p>}
             </div></fieldset>
@@ -225,7 +237,7 @@ function RunDetail({ runId, projectId, userId, items, onChanged, onStatusChanged
         <section className="run-request"><h3>작업 요청</h3><p className="preserve-lines">{data.instruction}</p><p className="hint">대상: {target?.title ?? (data.target_id ? shortId(data.target_id) : "새 임시 Markdown 문서")} {data.target_revision !== null && `· r${data.target_revision}`}</p></section>
         <details className="reference-details"><summary>고정 스킬·입력 근거·참조 manifest</summary><h3>skills.lock</h3><pre>{JSON.stringify(data.skills_lock, null, 2)}</pre><h3>입력 revision</h3><pre>{JSON.stringify(data.source_snapshots, null, 2)}</pre><h3>참조 manifest</h3><pre>{JSON.stringify(data.reference_manifest, null, 2)}</pre></details>
         {result ? <>
-            {result.document !== null && <section className="run-result section-space"><div className="section-head"><h2>문서 제안</h2>{data.status === "review_ready" && <label className="check-row"><input type="checkbox" checked={applyDocument} onChange={event => setApplyDocument(event.target.checked)} />이 문서 결과 적용 선택</label>}</div>
+            {result.document !== null && <section className="run-result section-space"><div className="section-head"><h2>문서 제안</h2>{data.status === "review_ready" && <Checkbox variant="card" label="이 문서 결과 적용 선택" checked={applyDocument} onCheckedChange={checked => setApplyDocument(checked === true)} />}</div>
                 <Markdown body={result.document} />
                 {target && <details className="reference-details"><summary>현재 저장한 본문과 비교</summary><div className="comparison"><div><h3>현재 본문 · r{target.revision}</h3><pre>{target.body}</pre></div><div><h3>실행 제안</h3><pre>{result.document}</pre></div></div></details>}
             </section>}
@@ -233,7 +245,7 @@ function RunDetail({ runId, projectId, userId, items, onChanged, onStatusChanged
             {result.requirements.length > 0 && <section className="section-space"><h2>요건·변경 후보 · {result.requirements.length}건</h2>
                 <p className="hint">선택한 후보만 요건·설계 변경 요청·작업·테스트 초안으로 연결합니다. 충돌·보류는 결정 기록까지만 남깁니다.</p>
                 <div className="proposal-list">{result.requirements.map((candidate, index) => <article className="proposal" key={`${index}:${candidate.title}`}>
-                    {data.status === "review_ready" && <input type="checkbox" aria-label={`${candidate.title} 채택 후보로 선택`} checked={indices.includes(index)} onChange={event => setIndices(event.target.checked ? [...indices, index] : indices.filter(value => value !== index))} />}
+                    {data.status === "review_ready" && <Checkbox aria-label={`${candidate.title} 채택 후보로 선택`} checked={indices.includes(index)} onCheckedChange={checked => setIndices(checked === true ? [...indices, index] : indices.filter(value => value !== index))} />}
                     <div><div className="row-head"><h3>{candidate.title}</h3><Badge value={candidate.disposition} /></div><Markdown body={candidate.body} /><p className="muted">판정 이유: {candidate.rationale}</p><h4>수용 조건</h4><StringList values={candidate.acceptance_criteria} />
                         <details><summary>연결할 설계 변경 {candidate.design_changes.length} · 작업 {candidate.tasks.length} · 테스트 {candidate.tests.length}</summary><h4>설계 변경</h4><ul>{candidate.design_changes.map((change, at) => <li key={at}>{items.find(item => item.id === change.artifact_id)?.title ?? shortId(change.artifact_id)} · {change.instruction}</li>)}</ul>
                             <h4>작업</h4>{candidate.tasks.map((task, at) => <div key={at}><strong>{task.title}</strong><p>{task.body}</p><StringList values={task.acceptance_criteria} /></div>)}

@@ -22,7 +22,7 @@ describe("editable work and real execution states", () => {
         const document = itemSchema.parse({ ...idea, kind: "artifact", data: defaultData("artifact") });
         render(<RecordEditor item={document} items={[document]} userId={userId} onChanged={vi.fn()} />);
         expect(screen.queryByRole("button", { name: "현재 revision 확정" })).toBeNull();
-        expect(screen.queryByRole("button", { name: "revision 이력" })).toBeNull();
+        expect(screen.queryByRole("tab", { name: "revision 이력" })).toBeNull();
         expect(screen.getByRole("button", { name: "Markdown 내려받기" })).toBeTruthy();
         expect(screen.getByText(/임시 문서 저장소 · Note 연계 예정/)).toBeTruthy();
     });
@@ -32,7 +32,7 @@ describe("editable work and real execution states", () => {
         const save = vi.spyOn(api, "saveItem").mockRejectedValueOnce(new ApiError("저장 기준이 달라졌습니다.", 409)).mockResolvedValue({ ...latest, body: "병합한 내 초안", revision: 3 });
         vi.spyOn(api, "item").mockResolvedValue(latest);
         render(<RecordEditor item={idea} items={[idea]} userId={userId} onChanged={vi.fn()} />);
-        await user.click(screen.getByRole("button", { name: "편집" }));
+        await user.click(screen.getByRole("tab", { name: "편집" }));
         fireEvent.change(screen.getByLabelText("본문 · Markdown"), { target: { value: "절대 지우지 않을 내 초안" } });
         await user.click(screen.getByRole("button", { name: "초안 저장" }));
         expect(await screen.findByText("다른 변경과 충돌했습니다. 내 초안은 그대로 보관합니다.")).toBeTruthy();
@@ -73,7 +73,7 @@ describe("editable work and real execution states", () => {
         const apply = vi.spyOn(api, "applyRun").mockResolvedValue({ ...mixed, status: "applied" });
         render(<RunsPage projectId={projectId} userId={userId} route={{ project: projectId, view: "runs", item: "", run: mixed.id, q: "", kind: "", baseline: "" }} items={[idea]} runtime={{ status: "ready", data: { configured: true, provider: "codex_login", model: "", capabilities: [] } }} onRuntimeReload={vi.fn()} onChanged={vi.fn()} />);
         await user.click(await screen.findByRole("checkbox", { name: "선택할 두 번째 요건 채택 후보로 선택" }));
-        expect(screen.getByRole("checkbox", { name: "이 문서 결과 적용 선택" })).toHaveProperty("checked", false);
+        expect(screen.getByRole("checkbox", { name: "이 문서 결과 적용 선택" }).getAttribute("data-state")).toBe("unchecked");
         await user.click(screen.getByRole("button", { name: "선택 후보 1건 적용" }));
         await waitFor(() => expect(apply).toHaveBeenCalledWith(mixed.id, [1], false));
     });

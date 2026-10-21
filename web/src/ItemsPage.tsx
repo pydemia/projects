@@ -9,6 +9,11 @@ import type { Catalog, Item, Kind, Revision } from "./models";
 import { cleanData, ItemDataFields } from "./ItemFields";
 import { itemRoute, Relations, TestExecutions } from "./Relations";
 import { Input } from "./pydemia-ui/input";
+import { Card, CardContent } from "./pydemia-ui/card";
+import { DataList } from "./pydemia-ui/data-list";
+import { SearchInput } from "./pydemia-ui/search-input";
+import { SideNav } from "./pydemia-ui/navigation";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./pydemia-ui/tabs";
 import { Textarea } from "./pydemia-ui/textarea";
 import {
     ActionButton, Badge, Empty, ErrorNotice, ExternalLink, Field, Loading, Markdown, Modal,
@@ -53,33 +58,30 @@ export function ItemsPage({ projectId, userId, route, items, catalog, onChanged 
             <ActionButton className="primary" onClick={() => setNewKind(validKind)}>+ {kindLabels[validKind]} 만들기</ActionButton>
             <RouteLink className="button" patch={{ view: "runs", item: "", run: "" }}>스킬 작업</RouteLink>
         </PageHead>
-        {viewKinds.length > 1 && <nav className="view-switch" aria-label="기획 대상 종류">
-            {viewKinds.map(kind => <RouteLink key={kind} patch={{ kind, item: "", q: "" }} current={validKind === kind}>{kindLabels[kind]} <span>{items.filter(item => item.kind === kind).length}</span></RouteLink>)}
-        </nav>}
+        {viewKinds.length > 1 && <Tabs value={validKind} onValueChange={kind => navigate({ kind, item: "", q: "" })}>
+            <TabsList variant="line" className="workspace-kind-tabs" aria-label="기획 대상 종류">
+                {viewKinds.map(kind => <TabsTrigger key={kind} value={kind}>{kindLabels[kind]} <span>{items.filter(item => item.kind === kind).length}</span></TabsTrigger>)}
+            </TabsList>
+        </Tabs>}
         <div className={`document-layout ${selected ? "has-selection" : ""}`}>
-            <aside className="doclist" aria-label={`${title} 목록`}>
-                <form className="list-search" onSubmit={event => { event.preventDefault(); navigate({ q: query }); }}>
-                    <label className="sr-only" htmlFor="item-search">제목·ID·본문 검색</label>
-                    <Input id="item-search" type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="제목·ID·본문 검색" />
-                    <ActionButton type="submit" className="small">검색</ActionButton>
-                </form>
-                {route.q && <ActionButton className="linkbtn small" onClick={() => { setQuery(""); navigate({ q: "" }); }}>검색 초기화</ActionButton>}
-                <div className="list-count">{filtered.length}개 {route.q ? "검색 결과" : kindLabels[validKind]}</div>
-                <div className="doc-list-items">
-                    {filtered.map(item => <RouteLink key={item.id} patch={{ item: item.id }} className={`doc-item ${selected?.id === item.id ? "active" : ""}`} current={selected?.id === item.id}>
+            <Card className="doclist workspace-collection" aria-label={`${title} 목록`}>
+                <CardContent>
+                <div className="workspace-list-heading"><h2>{kindLabels[validKind]} 목록</h2><span>{filtered.length}개</span></div>
+                <SearchInput label={`${title} 검색`} value={query} onValueChange={setQuery} onSearch={value => navigate({ q: value, item: "" })} variant="toolbar" placeholder="제목·ID·본문 검색" />
+                <SideNav aria-label={`${title} 항목`} className="doc-list-items">
+                    {filtered.map(item => <RouteLink key={item.id} patch={{ item: item.id }} appearance="side" className="doc-item" current={selected?.id === item.id}>
                         <strong>{item.title}</strong>
-                        <small>{shortId(item.id)} · r{item.revision}</small>
-                        <Badge value={item.kind === "task" ? item.data.state : item.status} />
+                        <span className="doc-item-meta"><small>{shortId(item.id)} · r{item.revision}</small><Badge value={item.kind === "task" ? item.data.state : item.status} /></span>
                     </RouteLink>)}
                     {!filtered.length && <p className="muted small">{route.q ? "검색 결과가 없습니다." : "아직 등록한 항목이 없습니다."}</p>}
-                </div>
-            </aside>
-            <div className="document-main">
+                </SideNav></CardContent>
+            </Card>
+            <Card className="document-main workspace-detail"><CardContent>
                 {selected ? <RecordEditor key={selected.id} item={selected} items={items} catalog={catalog} userId={userId} onChanged={onChanged} /> : <Empty title={route.item ? "선택한 항목을 찾을 수 없습니다." : `첫 ${kindLabels[validKind]}부터 시작해 보세요.`}>
                     <p>{route.item ? "다른 종류를 선택했거나 접근할 수 없는 항목일 수 있습니다. 목록에서 다시 선택해 주세요." : "왼쪽 목록에서 항목을 열거나 새로 작성할 수 있습니다."}</p>
                     <ActionButton onClick={() => setNewKind(validKind)}>+ {kindLabels[validKind]} 만들기</ActionButton>
                 </Empty>}
-            </div>
+            </CardContent></Card>
         </div>
         {newKind && <NewItem kind={newKind} projectId={projectId} userId={userId} items={items} catalog={catalog}
             onClose={() => setNewKind(null)} onCreated={item => { setNewKind(null); onChanged(); navigate(itemRoute(item)); }} />}
@@ -221,13 +223,14 @@ export function RecordEditor({ item, items, catalog, userId, onChanged }: Editor
                 setNotice("서버 최신 revision을 편집 기준으로 선택했습니다. 합칠 내용을 편집한 뒤 저장해 주세요.");
             }}>서버 최신 revision을 기준으로 병합 편집</ActionButton>
         </section>}
-        <nav className="editor-tabs" aria-label="항목 작업">
-            {tabs.map(([value, label]) => <ActionButton key={value} aria-pressed={tab === value} className={tab === value ? "selected" : ""} onClick={() => setTab(value ?? "preview")}>{label}</ActionButton>)}
-        </nav>
-        {tab === "preview" && <div className="doc-split"><div><Markdown body={serverItem.body} /><ItemDetails item={serverItem} catalog={catalog} /></div>
+        <Tabs value={tab} onValueChange={setTab}>
+        <TabsList variant="line" className="editor-tabs" aria-label="항목 작업">
+            {tabs.map(([value, label]) => <TabsTrigger key={value} value={value ?? "preview"}>{label}</TabsTrigger>)}
+        </TabsList>
+        {tab === "preview" && <TabsContent value="preview" className="doc-split"><div><Markdown body={serverItem.body} /><ItemDetails item={serverItem} catalog={catalog} /></div>
             <aside className="doc-aside"><h3>문서 기준</h3><p>현재 서버 revision {serverItem.revision}</p><p>{item.kind === "artifact" ? "임시 문서 저장소 · Note 연계 예정. revision 숫자는 저장 충돌 검사에 사용합니다." : serverItem.status === "confirmed" ? "이 revision은 확정되어 있습니다. 편집 후 저장하면 새 초안을 만듭니다." : "초안 저장과 확정은 별개입니다."}</p><h3>연결 근거</h3><p>관계·근거 탭에서 요구사항·작업·테스트와 revision을 연결할 수 있습니다.</p><ActionButton onClick={() => setTab("links")}>관계 확인</ActionButton></aside>
-        </div>}
-        {tab === "edit" && <form onSubmit={event => { void save(event); }}>
+        </TabsContent>}
+        {tab === "edit" && <TabsContent value="edit"><form onSubmit={event => { void save(event); }}>
             {serverItem.status === "confirmed" && <p className="hint">확정본을 보존하며 다음 초안 revision으로 저장합니다.</p>}
             <Field label="제목"><Input required maxLength={300} value={draft.title} onChange={event => setDraft({ ...draft, title: event.target.value })} /></Field>
             <Field label="본문 · Markdown" hint="표와 코드 블록을 지원합니다. HTML은 미리보기에 실행하지 않습니다.">
@@ -238,10 +241,11 @@ export function RecordEditor({ item, items, catalog, userId, onChanged }: Editor
             <div className="form-actions"><ActionButton type="button" disabled={busy || !dirty} onClick={() => setDiscardOpen(true)}>내 초안 버리기</ActionButton>
                 <span className="muted small">{busy ? "서버 응답을 기다리는 중…" : dirty ? "서버 미저장" : `서버 r${serverItem.revision}과 같음`}</span>
                 <ActionButton type="submit" className="primary" disabled={busy || !dirty || !!conflict || !draft.title.trim()}>{busy ? "저장 중…" : "초안 저장"}</ActionButton></div>
-        </form>}
-        {tab === "history" && <RevisionHistory item={serverItem} dirty={dirty} onRestored={updated => { setServerItem(updated); setDraft(fromItem(updated)); setTab("preview"); onChanged(); }} />}
-        {tab === "links" && <Relations item={serverItem} items={items} onChanged={onChanged} />}
-        {tab === "executions" && <TestExecutions item={serverItem} onChanged={onChanged} />}
+        </form></TabsContent>}
+        {tab === "history" && <TabsContent value="history"><RevisionHistory item={serverItem} dirty={dirty} onRestored={updated => { setServerItem(updated); setDraft(fromItem(updated)); setTab("preview"); onChanged(); }} /></TabsContent>}
+        {tab === "links" && <TabsContent value="links"><Relations item={serverItem} items={items} onChanged={onChanged} /></TabsContent>}
+        {tab === "executions" && <TabsContent value="executions"><TestExecutions item={serverItem} onChanged={onChanged} /></TabsContent>}
+        </Tabs>
         {discardOpen && <Modal title="저장하지 않은 초안 버리기" onClose={() => setDiscardOpen(false)}>
             <p>이 브라우저의 편집 내용을 지우고 현재 서버 r{serverItem.revision}을 불러옵니다.</p>
             <div className="form-actions"><ActionButton onClick={() => setDiscardOpen(false)}>계속 편집</ActionButton><ActionButton className="danger" onClick={() => { removeDraft(key); setDraft(fromItem(serverItem)); setConflict(null); setError(""); setDiscardOpen(false); }}>내 초안 버리기</ActionButton></div>
@@ -254,20 +258,27 @@ function ItemDetails({ item, catalog }: { item: Item; catalog?: Catalog }) {
         {item.kind === "idea" && <><h3>가정·질문</h3><p className="preserve-lines">{item.data.notes || "등록된 메모 없음"}</p>{item.data.source_url && <p>출처: {item.data.source_url}</p>}</>}
         {item.kind === "feature" && <><h3>현재 동작</h3><p className="preserve-lines">{item.data.current_behavior || "미기록"}</p><p className="muted">근거 {item.data.evidence_url || "미기록"}<br />대상 SHA {item.data.target_sha || "미기록"}</p></>}
         {item.kind === "requirement" && <><h3>수용 조건</h3><StringList values={item.data.acceptance_criteria} /><p className="muted">{item.data.category === "functional" ? "기능" : "비기능"} 요구사항 · 우선순위 {item.data.priority} · <Badge value={item.data.disposition} /></p>{item.data.excluded_reason && <p>사유: {item.data.excluded_reason}</p>}</>}
-        {item.kind === "task" && <><h3>작업 계획</h3><p><Badge value={item.data.state} /> · {item.data.workflow === "personal" ? "개인 할 일" : "구현 작업"} · {item.data.list_name}</p>
-            <p className="muted">실행 {item.data.planned_date || "미지정"} · 마감 {item.data.due_date || "미지정"} · 예상 {item.data.estimated_minutes ? `${item.data.estimated_minutes}분` : "미산정"}<br />
-                GTD {item.data.next_action ? "다음 행동" : "보류"} · {item.data.context || "맥락 무관"} · 에너지 {{ any: "제약 없음", low: "낮음", medium: "보통", high: "높음" }[item.data.energy]}<br />
-                ABC {item.data.abc_priority === "none" ? "미지정" : `${item.data.abc_priority}${item.data.abc_order || ""}`} · {item.data.goal || "연결 목표 없음"}</p>
+        {item.kind === "task" && <><DataList label="작업 속성" layout="grid" items={[
+            { id: "state", label: "상태", value: <Badge value={item.data.state} /> },
+            { id: "workflow", label: "유형·목록", value: `${item.data.workflow === "personal" ? "개인 할 일" : "구현 작업"} · ${item.data.list_name}` },
+            { id: "planned", label: "실행 예정", value: item.data.planned_date || null },
+            { id: "due", label: "마감", value: item.data.due_date || null },
+            { id: "estimate", label: "예상 소요", value: item.data.estimated_minutes ? `${item.data.estimated_minutes}분` : null },
+            { id: "gtd", label: "GTD", value: `${item.data.next_action ? "다음 행동" : "보류"} · ${item.data.context || "맥락 무관"} · 에너지 ${{ any: "제약 없음", low: "낮음", medium: "보통", high: "높음" }[item.data.energy]}` },
+            { id: "abc", label: "ABC", value: item.data.abc_priority === "none" ? null : `${item.data.abc_priority}${item.data.abc_order || ""}` },
+            { id: "goal", label: "목표·가치", value: item.data.goal || null },
+        ]} />
             {item.data.github_issue_url && <p><ExternalLink href={item.data.github_issue_url}>GitHub Issue 열기 ↗</ExternalLink></p>}
             {item.data.workflow === "delivery" && <><h3>완료·수용 조건</h3><StringList values={item.data.acceptance_criteria} /><p>테스트 근거 {item.data.requires_test ? "필요" : "비적용"}</p><p className="muted">결과 {item.data.result_url || "미기록"}<br />대상 SHA {item.data.target_sha || "미기록"}</p></>}</>}
         {item.kind === "test_case" && <><h3>실행 절차</h3><StringList values={item.data.steps} /><h3>기대 결과</h3><p className="preserve-lines">{item.data.expected || "미기록"}</p></>}
         {item.kind === "decision" && <><h3>결정 이유</h3><p>{item.data.reason || "미기록"}</p><h3>대안</h3><StringList values={item.data.alternatives} /></>}
-        {item.kind === "artifact" && <><h3>양식·참조 manifest</h3>
-            <dl className="definition-list"><dt>문서 종류</dt><dd>{artifactDefinition(catalog, item.data.artifact_type)?.name ?? item.data.artifact_type}</dd>
-                <dt>양식</dt><dd>{item.data.template_ref || "지정 안 함"} {item.data.template_version && `· ${item.data.template_version}`}</dd>
-                <dt>확인 상태</dt><dd>{{ unverified: "미확인", verified: "사용자 직접 확인", inaccessible: "접근 실패" }[item.data.inspection_status] ?? item.data.inspection_status}</dd>
-                <dt>예시 참조</dt><dd>{item.data.example_refs.join(", ") || "지정 안 함"}</dd>
-                <dt>프로젝트 근거</dt><dd>{item.data.project_source_refs.map(shortId).join(", ") || "지정 안 함"}</dd></dl>
+        {item.kind === "artifact" && <><DataList label="양식·참조 manifest" layout="grid" items={[
+            { id: "kind", label: "문서 종류", value: artifactDefinition(catalog, item.data.artifact_type)?.name ?? item.data.artifact_type },
+            { id: "template", label: "양식", value: item.data.template_ref ? `${item.data.template_ref}${item.data.template_version ? ` · ${item.data.template_version}` : ""}` : null },
+            { id: "inspection", label: "확인 상태", value: { unverified: "미확인", verified: "사용자 직접 확인", inaccessible: "접근 실패" }[item.data.inspection_status] ?? item.data.inspection_status },
+            { id: "examples", label: "예시 참조", value: item.data.example_refs.join(", ") || null },
+            { id: "sources", label: "프로젝트 근거", value: item.data.project_source_refs.map(shortId).join(", ") || null },
+        ]} />
             <p className="hint">이 확인 상태는 실행 시 자료의 실제 읽기 결과와 별도로 기록합니다.</p>
         </>}
     </section>;

@@ -1,4 +1,4 @@
-import { cloneElement, lazy, Suspense, useEffect, useId, useRef } from "react";
+import { cloneElement, lazy, Suspense } from "react";
 import type { ReactElement, ReactNode } from "react";
 import { statusLabels } from "./models";
 import { navigate, routeUrl } from "./hooks";
@@ -8,8 +8,10 @@ import { Badge as PydBadge } from "./pydemia-ui/badge";
 import { Button } from "./pydemia-ui/button";
 import type { ButtonProps } from "./pydemia-ui/button";
 import { Empty as PydEmpty } from "./pydemia-ui/empty";
-import { Label } from "./pydemia-ui/label";
+import { Field as PydField } from "./pydemia-ui/field";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./pydemia-ui/dialog";
 import { PageHeader } from "./pydemia-ui/page-header";
+import { SideNavLink } from "./pydemia-ui/navigation";
 
 const MarkdownContent = lazy(() => import("./MarkdownContent"));
 
@@ -43,15 +45,12 @@ export function Field({ label, hint, children }: {
     label: string; hint?: string;
     children: ReactElement<{ id?: string; "aria-describedby"?: string }>;
 }) {
-    const generatedId = useId();
-    const inputId = children.props.id ?? generatedId;
-    return <div className="field"><Label htmlFor={inputId}>{label}</Label>
-        {cloneElement(children, {
-            id: inputId,
-            "aria-describedby": hint ? `${inputId}-hint` : children.props["aria-describedby"],
+    return <PydField label={label} description={hint} controlId={children.props.id} className="field">
+        {control => cloneElement(children, {
+            id: control.id,
+            "aria-describedby": control["aria-describedby"] ?? children.props["aria-describedby"],
         })}
-        {hint && <small className="muted" id={`${inputId}-hint`}>{hint}</small>}
-    </div>;
+    </PydField>;
 }
 export function PageHead({ title, description, children, eyebrow }: {
     title: string; description?: string; children?: ReactNode; eyebrow?: string;
@@ -59,42 +58,32 @@ export function PageHead({ title, description, children, eyebrow }: {
     return <PageHeader className="pagehead" title={title} subtitle={description}
         eyebrow={eyebrow ?? "PROJECT WORKSPACE"} actions={<div className="actions">{children}</div>} />;
 }
-export function RouteLink({ patch, children, className = "", current }: {
+export function RouteLink({ patch, children, className = "", current, appearance = "inline" }: {
     patch: Partial<Route>; children: ReactNode; className?: string; current?: boolean;
+    appearance?: "inline" | "side";
 }) {
-    return <a href={routeUrl(patch)} className={className}
-        aria-current={current ? "page" : undefined}
-        onClick={event => {
+    const props = { href: routeUrl(patch), className,
+        "aria-current": current ? "page" as const : undefined,
+        onClick: (event: React.MouseEvent<HTMLAnchorElement>) => {
             if (!event.metaKey && !event.ctrlKey && !event.shiftKey && event.button === 0) {
                 event.preventDefault();
                 navigate(patch);
             }
-        }}>{children}</a>;
+        } };
+    return appearance === "side" ? <SideNavLink {...props}>{children}</SideNavLink> : <a {...props}>{children}</a>;
 }
 export function Modal({ title, children, onClose, wide = false }: {
     title: string; children: ReactNode; onClose: () => void; wide?: boolean;
 }) {
-    const ref = useRef<HTMLDialogElement>(null);
-    const titleId = useId();
-    const closeRef = useRef(onClose);
-    closeRef.current = onClose;
-    useEffect(() => {
-        const dialog = ref.current;
-        const previous = document.activeElement;
-        dialog?.showModal();
-        dialog?.querySelector<HTMLElement>("input:not([type='hidden']), textarea, select")?.focus();
-        return () => {
-            dialog?.close();
-            if (previous instanceof HTMLElement && previous.isConnected) previous.focus();
-        };
-    }, []);
-    return <dialog ref={ref} className={wide ? "modal wide" : "modal"}
-        aria-labelledby={titleId}
-        onCancel={event => { event.preventDefault(); closeRef.current(); }}>
-        <div className="modal-head"><h2 id={titleId}>{title}</h2>
-            <Button variant="ghost" className="plain" aria-label="대화상자 닫기" onClick={onClose}>닫기 ×</Button>
-        </div><div className="modal-body">{children}</div>
-    </dialog>;
+    return <Dialog open onOpenChange={open => { if (!open) onClose(); }}>
+        <DialogContent size={wide ? "wide" : "default"} className="projects-dialog">
+            <DialogHeader className="modal-head"><DialogTitle>{title}</DialogTitle>
+                <Button variant="ghost" className="plain" aria-label="대화상자 닫기" onClick={onClose}>닫기 ×</Button>
+            </DialogHeader>
+            <DialogDescription className="sr-only">{title} 작업을 진행합니다.</DialogDescription>
+            <div className="modal-body">{children}</div>
+        </DialogContent>
+    </Dialog>;
 }
 export function safeMarkdownUrl(value: string): string {
     if (value.startsWith("#")) return value;

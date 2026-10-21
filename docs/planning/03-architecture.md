@@ -64,6 +64,16 @@ flowchart LR
 자동 반영하지 않는다. 읽기 동기화·webhook은 별도 credential·권한·멱등
 계약을 필요로 한다.
 
+전 화면 UI·UX 개편에서는 `AppShell`/`SideNav`를 전역 외곽으로, `Card`·
+`SearchInput`·`Tabs`를 기획/문서/테스트/SkillRun의 목록→상세 흐름으로
+재사용한다. 필드·체크·선택·대화상자·표·접기 역시 고정한 registry source를
+사용한다. React adapter는 Projects의 URL 탐색, Item/SkillRun API와
+revision 오류 처리만 담당한다. 간편/정교 작업은 화면 상태를 분리하지만
+같은 `Item(kind=task)`와 PostgreSQL row를 사용한다. 추적 필터는 이미
+권한 검사한 API 응답에 적용하고, 시각 상태가 서버의 완료 판정을 대신하지
+않는다. 상세한 단계·AC-35~39는 [개편 실행 계획](../implementation/ui-ux-overhaul.md)에
+기록한다.
+
 ## Infra
 
 개발 환경은 웹·API·worker와 로컬 DB·첨부 디렉터리로 시작한다. 컨테이너 구성을 제공하되 로컬 실행 경로도 명시한다. 첫 외부 배포는 HTTPS reverse proxy 뒤의 웹/API/worker, 관리형 DB 또는 별도 백업이 검증된 DB, 비공개 파일 저장소로 구성한다. 배포 공급자와 가격은 아직 결정하지 않는다.

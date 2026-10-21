@@ -39,10 +39,21 @@ describe("task workspace", () => {
         await waitFor(() => expect(changed).toHaveBeenCalledOnce());
     });
 
+    it("keeps Inbox capture undated while keeping the same personal workflow", async () => {
+        const create = vi.spyOn(api, "createItem").mockResolvedValue(task);
+        render(<TaskWorkspace projectId={projectId} userId={userId}
+            route={{ ...route, taskView: "inbox" }} items={[]} onChanged={vi.fn()} />);
+        fireEvent.change(screen.getByLabelText("빠른 할 일"), { target: { value: "나중에 분류할 일" } });
+        fireEvent.click(screen.getByRole("button", { name: "+ 추가" }));
+        await waitFor(() => expect(create).toHaveBeenCalledWith(projectId, expect.objectContaining({
+            data: expect.objectContaining({ workflow: "personal", planned_date: "", list_name: "Inbox" }),
+        })));
+    });
+
     it("quickly completes a personal task with revision control", async () => {
         const save = vi.spyOn(api, "saveItem").mockResolvedValue({ ...task, data: { ...task.data, state: "done" } });
         render(<TaskWorkspace projectId={projectId} userId={userId} route={route} items={[task]} onChanged={vi.fn()} />);
-        fireEvent.click(screen.getByRole("button", { name: "짧은 작업 완료" }));
+        fireEvent.click(screen.getByRole("checkbox", { name: "짧은 작업 완료" }));
         await waitFor(() => expect(save).toHaveBeenCalledWith(task.id, expect.objectContaining({
             expected_revision: task.revision, data: expect.objectContaining({ state: "done", workflow: "personal" }),
         })));
@@ -54,8 +65,30 @@ describe("task workspace", () => {
         expect(screen.getByRole("heading", { name: /할 일/ })).toBeTruthy();
         expect(screen.getByText("짧은 작업")).toBeTruthy();
         rerender(<TaskWorkspace projectId={projectId} userId={userId} route={{ ...complex, taskView: "insights" }} items={[task]} onChanged={vi.fn()} />);
-        expect(screen.getByRole("img", { name: "ABC B 1건" })).toBeTruthy();
+        expect(screen.getByRole("figure").getAttribute("data-ui")).toBe("bar-list");
+        expect(screen.getByText("ABC B")).toBeTruthy();
+        expect(screen.getAllByText("1건").length).toBeGreaterThan(0);
         expect(screen.getByText(/현재 스냅샷입니다/)).toBeTruthy();
+    });
+
+    it("changes a personal task from the board using the same revision-checked task", async () => {
+        const save = vi.spyOn(api, "saveItem").mockResolvedValue({ ...task, data: { ...task.data, state: "in_progress" } });
+        render(<TaskWorkspace projectId={projectId} userId={userId}
+            route={{ ...route, taskMode: "complex", taskView: "board" }} items={[task]} onChanged={vi.fn()} />);
+        fireEvent.change(screen.getByRole("combobox", { name: "짧은 작업 상태" }), { target: { value: "in_progress" } });
+        await waitFor(() => expect(save).toHaveBeenCalledWith(task.id, expect.objectContaining({
+            expected_revision: task.revision, data: expect.objectContaining({ state: "in_progress" }),
+        })));
+    });
+
+    it("renders the shared task controls with the current view and theme contracts", () => {
+        render(<TaskWorkspace projectId={projectId} userId={userId}
+            route={{ ...route, taskMode: "complex", taskView: "list" }} items={[task]} onChanged={vi.fn()} />);
+        expect(document.querySelector('[data-ui="segmented-control"]')).toBeTruthy();
+        expect(screen.getByRole("tab", { name: "목록" }).getAttribute("aria-selected")).toBe("true");
+        expect(screen.getByRole("searchbox", { name: "작업 검색" }).getAttribute("data-ui")).toBe("input");
+        expect(screen.getByRole("combobox", { name: "우선순위 기준" }).getAttribute("data-ui")).toBe("native-select");
+        expect(screen.getByRole("group", { name: "오늘 처리할 일" }).getAttribute("data-ui")).toBe("card");
     });
 
     it("switches between GTD available-time and ABC value ordering without changing tasks", () => {

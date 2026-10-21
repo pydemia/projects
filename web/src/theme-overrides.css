@@ -11,7 +11,7 @@
   background: var(--background);
   font-family: var(--font-ui);
 }
-.projects-theme button:not([data-ui="button"]),
+.projects-theme button:not([data-ui]),
 .projects-theme .button,
 .projects-theme select,
 .projects-theme input,
@@ -21,7 +21,7 @@
   border-color: var(--border);
 }
 .projects-theme input[type="checkbox"] { accent-color: var(--accent); }
-.projects-theme button:hover:not(:disabled),
+.projects-theme button:not([data-ui]):hover:not(:disabled),
 .projects-theme .button:hover { background-color: var(--surface-subtle); }
 .projects-theme button[data-ui="button"][data-variant="primary"] {
   color: var(--accent-foreground);
@@ -90,6 +90,7 @@
 .projects-theme .field select,
 .projects-theme .list-search input { color: var(--foreground); background: var(--surface); border-color: var(--border); }
 .projects-theme .field input[readonly] { background: var(--surface-subtle); }
+.projects-theme [data-ui="badge"] { color: var(--foreground); background: var(--surface-subtle); border-color: var(--border); }
 .projects-theme .notice.error,
 .projects-theme .status-failed,
 .projects-theme .status-conflict { color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, var(--surface)); }
@@ -112,7 +113,7 @@
 .projects-theme dialog::backdrop { background: var(--overlay); }
 .projects-theme .skip-link { color: var(--foreground); background: var(--surface); }
 .projects-theme .theme-controls { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
-.projects-theme .theme-controls select { width: auto; max-width: 150px; min-height: 34px; padding: 5px 8px; font-size: 12px; border-radius: var(--field-radius); }
+.projects-theme .theme-controls select { width: 100%; max-width: 150px; min-height: 34px; padding: 5px 8px; font-size: 12px; border-radius: var(--field-radius); }
 .projects-theme .theme-controls select:first-of-type { max-width: 176px; }
 .projects-theme .auth-theme { grid-column: 1 / -1; justify-self: end; margin-top: -54px; margin-bottom: 24px; }
 .projects-theme [data-ui="empty"] { align-items: flex-start; text-align: left; }

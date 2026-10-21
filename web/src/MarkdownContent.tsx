@@ -1,5 +1,6 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { Table } from "./pydemia-ui/table";
 import { safeMarkdownUrl } from "./ui";
 
 export default function MarkdownContent({ body }: { body: string }) {
@@ -12,6 +13,6 @@ export default function MarkdownContent({ body }: { body: string }) {
                 이미지 참조: <a href={typeof src === "string" ? src : undefined}
                     target="_blank" rel="noopener noreferrer">{alt || "원본 보기"}</a>
             </span>,
-            table: ({ children }) => <div className="tablewrap"><table>{children}</table></div>,
+            table: ({ children }) => <div className="tablewrap"><Table>{children}</Table></div>,
         }}>{body || "아직 작성된 본문이 없습니다."}</ReactMarkdown></div>;
 }

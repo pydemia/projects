@@ -6,6 +6,15 @@ import { NewItem, RecordEditor } from "./ItemsPage";
 import { dataSchemas, statusLabels } from "./models";
 import type { Catalog, Item } from "./models";
 import { Input } from "./pydemia-ui/input";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./pydemia-ui/accordion";
+import { BarList } from "./pydemia-ui/bar-list";
+import { Card, CardContent } from "./pydemia-ui/card";
+import { Checkbox } from "./pydemia-ui/checkbox";
+import { MetricCard } from "./pydemia-ui/metric-card";
+import { NativeSelect } from "./pydemia-ui/native-select";
+import { SearchInput } from "./pydemia-ui/search-input";
+import { SegmentedControl, SegmentedControlItem } from "./pydemia-ui/segmented-control";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./pydemia-ui/tabs";
 import { ActionButton, Badge, Empty, ErrorNotice, ExternalLink, Field, PageHead, RouteLink } from "./ui";
 
 type Task = Extract<Item, { kind: "task" }>;
@@ -96,10 +105,13 @@ export function TaskWorkspace({ projectId, userId, route, items, catalog, onChan
         if (!quickTitle.trim()) return;
         setBusyId("new"); setError("");
         try {
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            const plannedDate = mode === "simple" ? view === "inbox" ? "" : view === "upcoming" ? localDay(tomorrow) : today : quickDate;
             await api.createItem(projectId, {
                 kind: "task", title: quickTitle.trim(), body: "",
                 data: dataSchemas.task.parse({ workflow: "personal", requires_test: false,
-                    planned_date: quickDate, list_name: "Inbox" }),
+                    planned_date: plannedDate, list_name: "Inbox" }),
             });
             setQuickTitle(""); onChanged();
         } catch (cause) { setError(errorMessage(cause)); }
@@ -120,15 +132,31 @@ export function TaskWorkspace({ projectId, userId, route, items, catalog, onChan
         } catch (cause) { setError(errorMessage(cause)); }
         finally { setBusyId(""); }
     }
+    async function moveState(task: Task, state: Task["data"]["state"]) {
+        if (state === task.data.state) return;
+        if (task.data.workflow === "delivery" && state === "done") {
+            navigate({ taskMode: "complex", taskView: "list", item: task.id });
+            setError("구현 작업 완료에는 결과물·완료 기준·테스트 근거가 필요합니다. 상세 편집에서 확인해 주세요.");
+            return;
+        }
+        setBusyId(task.id); setError("");
+        try {
+            await api.saveItem(task.id, {
+                expected_revision: task.revision, title: task.title, body: task.body,
+                data: { ...task.data, state },
+            });
+            onChanged();
+        } catch (cause) { setError(errorMessage(cause)); }
+        finally { setBusyId(""); }
+    }
     function changeMode(next: "simple" | "complex") {
         navigate({ taskMode: next, taskView: next === "simple" ? "today" : "list" });
     }
     const list = (rows: Task[]) => <div className="task-list">
         {rows.map(task => <div className="task-row" key={task.id}>
-            <ActionButton className="task-check" aria-label={`${task.title} ${task.data.state === "done" ? "다시 열기" : "완료"}`}
-                disabled={busyId === task.id} onClick={() => { void toggle(task); }}>
-                {task.data.state === "done" ? "↩" : task.data.workflow === "personal" ? "✓" : "→"}
-            </ActionButton>
+            {task.data.workflow === "personal" ? <Checkbox className="task-check" aria-label={`${task.title} ${task.data.state === "done" ? "다시 열기" : "완료"}`}
+                checked={task.data.state === "done"} disabled={busyId === task.id} onCheckedChange={() => { void toggle(task); }} />
+                : <ActionButton className="task-check" aria-label={`${task.title} 상세 열기`} disabled={busyId === task.id} onClick={() => { void toggle(task); }}>→</ActionButton>}
             <div className="task-row-main"><RouteLink patch={{ item: task.id }} className="task-title">{task.title}</RouteLink>
                 <div className="task-meta"><Badge value={task.data.state} />
                     <span>{task.data.list_name}</span>
@@ -148,55 +176,74 @@ export function TaskWorkspace({ projectId, userId, route, items, catalog, onChan
             description="하나의 작업 목록을 오늘의 할 일과 정교한 프로젝트 관리 보기로 전환합니다.">
             <ActionButton onClick={() => setNewDetailed(true)}>+ 상세 작업</ActionButton>
         </PageHead>
-        <div className="task-mode-bar" role="group" aria-label="작업 화면 밀도">
-            <ActionButton aria-pressed={mode === "simple"} variant={mode === "simple" ? "primary" : "outline"} onClick={() => changeMode("simple")}>간편 · To-do</ActionButton>
-            <ActionButton aria-pressed={mode === "complex"} variant={mode === "complex" ? "primary" : "outline"} onClick={() => changeMode("complex")}>정교 · 프로젝트</ActionButton>
+        <div className="task-mode-bar">
+            <SegmentedControl label="작업 화면 밀도" name="task-mode" value={mode} onValueChange={value => changeMode(value as "simple" | "complex")}>
+                <SegmentedControlItem value="simple">간편 · To-do</SegmentedControlItem>
+                <SegmentedControlItem value="complex">정교 · 프로젝트</SegmentedControlItem>
+            </SegmentedControl>
             <span className="muted small">같은 작업 데이터 · 보기만 변경</span>
         </div>
-        <form className="task-quick-add" onSubmit={event => { void quickAdd(event); }}>
+        {mode === "simple" ? <p className="task-simple-status"><strong>오늘 {tasks.filter(task => isOpen(task) && (task.data.planned_date === today || !!task.data.due_date && task.data.due_date <= today)).length}개</strong><span>열려 있는 작업 {tasks.filter(isOpen).length}개 · 제목만 적으면 바로 추가됩니다.</span></p> : <div className="task-metrics" aria-label="작업 현황">
+            <MetricCard variant="featured" label="오늘 처리할 일" value={tasks.filter(task => isOpen(task) && (task.data.planned_date === today || !!task.data.due_date && task.data.due_date <= today)).length} detail="오늘 예정 또는 마감" />
+            <MetricCard variant="compact" label="진행 중" value={tasks.filter(task => isOpen(task)).length} detail="완료·취소 제외" />
+            <MetricCard variant="compact" label="완료" value={tasks.filter(task => task.data.state === "done").length} detail="현재 작업 기준" />
+        </div>}
+        <Card className="task-compose" variant="default"><CardContent><form className="task-quick-add" onSubmit={event => { void quickAdd(event); }}>
             <Field label="빠른 할 일"><Input value={quickTitle} maxLength={300} onChange={event => setQuickTitle(event.target.value)} placeholder="지금 할 일을 한 줄로 적으세요" /></Field>
-            <Field label="실행 예정일"><Input type="date" value={quickDate} onChange={event => setQuickDate(event.target.value)} /></Field>
+            {mode === "complex" && <Field label="실행 예정일"><Input type="date" value={quickDate} onChange={event => setQuickDate(event.target.value)} /></Field>}
             <ActionButton className="primary" type="submit" disabled={busyId === "new" || !quickTitle.trim()}>{busyId === "new" ? "추가 중…" : "+ 추가"}</ActionButton>
-        </form>
+        </form>{mode === "simple" && <p className="task-quick-hint">{view === "inbox" ? "Inbox에 날짜 없이 보관합니다." : view === "upcoming" ? "내일 예정으로 추가합니다." : "오늘 할 일로 추가합니다."} 날짜·완료 조건은 정교 보기에서 바꿀 수 있습니다.</p>}</CardContent></Card>
         {error && <ErrorNotice error={error} />}
-        <nav className="task-view-bar" aria-label="작업 보기">
-            {(mode === "simple" ? simpleViews : complexViews).map(candidate => <RouteLink key={candidate}
-                patch={{ taskView: candidate, item: "" }} current={view === candidate}>
+        <Tabs value={view} onValueChange={candidate => navigate({ taskView: candidate, item: "" })}>
+            <TabsList className="task-view-bar" variant="line" aria-label="작업 보기">
+            {(mode === "simple" ? simpleViews : complexViews).map(candidate => <TabsTrigger key={candidate} value={candidate}>
                 {{ today: "오늘", inbox: "Inbox", upcoming: "예정", list: "목록", board: "보드", calendar: "캘린더", insights: "집계" }[candidate]}
-            </RouteLink>)}
-        </nav>
-        <div className="task-tools">
-            <Field label="작업 검색"><Input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="제목·목록·맥락·목표" /></Field>
-            {mode === "complex" && <Field label="상태"><select value={status} onChange={event => setStatus(event.target.value)}>
+            </TabsTrigger>)}
+            </TabsList>
+        {mode === "simple" ? <div className="task-simple-tools">
+            <SearchInput label="작업 검색" value={query} onValueChange={setQuery} onSearch={() => {}} placeholder="할 일 검색" submitLabel="찾기" />
+            <Accordion type="single" collapsible className="task-priority-options"><AccordionItem value="priority"><AccordionTrigger>지금 가능한 작업 찾기 · GTD / ABC</AccordionTrigger><AccordionContent><div className="task-tools">
+                <Field label="우선순위 기준"><NativeSelect value={lens} onChange={event => setLens(event.target.value as Lens)}><option value="gtd">GTD · 지금 가능한 행동</option><option value="abc">ABC · 목표와 가치</option></NativeSelect></Field>
+                {lens === "gtd" && <Field label="가용 시간"><NativeSelect value={minutes} onChange={event => setMinutes(Number(event.target.value))}><option value={0}>제한 없음</option><option value={15}>15분</option><option value={30}>30분</option><option value={60}>60분</option><option value={120}>120분</option></NativeSelect></Field>}
+            </div></AccordionContent></AccordionItem></Accordion>
+        </div> : <div className="task-tools">
+            <SearchInput label="작업 검색" value={query} onValueChange={setQuery} onSearch={() => {}} placeholder="제목·목록·맥락·목표" submitLabel="찾기" />
+            <Field label="상태"><NativeSelect value={status} onChange={event => setStatus(event.target.value)}>
                 <option value="all">전체</option><option value="open">진행 중 전체</option>
                 {states.map(state => <option key={state} value={state}>{statusLabels[state]}</option>)}
-            </select></Field>}
-            <Field label="우선순위 기준"><select value={lens} onChange={event => setLens(event.target.value as Lens)}>
+            </NativeSelect></Field>
+            <Field label="우선순위 기준"><NativeSelect value={lens} onChange={event => setLens(event.target.value as Lens)}>
                 <option value="gtd">GTD · 지금 가능한 행동</option><option value="abc">ABC · 목표와 가치</option>
-            </select></Field>
-            {lens === "gtd" && <><Field label="가용 시간"><select value={minutes} onChange={event => setMinutes(Number(event.target.value))}>
+            </NativeSelect></Field>
+            {lens === "gtd" && <><Field label="가용 시간"><NativeSelect value={minutes} onChange={event => setMinutes(Number(event.target.value))}>
                 <option value={0}>제한 없음</option><option value={15}>15분</option><option value={30}>30분</option><option value={60}>60분</option><option value={120}>120분</option>
-            </select></Field>
-                {mode === "complex" && <><Field label="현재 맥락"><Input value={context} onChange={event => setContext(event.target.value)} placeholder="예: desk" /></Field>
-                    <Field label="현재 에너지"><select value={energy} onChange={event => setEnergy(event.target.value)}>
+            </NativeSelect></Field>
+                <Field label="현재 맥락"><Input value={context} onChange={event => setContext(event.target.value)} placeholder="예: desk" /></Field>
+                    <Field label="현재 에너지"><NativeSelect value={energy} onChange={event => setEnergy(event.target.value)}>
                         <option value="any">제한 없음</option><option value="low">낮음</option><option value="medium">보통</option><option value="high">높음</option>
-                    </select></Field></>}</>}
-        </div>
+                    </NativeSelect></Field></>}
+        </div>}
         <p className="task-result-count">{visible.length}개 작업 · {view === "insights" ? "현재 필터의 상태 분포" : lens === "gtd" ? "다음 행동·맥락·시간·에너지 순" : "A/B/C 가치·그룹 내 순서"} · 미산정 항목은 목록에 남깁니다.</p>
+        <TabsContent value={view} className="task-view-content">
         {view === "board" && <div className="task-board">{states.map(state => <section className="task-board-column" key={state}>
             <h2>{statusLabels[state]} <small>{visible.filter(task => task.data.state === state).length}</small></h2>
-            {visible.filter(task => task.data.state === state).map(task => <article className="task-board-card" key={task.id}>
+            {visible.filter(task => task.data.state === state).map(task => <Card className="task-board-card" key={task.id}>
                 <RouteLink patch={{ item: task.id }}>{task.title}</RouteLink><p>{task.data.list_name} · {task.data.due_date || "마감 없음"}</p>
                 <span>{task.data.abc_priority === "none" ? "ABC 미지정" : `ABC ${task.data.abc_priority}${task.data.abc_order || ""}`}</span>
-            </article>)}</section>)}</div>}
+                <NativeSelect aria-label={`${task.title} 상태`} value={task.data.state} disabled={busyId === task.id}
+                    onChange={event => { void moveState(task, event.target.value as Task["data"]["state"]); }}>
+                    {states.map(candidate => <option key={candidate} value={candidate}>{statusLabels[candidate]}</option>)}
+                </NativeSelect>
+            </Card>)}</section>)}</div>}
         {view === "calendar" && <TaskCalendar tasks={visible} month={month} onMonth={setMonth} />}
         {view === "insights" && <TaskInsights tasks={visible} />}
         {(view === "today" || view === "inbox" || view === "upcoming" || view === "list") && list(visible)}
-        {selected && <div className="task-selected" ref={selectedRef}><div className="section-head"><h2>선택한 작업</h2>
+        {selected && <Card className="task-selected" ref={selectedRef}><div className="section-head"><h2>선택한 작업</h2>
             <ActionButton className="small" onClick={() => navigate({ item: "" })}>닫기</ActionButton></div>
             {mode === "complex" ? <RecordEditor key={selected.id} item={selected} items={items} catalog={catalog} userId={userId} onChanged={onChanged} />
                 : <div><p><strong>{selected.title}</strong> · {statusLabels[selected.data.state]}</p><p>{selected.body || "추가 설명 없음"}</p>
-                    <ActionButton onClick={() => navigate({ taskMode: "complex", taskView: "list" })}>정교 보기에서 상세 편집</ActionButton></div>}</div>}
+                    <ActionButton onClick={() => navigate({ taskMode: "complex", taskView: "list" })}>정교 보기에서 상세 편집</ActionButton></div>}</Card>}
+        </TabsContent></Tabs>
         {newDetailed && <NewItem kind="task" projectId={projectId} userId={userId} items={items} catalog={catalog}
             onClose={() => setNewDetailed(false)} onCreated={item => { setNewDetailed(false); onChanged(); navigate({ taskMode: "complex", taskView: "list", item: item.id }); }} />}
     </section>;
@@ -237,8 +284,7 @@ function TaskInsights({ tasks }: { tasks: Task[] }) {
     return <section className="task-insights" aria-label="작업 집계">
         <p>현재 조건의 작업 {total}건 · 진행 중 예상 소요 {remainingMinutes}분</p>
         <p className="hint">현재 스냅샷입니다. 완료 추세나 소요 시간 실측으로 해석하지 않습니다.</p>
-        <div className="task-chart">{groups.map(group => <div className="task-chart-row" key={group.label}>
-            <span>{group.label}</span><div role="img" aria-label={`${group.label} ${group.count}건`}><i style={{ width: `${total ? 100 * group.count / total : 0}%` }} /></div><strong>{group.count}</strong>
-        </div>)}</div>
+        <BarList title="작업 분포" description="현재 필터 기준 · 상태 및 ABC 등급" max={Math.max(total, 1)} unit="건"
+            items={groups.map((group, index) => ({ id: String(index), label: group.label ?? "기타", value: group.count }))} />
     </section>;
 }

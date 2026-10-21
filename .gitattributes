@@ -1,0 +1,2 @@
+# Keep the approved favicon bytes identical across Windows and Linux checkouts.
+web/public/favicon.svg -text

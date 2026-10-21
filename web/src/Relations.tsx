@@ -6,6 +6,7 @@ import {
 } from "./models";
 import type { Item, Link } from "./models";
 import { Input } from "./pydemia-ui/input";
+import { NativeSelect } from "./pydemia-ui/native-select";
 import { Textarea } from "./pydemia-ui/textarea";
 import { ActionButton, Badge, Empty, ErrorNotice, ExternalLink, Field, Loading, RouteLink } from "./ui";
 
@@ -59,16 +60,16 @@ export function Relations({ item, items, onChanged }: {
         <form onSubmit={event => { void add(event); }} className="section-space">
             <h3>관계 추가</h3>
             <div className="form-grid">
-                <Field label="시작 대상"><select required value={source} onChange={event => setSource(event.target.value)}>
+                <Field label="시작 대상"><NativeSelect required value={source} onChange={event => setSource(event.target.value)}>
                     {items.map(entry => <option key={entry.id} value={entry.id}>{kindLabels[entry.kind]} · {entry.title}</option>)}
-                </select></Field>
-                <Field label="관계"><select value={relation} onChange={event => setRelation(event.target.value)}>
+                </NativeSelect></Field>
+                <Field label="관계"><NativeSelect value={relation} onChange={event => setRelation(event.target.value)}>
                     {relationSchema.options.map(value => <option key={value} value={value}>{relationLabels[value]}</option>)}
-                </select></Field>
-                <Field label="연결 대상"><select required value={target} onChange={event => setTarget(event.target.value)}>
+                </NativeSelect></Field>
+                <Field label="연결 대상"><NativeSelect required value={target} onChange={event => setTarget(event.target.value)}>
                     <option value="">대상 선택</option>
                     {items.filter(entry => entry.id !== source).map(entry => <option key={entry.id} value={entry.id}>{kindLabels[entry.kind]} · {entry.title}</option>)}
-                </select></Field>
+                </NativeSelect></Field>
             </div>
             {error && <ErrorNotice error={error} />}
             <ActionButton type="submit" disabled={busy || !target}>{busy ? "처리 중…" : "관계 저장"}</ActionButton>
@@ -112,9 +113,9 @@ export function TestExecutions({ item, onChanged }: { item: Item; onChanged: () 
         <form className="section-space" onSubmit={event => { void record(event); }}>
             <h3>새 실행 결과 기록</h3>
             <div className="form-grid">
-                <Field label="결과"><select value={outcome} onChange={event => setOutcome(event.target.value)}>
+                <Field label="결과"><NativeSelect value={outcome} onChange={event => setOutcome(event.target.value)}>
                     <option value="passed">통과</option><option value="failed">실패</option><option value="aborted">중단</option>
-                </select></Field>
+                </NativeSelect></Field>
                 <Field label="실행 환경"><Input required value={environment} onChange={event => setEnvironment(event.target.value)} placeholder="예: Windows 11 · Chrome 141 · dev" /></Field>
             </div>
             <Field label="실제 실행 결과"><Textarea required rows={4} value={actual} onChange={event => setActual(event.target.value)} placeholder="관찰한 결과와 실패·중단 사유를 기록해 주세요." /></Field>

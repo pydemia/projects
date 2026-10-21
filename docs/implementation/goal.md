@@ -1,6 +1,18 @@
 # Projects 구현 goal
 
-2026-10-21 · 상태: 로컬 MVP·CI 통과, 공개 HTTPS 배포·실제 Entra 로그인 확인 · 최신 요구: APP-REQ-001~019
+2026-10-21 · 상태: 로컬 MVP·CI 통과, 공개 HTTPS 배포·실제 Entra 로그인 확인 · 최신 요구: APP-REQ-001~020
+
+## 현재 실행 goal · UI·UX 전면 개편
+
+기존의 “버튼·입력창 같은 기본 요소만 공통 컴포넌트로 바꾸고 화면 구조와
+업무용 컨트롤은 그대로 둔다”는 범위는 사용자 결정과 맞지 않아 폐기한다.
+[6개 제품 공식 자료 벤치마크](../planning/12-task-workspace-benchmark.md)를
+사용자 과업으로 번역하고, [개편 실행 계획](ui-ux-overhaul.md)의
+AC-35~39까지 구현·테스트·운영 브라우저에서 확인한다. 범위에는 전역
+탐색·개요·간편/정교 작업·기획/문서/테스트 목록과 편집·스킬 실행·추적이
+모두 포함된다. `ui.pydemia.ai`의 고정된 실제 source 컴포넌트를 업무
+조작에도 사용하고 21개 출시 UI 모드와 light/dark를 유지한다. Note는
+임시 Markdown 경계를 지킨다.
 
 사용자의 후속 요청으로 `projects.pydemia.ai` 배포와
 `pydemia@pydemia.ai` Microsoft Entra 로그인 연결을 현재 실행 범위에
@@ -8,18 +20,31 @@
 배포 구현과 검증은 [배포 안내](deployment.md) 및
 [검증 기록](verification.md)에 이어서 기록한다.
 
+2026-10-21 인증 범위 확대: Microsoft Entra의 단일 `pydemia` 테넌트에서
+`@pydemia.ai` 계정이 접속하도록 변경한다. 기존 `pydemia` 계정의 자료는
+유지하며 다른 사용자는 OIDC subject로 연결된 별도 개인 계정을 사용한다.
+도메인 밖·누락된 프록시 신원·다른 계정 세션을 거부하고 자체 가입·암호
+로그인을 계속 차단한다. APP-REQ-003의 이번 수용 조건은 도메인 접속,
+사용자별 자료 격리·기존 자료 보존, 운영 반영·실제 로그인 확인이다.
+
 최신 범위 조정: 구현 DB는 PostgreSQL로 확정했다. 문서 관리 본체는 향후
 Note 앱으로 연계하며, 이번 구현은 [임시 문서 기능](note-document-handoff.md)으로
 제한한다. 아래 초기 goal보다 이 사용자 지시를 우선한다.
 LLM 기본은 Codex 로그인이며 auth.json 파일 경로 또는 inline 인증을 YAML로
 설정한다. OpenAI-compatible API의 키·모델·주소도 YAML로 선택할 수 있다.
-전체 최신 요구 ID는 APP-REQ-001~019다.
+전체 최신 요구 ID는 APP-REQ-001~020이다.
 
 후속 UI 작업: [공통 UI 편입 기록](ui-component-integration.md)에 따라
 `ui.pydemia.ai`의 실제 컴포넌트·토큰·21개 출시 UI 모드를 적용하고
 light/dark 선택을 제공한다. favicon을 빌드·배포 검증 대상으로 추가한다.
-따라서 현재 요구 ID는 APP-REQ-001~019다. 아래 초기 구현 판정은 UI 개편
+따라서 현재 요구 ID는 APP-REQ-001~020이다. 아래 초기 구현 판정은 UI 개편
 이전 근거이므로 신규 UI 검증과 구분한다.
+
+2026-10-21 UI·UX 전면 개편: 기본 요소만의 편입은 불충분하다. 공통
+작업공간 외곽, 간편 수집/정교 관리, 기획·문서·테스트·SkillRun의
+목록→상세/검색/탭, 추적 필터/기준선, 초안·충돌 Dialog까지 실제
+컴포넌트와 사용 흐름을 적용한다. [공통 UI 편입 기록](ui-component-integration.md)에
+원본·hash를, [검증 기록](verification.md)에 별도 릴리즈 판정을 남긴다.
 
 후속 작업공간 goal: [제품 벤치마크](../planning/12-task-workspace-benchmark.md)를
 근거로 개인 할 일과 구현 작업을 한 PostgreSQL 작업 모델에 유지한다.

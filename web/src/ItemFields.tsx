@@ -1,6 +1,8 @@
 import type { Catalog, Item, Kind } from "./models";
 import { artifactDefinition } from "./models";
 import { Input } from "./pydemia-ui/input";
+import { Checkbox } from "./pydemia-ui/checkbox";
+import { NativeSelect } from "./pydemia-ui/native-select";
 import { Textarea } from "./pydemia-ui/textarea";
 import { ExternalLink, Field, StringList } from "./ui";
 
@@ -29,27 +31,27 @@ export function ArtifactFields({ data, onChange, catalog, items }: {
     return <>
         <div className="form-grid">
             <Field label="문서 종류">
-                <select value={textValue(data, "artifact_type")} onChange={event => set("artifact_type", event.target.value)}>
+                <NativeSelect value={textValue(data, "artifact_type")} onChange={event => set("artifact_type", event.target.value)}>
                     {!catalog?.artifacts.some(type => type.id === data.artifact_type) && !catalog?.document_profiles.some(type => type.id === data.artifact_type) && <option value={textValue(data, "artifact_type")}>{textValue(data, "artifact_type")} · 기존 문서 종류</option>}
                     {catalog && <optgroup label="핵심 산출물 7종">{catalog.document_profiles.map(type => <option key={type.id} value={type.id}>{type.name}</option>)}</optgroup>}
                     {catalog && <optgroup label="참고 산출물 분류">{catalog.artifacts.filter(type => !catalog.document_profiles.some(profile => profile.id === type.id)).map(type => <option key={type.id} value={type.id}>{type.name}</option>)}</optgroup>}
-                </select>
+                </NativeSelect>
             </Field>
             <Field label="참조 양식" hint="양식은 입력 자료이며, 작성 규칙은 고정한 스킬 원문을 사용합니다.">
-                <select value={textValue(data, "template_ref")} onChange={event => set("template_ref", event.target.value || null)}>
+                <NativeSelect value={textValue(data, "template_ref")} onChange={event => set("template_ref", event.target.value || null)}>
                     <option value="">지정하지 않음</option>
                     {catalog?.sources.map(source => <option key={source.id} value={source.id}>{source.id} · {source.name}</option>)}
-                </select>
+                </NativeSelect>
             </Field>
             <Field label="양식 버전·확인 시점">
                 <Input value={textValue(data, "template_version")} onChange={event => set("template_version", event.target.value || null)} placeholder="예: v3.1 · 2026-10-21 확인" />
             </Field>
             <Field label="참조 확인 상태" hint="원문 자료를 직접 확인한 경우에만 확인 상태를 변경해 주세요.">
-                <select value={textValue(data, "inspection_status")} onChange={event => set("inspection_status", event.target.value)}>
+                <NativeSelect value={textValue(data, "inspection_status")} onChange={event => set("inspection_status", event.target.value)}>
                     <option value="unverified">미확인</option>
                     <option value="verified">직접 확인함</option>
                     <option value="inaccessible">접근 실패</option>
-                </select>
+                </NativeSelect>
             </Field>
         </div>
         {selectedType && <details className="reference-details">
@@ -64,16 +66,12 @@ export function ArtifactFields({ data, onChange, catalog, items }: {
         <details className="reference-details">
             <summary>예시 자료와 프로젝트 근거 선택</summary>
             <fieldset><legend>예시·공개 참조</legend><div className="check-list">
-                {catalog?.sources.map(source => <label key={source.id}>
-                    <input type="checkbox" checked={examples.includes(source.id)} onChange={event => set("example_refs", event.target.checked ? [...examples, source.id] : examples.filter(id => id !== source.id))} />
-                    <span>{source.name}<small>{source.kind} · {source.format}</small></span>
-                </label>)}
+                {catalog?.sources.map(source => <Checkbox key={source.id} variant="card" label={source.name} description={`${source.kind} · ${source.format}`}
+                    checked={examples.includes(source.id)} onCheckedChange={checked => set("example_refs", checked === true ? [...examples, source.id] : examples.filter(id => id !== source.id))} />)}
             </div></fieldset>
             <fieldset><legend>프로젝트 원본·근거</legend><div className="check-list">
-                {items.map(item => <label key={item.id}>
-                    <input type="checkbox" checked={projectSources.includes(item.id)} onChange={event => set("project_source_refs", event.target.checked ? [...projectSources, item.id] : projectSources.filter(id => id !== item.id))} />
-                    <span>{item.title}<small>revision {item.revision}</small></span>
-                </label>)}
+                {items.map(item => <Checkbox key={item.id} variant="card" label={item.title} description={`revision ${item.revision}`}
+                    checked={projectSources.includes(item.id)} onCheckedChange={checked => set("project_source_refs", checked === true ? [...projectSources, item.id] : projectSources.filter(id => id !== item.id))} />)}
                 {!items.length && <p className="muted">등록된 프로젝트 근거가 없습니다.</p>}
             </div></fieldset>
         </details>
@@ -111,21 +109,20 @@ export function ItemDataFields({ kind, data, onChange, catalog, items, existingI
         </>;
         case "requirement": return <>
             <div className="form-grid">
-                <Field label="요구 분류"><select value={textValue(data, "category")} onChange={event => set("category", event.target.value)}>
+                <Field label="요구 분류"><NativeSelect value={textValue(data, "category")} onChange={event => set("category", event.target.value)}>
                     <option value="functional">기능 요구사항 · FR</option><option value="nonfunctional">비기능 요구사항 · NFR</option>
-                </select></Field>
-                <Field label="우선순위"><select value={textValue(data, "priority")} onChange={event => set("priority", event.target.value)}>
+                </NativeSelect></Field>
+                <Field label="우선순위"><NativeSelect value={textValue(data, "priority")} onChange={event => set("priority", event.target.value)}>
                     <option value="high">높음</option><option value="medium">보통</option><option value="low">낮음</option>
-                </select></Field>
-                <Field label="반영 분류"><select value={textValue(data, "disposition")} onChange={event => set("disposition", event.target.value)}>
+                </NativeSelect></Field>
+                <Field label="반영 분류"><NativeSelect value={textValue(data, "disposition")} onChange={event => set("disposition", event.target.value)}>
                     <option value="new">신규</option><option value="extend">확장</option><option value="change">변경</option><option value="merge">통합</option><option value="duplicate">중복</option><option value="conflict">충돌</option><option value="defer">보류</option>
-                </select></Field>
+                </NativeSelect></Field>
             </div>
             {listField("acceptance_criteria", "수용 조건")}
             <fieldset><legend>연결할 기존 기능</legend><div className="check-list">
-                {items.filter(item => item.kind === "feature").map(item => <label key={item.id}>
-                    <input type="checkbox" checked={listValue(data, "feature_ids").includes(item.id)} onChange={event => set("feature_ids", event.target.checked ? [...listValue(data, "feature_ids"), item.id] : listValue(data, "feature_ids").filter(id => id !== item.id))} />{item.title}
-                </label>)}
+                {items.filter(item => item.kind === "feature").map(item => <Checkbox key={item.id} variant="card" label={item.title}
+                    checked={listValue(data, "feature_ids").includes(item.id)} onCheckedChange={checked => set("feature_ids", checked === true ? [...listValue(data, "feature_ids"), item.id] : listValue(data, "feature_ids").filter(id => id !== item.id))} />)}
                 {!items.some(item => item.kind === "feature") && <p className="muted">먼저 기존 기능을 등록하면 선택할 수 있습니다.</p>}
             </div></fieldset>
             {areaField("excluded_reason", "제외·보류·충돌 사유")}
@@ -134,13 +131,13 @@ export function ItemDataFields({ kind, data, onChange, catalog, items, existingI
         case "task": return <>
             <div className="form-grid">
                 <Field label="작업 유형" hint="개인 할 일은 가볍게 완료합니다. 구현 작업은 근거·테스트 완료 조건을 유지합니다. 생성 후 유형은 바꿀 수 없습니다.">
-                    <select value={textValue(data, "workflow") || "delivery"} disabled={!!existingItem} onChange={event => set("workflow", event.target.value)}>
+                    <NativeSelect value={textValue(data, "workflow") || "delivery"} disabled={!!existingItem} onChange={event => set("workflow", event.target.value)}>
                         <option value="personal">개인 할 일</option><option value="delivery">구현 작업</option>
-                    </select>
+                    </NativeSelect>
                 </Field>
-                <Field label="작업 상태"><select value={textValue(data, "state")} onChange={event => set("state", event.target.value)}>
+                <Field label="작업 상태"><NativeSelect value={textValue(data, "state")} onChange={event => set("state", event.target.value)}>
                     <option value="todo">할 일</option><option value="in_progress">진행 중</option><option value="in_review">검토 중</option><option value="done">완료</option><option value="cancelled">취소</option>
-                </select></Field>
+                </NativeSelect></Field>
             </div>
             <div className="form-grid">
                 {textField("list_name", "목록·영역")}
@@ -150,15 +147,15 @@ export function ItemDataFields({ kind, data, onChange, catalog, items, existingI
             </div>
             <div className="form-grid">
                 {textField("context", "GTD 실행 맥락")}
-                <Field label="필요 에너지"><select value={textValue(data, "energy") || "any"} onChange={event => set("energy", event.target.value)}>
+                <Field label="필요 에너지"><NativeSelect value={textValue(data, "energy") || "any"} onChange={event => set("energy", event.target.value)}>
                     <option value="any">제약 없음</option><option value="low">낮음</option><option value="medium">보통</option><option value="high">높음</option>
-                </select></Field>
-                <Field label="ABC 가치 우선순위"><select value={textValue(data, "abc_priority") || "none"} onChange={event => set("abc_priority", event.target.value)}>
+                </NativeSelect></Field>
+                <Field label="ABC 가치 우선순위"><NativeSelect value={textValue(data, "abc_priority") || "none"} onChange={event => set("abc_priority", event.target.value)}>
                     <option value="none">미지정</option><option value="A">A · 핵심 가치</option><option value="B">B · 중요</option><option value="C">C · 선택</option>
-                </select></Field>
+                </NativeSelect></Field>
                 <Field label="ABC 그룹 내 순서"><Input type="number" min={0} max={999} value={Number(data.abc_order) || 0} onChange={event => set("abc_order", Number(event.target.value) || 0)} /></Field>
             </div>
-            <label className="check-row"><input type="checkbox" checked={data.next_action !== false} onChange={event => set("next_action", event.target.checked)} />GTD 다음 행동으로 표시</label>
+            <Checkbox className="check-row" variant="card" label="GTD 다음 행동으로 표시" checked={data.next_action !== false} onCheckedChange={checked => set("next_action", checked === true)} />
             {textField("goal", "연결된 목표·가치")}
             <Field label="GitHub Issue URL" hint="github.com의 Issue 주소를 연결합니다. 상태 동기화·Issue 생성은 별도 연동 단계입니다.">
                 <Input type="url" value={textValue(data, "github_issue_url")} onChange={event => set("github_issue_url", event.target.value)} placeholder="https://github.com/owner/repo/issues/123" />
@@ -166,7 +163,7 @@ export function ItemDataFields({ kind, data, onChange, catalog, items, existingI
             {textValue(data, "workflow") !== "personal" && listField("acceptance_criteria", "완료·수용 조건")}
             {(data.state === "cancelled" || textValue(data, "cancellation_reason")) && areaField("cancellation_reason", "작업 취소 사유")}
             {textValue(data, "workflow") !== "personal" && <><div className="form-grid">{textField("result_url", "결과물·PR·문서 URL")}{textField("target_sha", "검증 대상 commit SHA")}</div>
-                <label className="check-row"><input type="checkbox" checked={data.requires_test !== false} onChange={event => set("requires_test", event.target.checked)} />이 작업의 완료에 테스트 근거가 필요함</label>
+                <Checkbox className="check-row" variant="card" label="이 작업의 완료에 테스트 근거가 필요함" checked={data.requires_test !== false} onCheckedChange={checked => set("requires_test", checked === true)} />
                 <p className="hint">구현 작업 완료 전환 시 서버가 결과물·수용 조건·연결된 현행 테스트를 검사합니다.</p></>}
         </>;
         case "test_case": return <>

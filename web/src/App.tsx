@@ -1,11 +1,16 @@
 import { Component, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { api, ApiError, downloadArchive, errorMessage, setCsrf } from "./api";
-import { navigate, useResource, useRoute } from "./hooks";
+import { navigate, routeUrl, useResource, useRoute } from "./hooks";
 import type { Session, Project } from "./models";
 import { dateLabel } from "./models";
 import { Button } from "./pydemia-ui/button";
+import { Card } from "./pydemia-ui/card";
+import { AppBody, AppHeader, AppMain, AppShell, AppSidebar } from "./pydemia-ui/app-shell";
 import { Input } from "./pydemia-ui/input";
+import { NativeSelect } from "./pydemia-ui/native-select";
+import { SegmentedControl, SegmentedControlItem } from "./pydemia-ui/segmented-control";
+import { SideNav, SideNavLink } from "./pydemia-ui/navigation";
 import { Textarea } from "./pydemia-ui/textarea";
 import { ThemeControls } from "./theme";
 import { ItemsPage } from "./ItemsPage";
@@ -85,7 +90,9 @@ function AuthPage({ onSignedIn, sessionError, retrySession }: {
         finally { setBusy(false); }
     }
     return <main className="auth-page"><Brand /><div className="auth-theme"><ThemeControls /></div><div className="auth-intro"><div className="eyebrow">YOUR PROJECT WORKSPACE</div><h1>아이디어부터<br />실행의 근거까지.</h1><p>메모, 요건, 스킬 작업과 검증 기록을 한 프로젝트에서 이어갑니다.</p></div>
-        <section className="auth-form">{!microsoftLogin && <nav className="view-switch" aria-label="계정 작업"><ActionButton aria-pressed={mode === "login"} className={mode === "login" ? "selected" : ""} onClick={() => { setMode("login"); setError(""); }}>로그인</ActionButton>{registrationEnabled && <ActionButton aria-pressed={mode === "register"} className={mode === "register" ? "selected" : ""} onClick={() => { setMode("register"); setError(""); }}>계정 만들기</ActionButton>}</nav>}
+        <Card className="auth-form">{!microsoftLogin && registrationEnabled && <SegmentedControl label="계정 작업" name="auth-mode" value={mode} onValueChange={value => { setMode(value as "login" | "register"); setError(""); }}>
+            <SegmentedControlItem value="login">로그인</SegmentedControlItem><SegmentedControlItem value="register">계정 만들기</SegmentedControlItem>
+        </SegmentedControl>}
             {microsoftLogin && <p className="muted">pydemia@pydemia.ai Microsoft 계정으로 로그인합니다.</p>}
             {authOptions.status === "ready" && !registrationEnabled && !microsoftLogin && <p className="muted">개인 작업공간입니다. 발급된 계정으로 로그인해 주세요.</p>}
             <h2>{mode === "login" ? "작업공간으로 돌아가기" : "개인 작업공간 시작하기"}</h2>
@@ -94,7 +101,7 @@ function AuthPage({ onSignedIn, sessionError, retrySession }: {
                 <Button className="primary full-width" type="submit" disabled={busy}>{busy ? "서버 확인 중…" : mode === "login" ? "로그인" : "계정 만들기"}</Button></form>}
             {sessionError && <ErrorNotice error={sessionError} retry={retrySession} />}
             <p className="auth-health">{health.status === "loading" ? "API 연결 확인 중…" : health.status === "ready" ? "API 서버 연결됨" : "API 서버에 연결되지 않았습니다."}{health.status === "error" && <ActionButton className="linkbtn" onClick={health.reload}>다시 확인</ActionButton>}</p>
-        </section>
+        </Card>
     </main>;
 }
 
@@ -130,29 +137,34 @@ function Workbench({ session, onLogout }: { session: Session; onLogout: () => vo
         catch (error) { setError(errorMessage(error)); }
         finally { setExportBusy(false); }
     }
-    return <div className="shell"><a href="#main" className="skip-link">본문으로 이동</a>
-        <aside className="sidebar" aria-label="프로젝트 탐색"><div><Brand /><div className="workspace">개인 작업공간</div></div>
-            <div className="project-nav"><label className="side-label" htmlFor="project-choice">PROJECT</label><select id="project-choice" className="project-choice" value={route.project} onChange={event => navigate({ project: event.target.value, item: "", run: "", baseline: "", q: "", view: "overview" })}>
-                <option value="">프로젝트 목록</option>{projects.status === "ready" && projects.data.map(project => <option value={project.id} key={project.id}>{project.name}</option>)}</select>
+    return <AppShell appearance="canvas" className="shell"><a href="#main" className="skip-link">본문으로 이동</a>
+        <AppBody className="workspace-body"><AppSidebar className="sidebar" aria-label="프로젝트 탐색"><div><Brand /><div className="workspace">개인 작업공간</div></div>
+            <div className="project-nav"><label className="side-label" htmlFor="project-choice">PROJECT</label><NativeSelect id="project-choice" className="project-choice" value={route.project} onChange={event => navigate({ project: event.target.value, item: "", run: "", baseline: "", q: "", view: "overview" })}>
+                <option value="">프로젝트 목록</option>{projects.status === "ready" && projects.data.map(project => <option value={project.id} key={project.id}>{project.name}</option>)}</NativeSelect>
                 <ActionButton className="linkbtn small new-project" onClick={() => setCreateOpen(true)}>+ 프로젝트 만들기</ActionButton>
-                <nav className="nav" aria-label="프로젝트 메뉴">{menu.map(([view, icon, label]) => <RouteLink key={view} patch={{ view, item: "", run: "", q: "", kind: "" }} className={route.view === view && route.project ? "active" : ""} current={route.view === view && !!route.project}><span className="nav-icon" aria-hidden="true">{icon}</span>{label}</RouteLink>)}</nav>
+                <SideNav className="nav" aria-label="프로젝트 메뉴">{menu.map(([view, icon, label]) => {
+                    const patch = { view, item: "", run: "", q: "", kind: "" };
+                    return <SideNavLink key={view} variant="filled" href={routeUrl(patch)} aria-current={route.view === view && !!route.project ? "page" : undefined}
+                        onClick={event => { if (!event.metaKey && !event.ctrlKey && !event.shiftKey && event.button === 0) { event.preventDefault(); navigate(patch); } }}>
+                        <span className="nav-icon" aria-hidden="true">{icon}</span>{label}</SideNavLink>;
+                })}</SideNav>
             </div><div className="sidebar-bottom"><span className="avatar" aria-hidden="true">{session.user.username.slice(0, 2).toUpperCase()}</span><strong>{session.user.username}</strong><p className="muted small">개인 모드</p><ActionButton className="small" disabled={logoutBusy} onClick={() => { void logout(); }}>{logoutBusy ? "처리 중…" : "로그아웃"}</ActionButton></div>
-        </aside>
-        <div className="workspace-main"><header className="topbar"><div className="crumb"><RouteLink patch={{ project: "", item: "", run: "", baseline: "" }}>프로젝트</RouteLink>{selected && <><span>/</span><strong>{selected.name}</strong><span>/</span><span>{title}</span></>}</div><div className="actions">
+        </AppSidebar>
+        <div className="workspace-main"><AppHeader className="topbar"><div className="crumb"><RouteLink patch={{ project: "", item: "", run: "", baseline: "" }}>프로젝트</RouteLink>{selected && <><span>/</span><strong>{selected.name}</strong><span>/</span><span>{title}</span></>}</div><div className="actions">
             <ThemeControls />
             {runtime.status === "ready" && <span className={`runtime-label ${runtime.data.configured ? "configured" : ""}`}>{runtime.data.configured ? "LLM 연결 설정됨" : "LLM 미설정"}</span>}
             {selected && <ActionButton className="small" disabled={exportBusy} onClick={() => { void exportProject(); }}>{exportBusy ? "ZIP 받는 중…" : "프로젝트 ZIP"}</ActionButton>}
             <ActionButton className="mobile-logout small" disabled={logoutBusy} onClick={() => { void logout(); }}>로그아웃</ActionButton>
-        </div></header>
-            <main id="main" className="page" tabIndex={-1}>
+        </div></AppHeader>
+            <AppMain id="main" className="page" tabIndex={-1}>
                 {error && <ErrorNotice error={error} />}
                 {projects.status === "loading" && <Loading label="프로젝트 목록 불러오는 중…" />}
                 {projects.status === "error" && <ErrorNotice error={projects.error} retry={projects.reload} />}
                 {projects.status === "ready" && (!route.project ? <ProjectsList projects={projects.data} onCreate={() => setCreateOpen(true)} onImported={project => { projects.reload(); navigate({ project: project.id, view: "overview", item: "", run: "", baseline: "", q: "" }); }} /> : selected ? <ProjectWorkspace project={selected} userId={session.user.id} revision={revision} onChanged={() => setRevision(value => value + 1)} catalog={catalog} runtime={runtime} /> : <Empty title="프로젝트를 찾을 수 없습니다."><p>프로젝트가 존재하지 않거나 이 계정의 접근 범위에 없습니다.</p><RouteLink patch={{ project: "", item: "" }}>프로젝트 목록으로</RouteLink></Empty>)}
-            </main>
+            </AppMain>
         </div>
-        {createOpen && <CreateProject onClose={() => setCreateOpen(false)} onCreated={project => { setCreateOpen(false); projects.reload(); navigate({ project: project.id, view: "overview", item: "", run: "", baseline: "", q: "" }); }} />}
-    </div>;
+        </AppBody>{createOpen && <CreateProject onClose={() => setCreateOpen(false)} onCreated={project => { setCreateOpen(false); projects.reload(); navigate({ project: project.id, view: "overview", item: "", run: "", baseline: "", q: "" }); }} />}
+    </AppShell>;
 }
 
 function ProjectWorkspace({ project, userId, revision, onChanged, catalog, runtime }: {
@@ -186,7 +198,7 @@ function CreateProject({ onClose, onCreated }: { onClose: () => void; onCreated:
     return <Modal title="프로젝트 만들기" onClose={onClose}><form onSubmit={event => { void create(event); }}>
         <Field label="프로젝트 이름"><Input required autoFocus maxLength={200} value={name} onChange={event => setName(event.target.value)} /></Field>
         <Field label="목표"><Textarea rows={4} value={goal} onChange={event => setGoal(event.target.value)} placeholder="이 프로젝트로 해결할 문제와 만들 결과를 적어 주세요." /></Field>
-        <Field label="프로필"><select value={profile} onChange={event => setProfile(event.target.value)}><option value="simple">간편 · 개인 아이디어부터 시작</option><option value="standard">표준 · 기획·설계·검증 근거 함께 관리</option></select></Field>
+        <Field label="프로필"><NativeSelect value={profile} onChange={event => setProfile(event.target.value)}><option value="simple">간편 · 개인 아이디어부터 시작</option><option value="standard">표준 · 기획·설계·검증 근거 함께 관리</option></NativeSelect></Field>
         <p className="hint">문서 종류 35종은 선택 항목입니다. 모든 문서를 필수로 만들지 않습니다.</p>
         {error && <ErrorNotice error={error} />}
         <div className="form-actions"><Button variant="outline" type="button" onClick={onClose}>취소</Button><Button className="primary" type="submit" disabled={busy || !name.trim()}>{busy ? "만드는 중…" : "프로젝트 만들기"}</Button></div>
@@ -215,7 +227,7 @@ function ProjectsList({ projects, onCreate, onImported }: {
     }
     return <>
         <PageHead title="프로젝트" description="이어갈 일을 고르거나, 새로운 아이디어를 프로젝트로 시작하세요." eyebrow="YOUR WORKSPACE"><ActionButton onClick={() => setImportOpen(true)}>ZIP 가져오기</ActionButton><ActionButton className="primary" onClick={onCreate}>+ 프로젝트 만들기</ActionButton></PageHead>
-        {projects.length ? <div className="project-list">{projects.map(project => <RouteLink key={project.id} patch={{ project: project.id, view: "overview", item: "", run: "", baseline: "", q: "" }} className="project-row"><div><h2>{project.name}</h2><p>{project.goal || "아직 작성한 목표가 없습니다."}</p></div><span>{project.profile === "simple" ? "간편" : "표준"}<small>{dateLabel(project.created_at)}</small></span><span aria-hidden="true">→</span></RouteLink>)}</div> : <Empty title="처음 시작하는 프로젝트"><p>원문 아이디어를 남기고, 스킬로 문서와 실행 계획을 구체화해 보세요.</p><ActionButton className="primary" onClick={onCreate}>프로젝트 만들기</ActionButton></Empty>}
+        {projects.length ? <div className="project-list">{projects.map(project => <Card key={project.id} className="project-card"><RouteLink patch={{ project: project.id, view: "overview", item: "", run: "", baseline: "", q: "" }} className="project-row"><div><h2>{project.name}</h2><p>{project.goal || "아직 작성한 목표가 없습니다."}</p></div><span>{project.profile === "simple" ? "간편" : "표준"}<small>{dateLabel(project.created_at)}</small></span><span aria-hidden="true">→</span></RouteLink></Card>)}</div> : <Empty title="처음 시작하는 프로젝트"><p>원문 아이디어를 남기고, 스킬로 문서와 실행 계획을 구체화해 보세요.</p><ActionButton className="primary" onClick={onCreate}>프로젝트 만들기</ActionButton></Empty>}
         {importOpen && <Modal title="프로젝트 ZIP 가져오기" onClose={() => setImportOpen(false)}><form onSubmit={event => { void importFile(event); }}><p>Projects에서 반출한 ZIP을 선택해 주세요. 서버가 hash·경로·참조와 ID 중복을 검사합니다.</p><Field label="프로젝트 ZIP · 최대 8 MB"><Input type="file" required accept=".zip,application/zip" onChange={event => setFile(event.target.files?.[0] ?? null)} /></Field>{error && <ErrorNotice error={error} />}<div className="form-actions"><ActionButton type="button" onClick={() => setImportOpen(false)}>닫기</ActionButton><ActionButton className="primary" type="submit" disabled={busy || !file}>{busy ? "검사·가져오는 중…" : "서버에서 검사 후 가져오기"}</ActionButton></div></form></Modal>}
     </>;
 }

@@ -16,6 +16,7 @@ from .config import Settings
 from .runtime.models import RunResult, RuntimeFailure
 
 _LIMIT = 4 * 1024 * 1024
+_CREATE_NO_WINDOW: int = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 
 
 def _failure(code: str, message: str) -> RuntimeFailure:
@@ -179,7 +180,7 @@ class CodexLoginRunner:
                         cwd=root,
                         env=environment,
                         shell=False,
-                        creationflags=subprocess.CREATE_NO_WINDOW
+                        creationflags=_CREATE_NO_WINDOW
                         if os.name == "nt"
                         else 0,
                     )
@@ -228,7 +229,7 @@ class CodexLoginRunner:
                             stdout=subprocess.DEVNULL,
                             stderr=subprocess.DEVNULL,
                             timeout=10,
-                            creationflags=subprocess.CREATE_NO_WINDOW,
+                            creationflags=_CREATE_NO_WINDOW,
                             check=False,
                         )
                     else:

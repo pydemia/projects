@@ -30,9 +30,11 @@ GTD의 행동·시간·맥락·에너지와 Franklin ABC의 가치·순서를 �
 원격 상태 동기화는 후속 계약이다. 실행 항목·단계별 판정은
 [작업공간 구현 계획](task-workspace.md)을 따른다.
 
-2026-10-21 로컬 재검증: Docker가 다시 동작해 PostgreSQL migration,
-`uv run pytest` 135개, 웹 TypeScript/Vitest 17개, Ruff·mypy·웹 빌드가
-통과했다. 작업공간 운영 배포/브라우저 판정은 별도로 기록한다.
+2026-10-21 재검증: PostgreSQL migration, `uv run pytest` 135개,
+웹 TypeScript/Vitest 19개, Ruff·mypy·웹 빌드와 최종 GitHub Actions가
+통과했다. 운영 이미지를 교체하고 Entra 로그인 브라우저에서 간편 입력,
+개인 완료·다시 열기, 정교 보기의 목록·보드·캘린더·집계와 light/dark를
+확인했다. 범위별 판정은 [검증 기록](verification.md)에 남긴다.
 
 ## 최종 판정
 

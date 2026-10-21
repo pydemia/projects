@@ -38,6 +38,13 @@ Basic light/dark의 집계 화면도 확인했습니다. 브라우저에서 구�
 이번 운영 검사의 증거가 아닙니다. 그중 gate·입력 검증·정렬은 위의
 PostgreSQL/Vitest에서 검사했고, 외부 동기화는 구현하지 않았습니다.
 
+최종 앱 이미지는 source hash `68cc2b8db08e1e0b`로 빌드해 배포했고,
+앱과 PostgreSQL 컨테이너의 health가 정상입니다. 기존 DB volume과
+OAuth 프록시는 유지했습니다. 선택된 간편/정교 모드는 배포 후 브라우저에서
+pydemia UI의 primary/outline 버튼 대비로 확인했습니다. 최종 커밋
+`fa4e0bf`의 [GitHub Actions 검사](https://github.com/pydemia/projects/actions/runs/39583692795)는
+완료·성공입니다.
+
 ## 2026-10-21 pydemia UI·favicon 후속 검사
 
 [편입 기록](ui-component-integration.md)의 고정 소스를 사용해 로그인·프로젝트·문서·스킬·추적 화면의 버튼·입력과 공통 상태 컴포넌트를 바꿨습니다. `npm --prefix web run check`는 TypeScript와 **14개 테스트**가 통과했고 `npm --prefix web run build`는 production build와 favicon 검증 스크립트가 통과했습니다. 빌드의 `favicon.svg` SHA-256은 `210e38b2f2f4dace4d0bf32f76dc54c17c8b335a5a056868aebf4795ae8eae33`으로 원본과 일치합니다. 배포 archive 검사에서 favicon·검증 스크립트·폰트 고지 포함과 인증 파일 미포함을 확인했습니다.

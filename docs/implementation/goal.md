@@ -1,6 +1,6 @@
 # Projects 구현 goal
 
-2026-10-21 · 상태: 로컬 MVP·CI 통과, 원격 서비스·Entra 앱 구성 완료, DNS·실제 로그인 검증 대기 · 최신 근거: APP-REQ-001~012
+2026-10-21 · 상태: 로컬 MVP·CI 통과, 공개 HTTPS 배포·실제 Entra 로그인 확인 · 최신 근거: APP-REQ-001~012
 
 사용자의 후속 요청으로 `projects.pydemia.ai` 배포와
 `pydemia@pydemia.ai` Microsoft Entra 로그인 연결을 현재 실행 범위에
@@ -24,9 +24,10 @@ PostgreSQL 기반 개인 앱, Hub 원문 스킬 실행, 아이디어 요건화·
 브라우저 검사를 통과했다. [수용 조건별 증거와 한계](verification.md)를 따른다.
 
 OpenAI 원격 호출·Note 실연동·팀 협업은 후속 또는 미검증이다.
-GitHub Actions의 백엔드·웹 검사는 커밋 `802c50d`에서 통과했다.
-배포는 진행 중이며 DNS·외부 HTTPS·실제 Entra 로그인 검증 전에는
-완료로 판정하지 않는다.
+GitHub Actions의 백엔드·웹·배포 스크립트 검사는 커밋 `8538105`에서 통과했다.
+`projects.pydemia.ai`의 DNS·Let's Encrypt HTTPS·실제 Entra 로그인과
+기존 `pydemia` 작업공간 표시를 확인했다. 운영 환경의 실제 LLM 문서 생성과
+Note 실연동은 아직 검증하지 않았다.
 사용자가 승인한 과거 임시 인증 복사본 두 파일의 삭제는 자동 승인 검토가
 거부하여 남아 있으며, 이 별도 정리를 완료로 표시하지 않는다.
 

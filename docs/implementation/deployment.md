@@ -1,9 +1,8 @@
 # Projects 원격 배포와 Microsoft Entra 로그인
 
-2026-10-21 현재 대상은 기존 Ubuntu 서버 `codex-devbox`와
-`projects.pydemia.ai`입니다. 이 문서는 완료된 구성과 아직 필요한 외부
-설정을 구분합니다. Entra 앱과 서버 자격 증명은 구성됐고, 실제 HTTPS·
-로그인은 DNS가 설정된 뒤 검증해야 합니다.
+2026-10-21 현재 기존 Ubuntu 서버 `codex-devbox`에서
+`projects.pydemia.ai`를 제공합니다. DNS, Let's Encrypt HTTPS와
+`pydemia@pydemia.ai`의 실제 Microsoft Entra 로그인을 확인했습니다.
 
 ## 구성과 데이터 경계
 
@@ -23,10 +22,11 @@ DB 접속 값, Entra client secret과 cookie secret은 `.secrets/`에 mode 0600
 계정에 매핑합니다. 앱이 mode 0600 인증 파일을 읽도록 컨테이너 내부만
 UID 0으로 실행하고 권한 상승·Linux capability를 제거했습니다.
 
-## 필요한 외부 설정
+## 외부 설정과 확인 결과
 
-1. **대기:** Squarespace DNS에서 `projects` A 레코드를 서버 IPv4
-   `139.59.246.134`로 설정하고 전파를 확인합니다.
+1. **완료:** Squarespace DNS에 `projects` A 레코드를 서버 IPv4
+   `139.59.246.134`, TTL 30분으로 저장했습니다. 권한 DNS와 일반 조회에서
+   같은 주소를 확인했습니다.
 2. **완료:** Entra의 `pydemia` 테넌트에 단일 테넌트 Web 앱
    `pydemia Projects`(client ID `6e82235b-8b6b-441c-a944-8a443d78b390`)
    를 등록했습니다. redirect URI는
@@ -35,8 +35,12 @@ UID 0으로 실행하고 권한 상승·Linux capability를 제거했습니다.
    저장했습니다. `scripts/activate-entra.py`는 비밀 값을 표준 입력으로
    전송하고 서버의 `deploy/activate-entra.py`가 원자적으로 설정을
    교체합니다. 비밀 값은 채팅·로그·Git에 기록하지 않습니다.
-3. **대기:** HTTPS 인증서·로그인·로그아웃·차단 계정·기존 Projects 데이터
-   접근을 실제 브라우저에서 확인합니다.
+3. **완료:** Let's Encrypt 인증서와 공개 HTTPS, 미인증 `/api/session`의
+   401, OAuth 시작 시 지정 tenant/client/callback/PKCE로 이동, 실제
+   `pydemia@pydemia.ai` Entra 동의·로그인 및 기존 `pydemia` 개인 작업공간
+   표시를 확인했습니다. 조직 전체 동의는 적용하지 않았습니다.
+4. **추가 운영 검사:** 로그아웃·허용 목록 밖 계정 차단과 운영 LLM 문서
+   생성은 이번 실제 브라우저 검사에서 수행하지 않았습니다.
 
 `deploy/authenticated-emails.txt`가 허용 이메일을 관리합니다. 운영
 배포의 엔트라 issuer는 실제 단일 테넌트 ID로 지정됐습니다. 앱
@@ -67,8 +71,9 @@ systemctl --user start projects-caddy-sync.service
 
 `caddy validate`와 `reload`는 Caddyfile adapter를 사용합니다. 다른
 사이트의 설정을 유지한 상태에서 Caddy admin의 호스트 목록에
-`projects.pydemia.ai`가 있는지 확인합니다. DNS 설정 전에는 인증서
-발급과 공개 주소를 정상 상태로 판정하지 않습니다.
+`projects.pydemia.ai`가 있는지 확인합니다. DNS 설정 후 인증서 발급을
+다시 시도하도록 Caddy를 강제로 reload했고, 기존 네 사이트와 Projects
+사이트가 함께 등록된 것을 확인했습니다.
 
 PostgreSQL volume, `state/`, `.secrets/`는 배포 패키지와 별도로 백업해야
 합니다. `auth.json`을 운영 서버에 복사한 상태이므로 원본 인증의 갱신·

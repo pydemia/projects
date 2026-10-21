@@ -4,9 +4,9 @@
 
 최신 사용자 결정에 따른 개인용 로컬 MVP를 구현하고 검사했습니다.
 문서는 Note 연계 전의 임시 Markdown 범위이며, Projects는 업무 관계와
-SkillRun을 소유합니다. GitHub 게시·CI 실행·배포·팀 협업·Note 실연동은
-원래 로컬 검증에 포함하지 않았습니다. 이후 배포 진행 상황은 아래
-별도 절에 기록합니다.
+SkillRun을 소유합니다. 원래 로컬 검사 이후 GitHub CI, 공개 배포와
+실제 Microsoft Entra 로그인을 별도로 확인했습니다. 팀 협업과 Note
+실연동은 후속 범위입니다.
 
 ## 2026-10-21 배포·Entra 추가 검사
 
@@ -25,22 +25,26 @@ Entra 프록시 인증 경로를 구현했습니다. 앱은 프록시가 전달�
   실행 중입니다. 앱·DB health check 통과, 미인증 `/api` 요청은 401입니다.
   Caddy runtime에 `projects.pydemia.ai` 경로를 로드했고 기존 네 개 사이트
   호스트 설정이 함께 남아 있음을 확인했습니다.
-- GitHub `main`의 커밋 `e9b4f7e`에서
-  [Actions 백엔드·웹 검사](https://github.com/pydemia/projects/actions/runs/39572260702)가
-  모두 통과했습니다. 첫 CI에서 발견한 Linux mypy의 Windows 전용 상수
-  오류는 커밋 `802c50d`에서 수정했습니다. 서버 앱 이미지는 최신 소스 묶음
+- GitHub `main`의 커밋 `8538105`에서
+  [Actions 백엔드·웹·배포 스크립트 검사](https://github.com/pydemia/projects/actions/runs/39572518201)가
+  모두 통과했습니다. 서버 앱 이미지는 소스 묶음
   `f476d07a5dfa1100`으로 재빌드했고 health check를 통과했습니다.
 - Entra `pydemia Projects` 단일 테넌트 앱과 전용 client secret을
   등록해 서버 비공개 설정에 연결했습니다. 프록시의 로그인 시작 요청이
   실제 client ID·tenant·PKCE·정확한 callback으로 302 이동함을
-  확인했습니다. DNS A 레코드가 아직 없어서 공개 HTTPS 접속·실제
-  Microsoft 로그인·운영 브라우저 흐름은 **미검증**입니다.
+  확인했습니다. Squarespace DNS의 `projects` A 레코드는
+  `139.59.246.134`(TTL 30분)로 저장됐고 권한 DNS·일반 조회가 일치합니다.
+  Caddy가 발급한 Let's Encrypt 인증서로 공개 HTTPS가 열리고, 미인증
+  `/api/session`은 401입니다. Edge 브라우저에서 `pydemia@pydemia.ai`로
+  개인 동의 후 로그인해 기존 `pydemia` 작업공간을 확인했습니다. 조직
+  전체 동의는 선택하지 않았습니다. 로그아웃·허용 목록 밖 계정·운영 LLM
+  문서 생성은 이번 운영 브라우저 검사에서 수행하지 않았습니다.
 - 발급 당시 사용한 로컬 임시 비밀 값 파일은 `.gitignore`의 `.projects/`
   아래에 있습니다. 서버 반영 후 정확한 파일만 삭제하려 했지만 자동 승인
   검토가 `blocked by policy`로 거부했습니다. 다른 방법으로 우회하지
   않았으며 로컬 사본의 수동 정리가 남습니다.
 
-저장소는 초기 커밋이 없는 작업 트리입니다. commit SHA 대신
+아래 로컬 MVP 검사를 수행할 당시 저장소는 초기 커밋이 없는 작업 트리였습니다. commit SHA 대신
 [파일별 SHA-256과 명령 결과](screenshots/local-checks.json)를 남겼습니다.
 소스·테스트·설정·의존성·QA 스크립트·참조 registry 70개 파일의 묶음 hash는
 `1f026d7e0d6c0011c3c89f70a2896060ac3196d19057fa7c3deaec98868b07df`입니다.
@@ -151,7 +155,7 @@ Hub bundle에 없는 추가 스킬·binary·외부 도구가 필요하면 review
   수정했습니다. 301자 제목·101개 수용 조건 거부 및 300자 설계 제목의 실제
   저장 회귀 검사를 추가했습니다. 전체 보안 감사로 확대해 주장하지 않습니다.
 - 위 로컬 MVP 기록 당시에는 CI·commit·push·PR·배포를 수행하지
-  않았습니다. 이후 GitHub push/CI와 부분 배포는 위 배포 절을 따릅니다.
+  않았습니다. 이후 GitHub push/CI와 공개 배포는 위 배포 절을 따릅니다.
 
 ## 승인받은 임시 인증 복사본 정리
 

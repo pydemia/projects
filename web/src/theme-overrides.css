@@ -23,6 +23,25 @@
 .projects-theme input[type="checkbox"] { accent-color: var(--accent); }
 .projects-theme button:hover:not(:disabled),
 .projects-theme .button:hover { background-color: var(--surface-subtle); }
+.projects-theme button[data-ui="button"][data-variant="primary"] {
+  color: var(--accent-foreground);
+  background-color: var(--accent);
+  border-color: var(--accent);
+}
+.projects-theme button[data-ui="button"][data-variant="outline"] {
+  color: var(--foreground);
+  background-color: var(--surface);
+  border-color: var(--border);
+}
+.projects-theme button[data-ui="button"][data-variant="ghost"] {
+  color: var(--foreground);
+  background-color: transparent;
+  border-color: transparent;
+}
+.projects-theme button[data-ui="button"][data-variant="outline"]:hover:not(:disabled),
+.projects-theme button[data-ui="button"][data-variant="ghost"]:hover:not(:disabled) {
+  background-color: var(--surface-subtle);
+}
 .projects-theme .primary,
 .projects-theme button.primary,
 .projects-theme .button.primary,

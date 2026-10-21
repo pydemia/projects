@@ -25,11 +25,11 @@ Entra 프록시 인증 경로를 구현했습니다. 앱은 프록시가 전달�
   실행 중입니다. 앱·DB health check 통과, 미인증 `/api` 요청은 401입니다.
   Caddy runtime에 `projects.pydemia.ai` 경로를 로드했고 기존 네 개 사이트
   호스트 설정이 함께 남아 있음을 확인했습니다.
-- GitHub `main`의 커밋 `802c50d`에서
-  [Actions 백엔드·웹 검사](https://github.com/pydemia/projects/actions/runs/39570658439)가
+- GitHub `main`의 커밋 `e9b4f7e`에서
+  [Actions 백엔드·웹 검사](https://github.com/pydemia/projects/actions/runs/39572260702)가
   모두 통과했습니다. 첫 CI에서 발견한 Linux mypy의 Windows 전용 상수
-  오류는 같은 커밋에서 수정했습니다. 서버 앱 이미지는 수정한 소스 묶음
-  `02fabbd610af5433`으로 재빌드했고 health check를 통과했습니다.
+  오류는 커밋 `802c50d`에서 수정했습니다. 서버 앱 이미지는 최신 소스 묶음
+  `f476d07a5dfa1100`으로 재빌드했고 health check를 통과했습니다.
 - Entra `pydemia Projects` 단일 테넌트 앱과 전용 client secret을
   등록해 서버 비공개 설정에 연결했습니다. 프록시의 로그인 시작 요청이
   실제 client ID·tenant·PKCE·정확한 callback으로 302 이동함을

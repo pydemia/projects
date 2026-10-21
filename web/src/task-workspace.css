@@ -23,7 +23,7 @@
 .task-row .task-check { min-width: 34px; width: 34px; height: 34px; padding: 0; }
 .task-meta { display: flex; align-items: center; gap: 7px 12px; flex-wrap: wrap; margin-top: 5px; color: var(--muted); font-size: 11px; }
 .task-workflow { color: var(--muted); font-size: 11px; }
-.task-selected { border-top: 1px solid var(--border); margin-top: 27px; padding-top: 18px; }
+.task-selected { border-top: 1px solid var(--border); margin-top: 27px; padding-top: 18px; scroll-margin-top: 24px; }
 .task-board { display: grid; grid-template-columns: repeat(5, minmax(190px, 1fr)); gap: 12px; overflow-x: auto; padding-bottom: 8px; }
 .task-board-column { min-width: 190px; padding: 12px; background: var(--surface-subtle); border: 1px solid var(--border); border-radius: var(--panel-radius, var(--radius)); }
 .task-board-column h2 { font-size: 13px; margin: 0 0 12px; display: flex; justify-content: space-between; }

@@ -256,7 +256,7 @@ function ItemDetails({ item, catalog }: { item: Item; catalog?: Catalog }) {
         {item.kind === "requirement" && <><h3>수용 조건</h3><StringList values={item.data.acceptance_criteria} /><p className="muted">{item.data.category === "functional" ? "기능" : "비기능"} 요구사항 · 우선순위 {item.data.priority} · <Badge value={item.data.disposition} /></p>{item.data.excluded_reason && <p>사유: {item.data.excluded_reason}</p>}</>}
         {item.kind === "task" && <><h3>작업 계획</h3><p><Badge value={item.data.state} /> · {item.data.workflow === "personal" ? "개인 할 일" : "구현 작업"} · {item.data.list_name}</p>
             <p className="muted">실행 {item.data.planned_date || "미지정"} · 마감 {item.data.due_date || "미지정"} · 예상 {item.data.estimated_minutes ? `${item.data.estimated_minutes}분` : "미산정"}<br />
-                GTD {item.data.next_action ? "다음 행동" : "보류"} · {item.data.context || "맥락 무관"} · 에너지 {item.data.energy}<br />
+                GTD {item.data.next_action ? "다음 행동" : "보류"} · {item.data.context || "맥락 무관"} · 에너지 {{ any: "제약 없음", low: "낮음", medium: "보통", high: "높음" }[item.data.energy]}<br />
                 ABC {item.data.abc_priority === "none" ? "미지정" : `${item.data.abc_priority}${item.data.abc_order || ""}`} · {item.data.goal || "연결 목표 없음"}</p>
             {item.data.github_issue_url && <p><ExternalLink href={item.data.github_issue_url}>GitHub Issue 열기 ↗</ExternalLink></p>}
             {item.data.workflow === "delivery" && <><h3>완료·수용 조건</h3><StringList values={item.data.acceptance_criteria} /><p>테스트 근거 {item.data.requires_test ? "필요" : "비적용"}</p><p className="muted">결과 {item.data.result_url || "미기록"}<br />대상 SHA {item.data.target_sha || "미기록"}</p></>}</>}

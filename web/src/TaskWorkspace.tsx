@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { api, errorMessage } from "./api";
 import { navigate } from "./hooks";
 import type { Route } from "./hooks";
@@ -70,8 +70,12 @@ export function TaskWorkspace({ projectId, userId, route, items, catalog, onChan
     const [newDetailed, setNewDetailed] = useState(false);
     const [busyId, setBusyId] = useState("");
     const [error, setError] = useState("");
+    const selectedRef = useRef<HTMLDivElement>(null);
     const today = localDay();
     const selected = tasks.find(task => task.id === route.item);
+    useEffect(() => {
+        if (selected) selectedRef.current?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+    }, [selected?.id]);
     const visible = useMemo(() => {
         const searched = tasks.filter(task => `${task.title} ${task.data.list_name} ${task.data.context} ${task.data.goal}`
             .toLocaleLowerCase().includes(query.toLocaleLowerCase()));
@@ -188,7 +192,7 @@ export function TaskWorkspace({ projectId, userId, route, items, catalog, onChan
         {view === "calendar" && <TaskCalendar tasks={visible} month={month} onMonth={setMonth} />}
         {view === "insights" && <TaskInsights tasks={visible} />}
         {(view === "today" || view === "inbox" || view === "upcoming" || view === "list") && list(visible)}
-        {selected && <div className="task-selected"><div className="section-head"><h2>선택한 작업</h2>
+        {selected && <div className="task-selected" ref={selectedRef}><div className="section-head"><h2>선택한 작업</h2>
             <ActionButton className="small" onClick={() => navigate({ item: "" })}>닫기</ActionButton></div>
             {mode === "complex" ? <RecordEditor key={selected.id} item={selected} items={items} catalog={catalog} userId={userId} onChanged={onChanged} />
                 : <div><p><strong>{selected.title}</strong> · {statusLabels[selected.data.state]}</p><p>{selected.body || "추가 설명 없음"}</p>

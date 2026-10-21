@@ -33,16 +33,20 @@ ABC·Issue URL 거부는 실제 PostgreSQL을 쓰는 무작위 전용 schema 통
 완료한 뒤 정교 목록에서 같은 작업을 다시 열었고, 보드의 할 일 열과 10월
 캘린더 21일, 현재 집계의 할 일 1건에 같은 제목이 표시됐습니다. 이
 작업은 현재 열린 할 일로 남겨 사용자가 이어 쓸 수 있게 했습니다.
-Basic light/dark의 집계 화면도 확인했습니다. 브라우저에서 구현 작업의
-근거 gate, GTD/ABC 상세 편집, GitHub Issue 외부 상태 동기화, 모바일 폭은
-이번 운영 검사의 증거가 아닙니다. 그중 gate·입력 검증·정렬은 위의
-PostgreSQL/Vitest에서 검사했고, 외부 동기화는 구현하지 않았습니다.
+Basic light/dark의 집계 화면도 확인했습니다. 같은 개인 작업에서 예상 15분,
+맥락 `집`, 낮은 에너지, ABC B1과 연결 목표를 저장해 revision 4와 상세
+표시를 확인했습니다. 브라우저에서 구현 작업의 근거 gate, 여러 작업의
+GTD/ABC 정렬, GitHub Issue 외부 상태 동기화, 모바일 폭은 이번 운영
+검사의 증거가 아닙니다. gate·입력 검증·정렬은 위의 PostgreSQL/Vitest에서
+검사했고, 외부 동기화는 구현하지 않았습니다.
 
-최종 앱 이미지는 source hash `68cc2b8db08e1e0b`로 빌드해 배포했고,
+최종 앱 이미지는 source hash `59d589669a354069`로 빌드해 배포했고,
 앱과 PostgreSQL 컨테이너의 health가 정상입니다. 기존 DB volume과
 OAuth 프록시는 유지했습니다. 선택된 간편/정교 모드는 배포 후 브라우저에서
-pydemia UI의 primary/outline 버튼 대비로 확인했습니다. 최종 커밋
-`fa4e0bf`의 [GitHub Actions 검사](https://github.com/pydemia/projects/actions/runs/39583692795)는
+pydemia UI의 primary/outline 버튼 대비로 확인했습니다. 작업 상세 URL을
+새로고침해도 해당 상세 위치로 자동 이동하고 저장한 에너지가 `낮음`으로
+표시되는 것을 확인했습니다. 최종 코드 커밋 `d298071`의
+[GitHub Actions 검사](https://github.com/pydemia/projects/actions/runs/39584318210)는
 완료·성공입니다.
 
 ## 2026-10-21 pydemia UI·favicon 후속 검사

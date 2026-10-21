@@ -1,0 +1,129 @@
+{
+  "checked_at": "2026-10-21T07:37:46.239962+00:00",
+  "git_commit": null,
+  "uncommitted_tree": true,
+  "source_tree_sha256": "1f026d7e0d6c0011c3c89f70a2896060ac3196d19057fa7c3deaec98868b07df",
+  "scope": "runtime, tests, QA scripts, registry and build/dependency configuration; prose and generated evidence excluded",
+  "checks": [
+    {
+      "command": "docker compose up -d db",
+      "result": "healthy postgres:17.11"
+    },
+    {
+      "command": "uv run projects migrate",
+      "result": "exit 0; revision 0002"
+    },
+    {
+      "command": "uv run pytest",
+      "result": "126 passed, 1 Starlette TestClient deprecation warning"
+    },
+    {
+      "command": "uv run ruff check src tests migrations scripts",
+      "result": "all checks passed"
+    },
+    {
+      "command": "uv run ruff format --check src tests migrations scripts",
+      "result": "36 files already formatted"
+    },
+    {
+      "command": "uv run mypy src/projects",
+      "result": "no issues in 19 source files"
+    },
+    {
+      "command": "npm --prefix web run check",
+      "result": "TypeScript passed; 12 tests in 3 files passed"
+    },
+    {
+      "command": "npm --prefix web run build",
+      "result": "production build passed"
+    },
+    {
+      "command": "uv run python scripts/verify-postgres-backup.py",
+      "result": "dump/restore equality; owned QA schema cleaned"
+    },
+    {
+      "command": "PROJECTS_WEB_URL=http://127.0.0.1:5174 node scripts/verify-browser.cjs",
+      "result": "actual API and production preview, 11 check groups passed"
+    },
+    {
+      "command": "uv run python scripts/verify-document-profiles.py",
+      "result": "7 actual current-login draft/apply/portable checks passed"
+    },
+    {
+      "command": "uv run python scripts/verify-standalone-runtime.py",
+      "result": "actual current-login edit from local archive; no DB/API/Hub"
+    }
+  ],
+  "file_sha256": {
+    ".env.example": "4501a77ed083ea7f3207836e1773bab29aaaa33474b34573a08fd99e1a37324d",
+    ".github/workflows/ci.yml": "71659411dc6d4dc8d3e5a5c0417f34a2dffd9cfba755e6bb56ebf6f05096f250",
+    ".gitignore": "d0563cb6b276733c76014a92908778748aac830929902ccd8ee49f89b40521de",
+    "AGENTS.md": "64414d310e80b75600712f9e5e7a597f8242452e83f85b9231898715421d325e",
+    "alembic.ini": "344711ca29518fafc1cbcaa4d1725ba9da184bf016cbaec194bcda32f7784cb6",
+    "compose.yaml": "ee1c72e17bb4b067f41437307b001bcd36b2279a2fbbd2598e2d4484504400b3",
+    "docs/planning/references/artifact-templates.json": "04a46525e7d7467f8dc13d27c5196dda01aa61eb6e6a6da554d836669435b2ce",
+    "migrations/env.py": "374e2085c7147a66560c9b13a7065717fe1a865969109df24d638dcb67fb047b",
+    "migrations/versions/0001_initial.py": "2bdcd1529e7f7455e93c357aca032ef431fdbb82a1c371814a6ab74c69c1d123",
+    "migrations/versions/0002_run_events.py": "6aa605fcb196d6d151d37054ab93ac75d927995b431f0d3c66c50c598fa20534",
+    "projects.example.yaml": "953894f7d52051fbecdeea470442ba127190cc71330dc962efc0b72c51c1935c",
+    "pyproject.toml": "b7629086464e95f240c3af4aa0b57a79538d96d16f16c135b96907bb56f1f3ac",
+    "scripts/verify-browser.cjs": "a7c44de1781f0eda54f673cc9c68b9c3d96e9a4f2c50d002bdde4d95917ea3d4",
+    "scripts/verify-document-profiles.py": "2ea011ac29f3536596a63e92b6643e08cafe12ad89b636c6db9c4ee6246054e7",
+    "scripts/verify-live-runtime.py": "8cebcbf018be7cb5fe57b047010d4a9e6edfec44e322121e5118d6a40f73315c",
+    "scripts/verify-postgres-backup.py": "207d4ac85dd2a1200a1a5fdea9f89fca8b26bb8541eee156237714ba867d8109",
+    "scripts/verify-standalone-runtime.py": "2faed809773933ca571de12b9e212196a20954be5f633db01e435b1a1498caab",
+    "src/projects/__init__.py": "9a645206a3107250f54646115903ee4b46d0344fd17bd1291ad25d23d72aef20",
+    "src/projects/api.py": "6803b159fde75f25727fa425d6e11acfb266e15c9190be15aa1697aacbbba55b",
+    "src/projects/auth.py": "8b56455007b32dbc707086cf20d80dab55b67b7ab799c0d033f4bf17a6486bcc",
+    "src/projects/cli.py": "afe4b031b520347eeca0eab7edff652a3847424fc05aed7afca093c624938040",
+    "src/projects/codex_runner.py": "897a725e1df06a33e2f726e14aa0936ff14b5ab2ccd2b0e01adeb3559dd0055c",
+    "src/projects/config.py": "dd2d4a92147afd13495a8f0eead48c95e0d922f41aff5e2e2b6553033296e41d",
+    "src/projects/database.py": "67d80d0b18f092737e3782b2a058a029850c01095665e65adf68053bb3380831",
+    "src/projects/domain.py": "2a945ec2c84ffce9f3b40718cdd266961f37723cdd01e3c444ee5a41f416d93c",
+    "src/projects/jobs.py": "abfc78cb5b63f1848108a80dc435fb0651809a8f62573391d87a9e0a2f979a50",
+    "src/projects/portable.py": "3354a104133be7cba9ad70bf3c5a105d91114e4994b6952bf7de53c42946f30a",
+    "src/projects/records.py": "dfcc68b19257ab42e2d5d2f636935f6ad21e7ae53b26fe0c44700b669e85d4b9",
+    "src/projects/runtime/__init__.py": "6d482bda26fb1fe013e6f84c6b3a803ffc80290e874f566e6dc1d1e9a907ff88",
+    "src/projects/runtime/_inputs.py": "445f0e17074b51a92c14f02dc456e2b45170766d2229c848a23bbc892eaabde5",
+    "src/projects/runtime/bundles.py": "b6f6ff3c89bc34ab23b446ca6fb967486bb994f445ecd2ed9a083299617dd9a7",
+    "src/projects/runtime/models.py": "0d76e2fbfb145743bfce8b44af476113dcf4341d29b7a7ea87049bf8b22531ab",
+    "src/projects/runtime/prompts.py": "8728ec75402877eeca5104c8f79ed1210a99e8bda0786bd578601185c4c2d59f",
+    "src/projects/runtime/references.py": "fd7bb0f907b84785a9677c66e699ce5c33eed125bd55f16ea124107171b8dfd8",
+    "src/projects/runtime/runner.py": "6848496bcf90a03c9ff7a7f6890b6b347fbf8e82176bc2c991755267b917289d",
+    "src/projects/schemas.py": "56eef65a4ab7d7547448abd45bee2cbecff70c95cf13d791fdcaa76b4608e645",
+    "tests/conftest.py": "f9e200505b8084246a7cf8a82d2656f623d57488eefe020fcf897d30b9270d02",
+    "tests/test_api.py": "6b0f82366d4c3be9ebd063d949f8f7bee0063e929bd050452dd93ab7272f8b4a",
+    "tests/test_codex_runner.py": "a6cf169b8178c563235d724ef6c248d6b48f5ab4365403230a64c56699898c64",
+    "tests/test_document_profiles.py": "38fc11bb0299a75b825a6861f3358123b84201d721b881c62867d2b6b3ce8309",
+    "tests/test_domain.py": "189bc6c65b8aca9430b17448db53fdf390837e1b8ccc0a2e4cd1c75c1c13171d",
+    "tests/test_lifecycle.py": "1ccd6d0efea15421005aa4d7fd84f763bec53eb6c8db6347e9221c3eb638d229",
+    "tests/test_llm_config.py": "abdaf1ede86fec0975fca27cdc311adba482756dad7112f18d54c85ab15dd0a6",
+    "tests/test_provider_selection.py": "ad438d448d9d577ab7e11a0998f79e47143adb7a46c96b5108dc2f73c9f4f331",
+    "tests/test_result_bounds.py": "6cf2f390b06185448d9a9c55e3834f331b35fe8d1fa8f90b7700ec7d1973c9f5",
+    "tests/test_runtime.py": "2175726415fc1c76a8c95096bf76760b71cce696dd0c583f04c415886f5b1e9c",
+    "uv.lock": "d088469101cb4cfe03d6b7af44a587a904bd2cfae2f18052d96aca237d5f4558",
+    "web/package-lock.json": "b9d47ba1b648214174c847a1b229dcf6cdb74721d4a90052bb06a19dbad072cb",
+    "web/package.json": "6b2acffcb9881b97f6174aa8c082a0c4079658b51c4ec55d7ec3647d0609435a",
+    "web/src/api.test.ts": "9718fb183b8fd4e1971c415c69c884fe20fe19fcdac27bf9c35c67d855d227af",
+    "web/src/api.ts": "e36e595e3ac4ef5d923bae725882aba2f191174a20a408dab9168f68e5fcd7d1",
+    "web/src/app.css": "c673c4dc994645680d67318f6375d12102f3c683d4025c0123a81f20f04ce6de",
+    "web/src/App.tsx": "9ba757c842a6780efc84729bc5a0645a04df1db441e015664c168f1ec85c1dd0",
+    "web/src/fixtures.test-data.ts": "ae29cae38bb14dd4f5b4984e2cda8684bc9c7af9e798cdf2722e8e9108c52d37",
+    "web/src/flows.test.tsx": "619dc3ed1e315999fbf046416dda49cd08e4ddeb73eb69364537ff1ba2aabc92",
+    "web/src/hooks.ts": "fb342cf3ec0a378b430f5b6e04e7ac851cb3500aebccd3b368a0d3586d07cae0",
+    "web/src/ItemFields.tsx": "c027cd85c51e7d8968da47e575fb2e0feb12f232d03f0d842c48dd8b19b09297",
+    "web/src/ItemsPage.tsx": "5cb5eff49d18b9505363cbd92ddb1d5a37bd5c6c88230bb6336d9eaa882c8735",
+    "web/src/main.tsx": "5c5a60676e975ad40f26d5e9016787bdaf5d29312697ddaf81f0413d11a25183",
+    "web/src/MarkdownContent.tsx": "52c5d7aa420be9e5a12594cf0ec60acad5214423bf6b6c6b2b8b22f3b4726ca9",
+    "web/src/models.ts": "68d6ba46143614416a27d220372ec057a9e82c82c873ee7d4dca7cfceee1405c",
+    "web/src/ProjectPages.tsx": "446a466f2e7ade6b2f87c1ddedb27ddd8c0c0e30a38b2e318c143a0571ea3fa6",
+    "web/src/Relations.tsx": "7b2b777d3feb3b998d6ae00b87e1bd7c020b2aebdaa6b6a9fe8dbd30b646884f",
+    "web/src/RunsPage.tsx": "32a434d60c9d08842cc199d9027b3cb78b21cb9e1babb6ce2e33227477ea9b59",
+    "web/src/styles.css": "dfe305232c025422d76f53fbcab918895895df8bf9c0d9121e43387e0691e19f",
+    "web/src/test-setup.ts": "aff5a43106c4d4b688e16b61bc9b46c49df531d7262fd35c1c930e51c13d47a4",
+    "web/src/ui.test.tsx": "ae2b520ed20b07ed89e96cad05583c46a4d54740326741cfa3fc088f90bbb5d9",
+    "web/src/ui.tsx": "5dd7813d6ede03cc3b96d74fa16be6850a358cb4a8e51d3aa0e043f1ccc6cab3",
+    "web/tsconfig.json": "57ce081231e39708a6c279c878a69e523b80059cac0dd1611004eb34af935172",
+    "web/vite.config.ts": "4f027a074a842ec0042f73c211dfda719a04ce95eefbcf1bc1fca37ac2e12676"
+  }
+}

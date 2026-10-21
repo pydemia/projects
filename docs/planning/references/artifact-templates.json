@@ -1,0 +1,1144 @@
+{
+  "schema_version": 1,
+  "status": "planning_reference_registry_not_implemented",
+  "checked_date": "2026-10-21",
+  "source_page": "https://app.notion.com/p/3ffefe226cee8145b64ad659e30a43ab",
+  "source_document_type_count": 35,
+  "source_examples_policy": "private input content is not copied; only generic field structures and access observations",
+  "skill_policy": "Use original locked Skill bundles as writing rules. References and starter fields are inputs, not replacement rules.",
+  "sources": [
+    {
+      "id": "PM2",
+      "name": "European Commission PM² Artefacts v3.1",
+      "url": "https://pm2.europa.eu/pm2-artefacts_en",
+      "download_url": "https://pm2.europa.eu/document/download/f6ba050c-f9f4-4f74-99a3-eb6acc9b8ea9_en?filename=PM2-Project-Artefacts.v3.1.zip",
+      "kind": "editable_template_package",
+      "format": "DOCX / XLSX",
+      "inspection": "ZIP 다운로드·33개 엔트리 확인, 주요 DOCX 8종·XLSX 4종 구조 확인",
+      "reuse": "공개 다운로드 확인. 이번에는 링크·구조 참조만 사용; 앱 재배포 전 파일·사이트 고지 확인",
+      "role": "사업성·WBS·품질·배포전환·회의·진척·리스크·변경"
+    },
+    {
+      "id": "ARC42",
+      "name": "arc42 architecture template",
+      "url": "https://arc42.org/download/",
+      "download_url": "https://arc42.org/dl/arc42-template-EN-plain-asciidoc.zip",
+      "kind": "editable_template_package",
+      "format": "AsciiDoc ZIP; 사이트에 Markdown·Word 옵션 안내",
+      "inspection": "plain AsciiDoc ZIP 다운로드, 17개 파일·모듈/배포 섹션 확인",
+      "reuse": "CC BY-SA 4.0; 템플릿 변형 배포 시 출처·라이선스·변경 표시",
+      "role": "System·Application·Infra 설계"
+    },
+    {
+      "id": "ARC42-EX",
+      "name": "HtmlSanityCheck architecture example",
+      "url": "https://examples.arc42.org/systems/htmlsc/",
+      "example_urls": [
+        "https://examples.arc42.org/systems/htmlsc/05-building-block-view/",
+        "https://examples.arc42.org/systems/htmlsc/07-deployment-view/"
+      ],
+      "kind": "worked_example",
+      "format": "HTML",
+      "inspection": "전체 목차와 모듈·배포 본문 확인; 원 시스템 현행성 검증은 아님",
+      "reuse": "예시 CC BY-SA 4.0; 링크 참조",
+      "role": "설계 문서의 실제 작성 밀도·구성"
+    },
+    {
+      "id": "PRD",
+      "name": "Atlassian Product Requirements template",
+      "url": "https://www.atlassian.com/software/confluence/templates/product-requirements",
+      "kind": "template_preview",
+      "format": "HTML / Confluence",
+      "inspection": "공개 목차·작성법·예시 확인, Confluence 내 복제는 로그인 필요",
+      "reuse": "공개 안내 참조; 별도 재배포 권한은 미확인",
+      "role": "기능 기획·기능 정의·UI 연계"
+    },
+    {
+      "id": "FEAS",
+      "name": "Atlassian feasibility study format",
+      "url": "https://www.atlassian.com/work-management/project-management/project-planning/feasibility-study",
+      "kind": "guide_with_report_outline",
+      "format": "HTML",
+      "inspection": "본문의 보고서 구성 표 확인",
+      "reuse": "작성 항목 참고; 원문 복제 안 함",
+      "role": "타당성 분석"
+    },
+    {
+      "id": "MARKET",
+      "name": "SBA business planning and market research",
+      "url": "https://www.sba.gov/counseling/plan-your-business/",
+      "kind": "guide_with_examples",
+      "format": "HTML",
+      "inspection": "시장조사 질문과 사업계획 작성 안내 확인",
+      "reuse": "질문·구조 참고; 통계·시장 사실은 별도 조사",
+      "role": "시장조사·사업계획"
+    },
+    {
+      "id": "BMC",
+      "name": "Strategyzer Business Model Canvas",
+      "url": "https://www.strategyzer.com/library/the-business-model-canvas",
+      "kind": "official_template_landing",
+      "format": "PDF 안내",
+      "inspection": "공식 9개 영역·무료 다운로드 안내 확인; PDF 파일 자체 미다운로드",
+      "reuse": "공식 도구 링크 사용, 앱 내 재배포 조건 미확인; 유료 playbook은 제외",
+      "role": "비즈니스 모델 캔버스"
+    },
+    {
+      "id": "SWOT",
+      "name": "Atlassian SWOT template",
+      "url": "https://www.atlassian.com/software/confluence/templates/swot-analysis",
+      "kind": "template_preview",
+      "format": "HTML / Confluence",
+      "inspection": "첫 조회에서 본문·4분면 작성법 확인, 후속 재조회 timeout",
+      "reuse": "공개 작성법 참고; 제품 내 복제는 별도 확인",
+      "role": "SWOT"
+    },
+    {
+      "id": "DIALOG",
+      "name": "Google Conversation Design sample dialogs",
+      "url": "https://developers.google.com/assistant/conversation-design/write-sample-dialogs",
+      "kind": "worked_example_and_guide",
+      "format": "HTML",
+      "inspection": "사용자/시스템 발화·주석 표와 흐름 예시 확인",
+      "reuse": "대화 문서 형식만 참조; 과거 플랫폼의 실행 방식은 채택하지 않음",
+      "role": "Chat 시나리오"
+    },
+    {
+      "id": "C4",
+      "name": "C4 deployment diagram",
+      "url": "https://c4model.com/diagrams/deployment",
+      "kind": "diagram_guide_with_examples",
+      "format": "HTML / 도식",
+      "inspection": "환경·배포 노드·구성 요소 설명과 예시 구간 확인",
+      "reuse": "페이지·예시 CC BY 4.0, 출처 표시",
+      "role": "시스템·네트워크·인프라"
+    },
+    {
+      "id": "OAS",
+      "name": "OpenAPI Petstore example",
+      "url": "https://learn.openapis.org/examples/v3.0/petstore.html",
+      "kind": "machine_readable_example",
+      "format": "JSON / YAML",
+      "inspection": "paths·parameter·response·schema 실제 예시 확인",
+      "reuse": "예시 버전 3.0; 앱 계약 버전은 별도 선정, 원본 고지 유지",
+      "role": "API·Interface 계약"
+    },
+    {
+      "id": "ERD",
+      "name": "Mermaid ER diagram examples",
+      "url": "https://mermaid.js.org/syntax/entityRelationshipDiagram.html",
+      "kind": "diagram_source_examples",
+      "format": "Mermaid",
+      "inspection": "엔티티·관계·속성·cardinality 문법과 예시 확인",
+      "reuse": "도식 문법 참고, 샘플 업무내용은 복제하지 않음",
+      "role": "DB 설계"
+    },
+    {
+      "id": "SEQ",
+      "name": "Mermaid sequence diagram examples",
+      "url": "https://mermaid.js.org/syntax/sequenceDiagram.html",
+      "kind": "diagram_source_examples",
+      "format": "Mermaid",
+      "inspection": "참여자·메시지·분기 표현 확인",
+      "reuse": "도식 문법 참고",
+      "role": "시퀀스·비동기 흐름"
+    },
+    {
+      "id": "STYLE",
+      "name": "PEP 8",
+      "url": "https://peps.python.org/pep-0008/",
+      "kind": "coding_conventions",
+      "format": "HTML",
+      "inspection": "코드 구성·명명·주석·프로젝트 규칙 우선 원칙 확인",
+      "reuse": "Python 조건에서만 참고; 기존 프로젝트 규칙 우선",
+      "role": "코딩 표준"
+    },
+    {
+      "id": "INSTALL",
+      "name": "Best-README-Template blank form",
+      "url": "https://github.com/othneildrew/Best-README-Template/blob/main/BLANK_README.md",
+      "kind": "editable_template",
+      "format": "Markdown",
+      "inspection": "원본 양식 링크·Prerequisites/Installation/Usage 구성, 저장소 Unlicense 표시 확인",
+      "reuse": "Unlicense; 자산·이미지 권리는 별도",
+      "role": "설치·실행 가이드"
+    },
+    {
+      "id": "BRANCH",
+      "name": "GitHub flow",
+      "url": "https://docs.github.com/en/get-started/using-github/github-flow",
+      "kind": "workflow_guide",
+      "format": "HTML",
+      "inspection": "브랜치·변경·PR·검토·merge 흐름 확인",
+      "reuse": "예시 참고; 내부 프로젝트의 branch 명명·승인을 전역 규칙으로 강제하지 않음",
+      "role": "Git Branch"
+    },
+    {
+      "id": "TESTPLAN",
+      "name": "Atlassian Test Plan template and filled example",
+      "url": "https://www.atlassian.com/software/confluence/resources/guides/how-to/test-plan",
+      "kind": "template_and_worked_example",
+      "format": "HTML / Confluence",
+      "inspection": "범위·전략·환경·보고·종료 조건 및 은행 앱 작성 예시 확인",
+      "reuse": "범용 구성만 참고; 예시 인원·일정·통과율은 채택하지 않음",
+      "role": "테스트 계획"
+    },
+    {
+      "id": "TESTCASE",
+      "name": "TestRail test case CSV formats",
+      "url": "https://support.testrail.com/hc/en-us/articles/7101779988372-Import-test-cases-from-CSV-or-Excel",
+      "kind": "template_schema_and_links",
+      "format": "CSV",
+      "inspection": "사전조건·절차·기대값, 1행/다중행 구조 확인; 연결 CSV 파일은 웹에서 로그인 화면",
+      "reuse": "공개 필드 구조 참고; 제품 계정·유료 서비스 없이 자체 CSV 사용",
+      "role": "테스트 케이스"
+    },
+    {
+      "id": "LOAD",
+      "name": "Grafana k6 end-of-test result example",
+      "url": "https://grafana.com/docs/k6/latest/results-output/end-of-test/",
+      "kind": "execution_report_example",
+      "format": "console / JSON",
+      "inspection": "집계 결과·summary 출력 예시 확인",
+      "reuse": "실행 결과 구조 참고; 부하·목표치·실제 측정값은 프로젝트별 입력",
+      "role": "부하 테스트 보고서"
+    },
+    {
+      "id": "CHATQA",
+      "name": "Dialogflow CX test case expectations",
+      "url": "https://docs.cloud.google.com/dialogflow/cx/docs/concept/test-case",
+      "kind": "test_design_and_result_guide",
+      "format": "HTML / structured case",
+      "inspection": "대화 저장·기대 intent/action/flow/page·재실행 검증 확인",
+      "reuse": "대화 검증 구조만 참고; Dialogflow 의존성 추가 안 함",
+      "role": "QA Chat 시나리오"
+    },
+    {
+      "id": "CI",
+      "name": "GitHub Actions example workflow",
+      "url": "https://docs.github.com/en/enterprise-cloud%40latest/actions/tutorials/create-an-example-workflow",
+      "kind": "executable_configuration_example",
+      "format": "YAML",
+      "inspection": "trigger·job·runner·step 실제 YAML 확인",
+      "reuse": "예시 구조 참고; action·런타임 버전은 구현 시 고정·검증",
+      "role": "CI/CD"
+    },
+    {
+      "id": "RELEASE",
+      "name": "Keep a Changelog 1.1.0",
+      "url": "https://keepachangelog.com/en/1.1.0/",
+      "kind": "document_template_and_example",
+      "format": "Markdown",
+      "inspection": "릴리즈 버전·날짜·변경 분류와 실제 기록 확인",
+      "reuse": "형식 참고, 원문·샘플 릴리즈는 복사하지 않음",
+      "role": "릴리즈 노트"
+    },
+    {
+      "id": "DR",
+      "name": "Google Cloud disaster recovery planning guide",
+      "url": "https://docs.cloud.google.com/architecture/dr-scenarios-planning-guide",
+      "kind": "planning_guide_with_scenarios",
+      "format": "HTML",
+      "inspection": "RTO/RPO·복구 계획·시나리오 구성 확인",
+      "reuse": "계획 항목 참고; 클라우드 제품 선택·복구 목표는 별도 결정",
+      "role": "백업·복구"
+    },
+    {
+      "id": "SLO",
+      "name": "Google SRE Example SLO Document",
+      "url": "https://sre.google/workbook/slo-document/",
+      "kind": "worked_service_objective_document",
+      "format": "HTML",
+      "inspection": "서비스 개요·SLI/SLO·측정 창과 수식 표 확인",
+      "reuse": "측정 구조 참고; 예시 수치를 앱 목표로 사용하지 않음",
+      "role": "SLA의 측정 부속서"
+    },
+    {
+      "id": "SLA",
+      "name": "Amazon Compute SLA example",
+      "url": "https://aws.amazon.com/compute/sla/",
+      "kind": "published_agreement_example",
+      "format": "HTML",
+      "inspection": "서비스 약정 페이지 확인; 범용 빈 계약서가 아님",
+      "reuse": "항목 대조용 링크; 회사별 약정·보상 조건을 앱에 복제하지 않음",
+      "role": "서비스 범위·책임·제외·보상 검토"
+    }
+  ],
+  "artifacts": [
+    {
+      "notion_section": "1.1",
+      "id": "business-case",
+      "name": "사업 기획서",
+      "original_status": "inaccessible",
+      "original_observation": "VDI 내부 경로만 제시되어 실제 파일 미확인",
+      "public_reference_ids": [
+        "PM2",
+        "MARKET"
+      ],
+      "starter_fields": [
+        "목적·문제",
+        "대상 사용자",
+        "범위·제외",
+        "대안",
+        "기대효과·근거",
+        "비용·위험·미정"
+      ],
+      "suggested_primary_skill": "document-writing-workflow",
+      "review_skill": "document-review",
+      "verification_skill": "requirements-verification",
+      "template_rules_are_not_skill_rules": true,
+      "checked_date": "2026-10-21"
+    },
+    {
+      "notion_section": "1.2",
+      "id": "requirements",
+      "name": "요구사항 정의서",
+      "original_status": "example_verified",
+      "original_observation": "Notion 안내와 연결 Sheet의 요구 ID·내용·출처·제약·변경 표 확인",
+      "public_reference_ids": [
+        "PRD",
+        "PM2"
+      ],
+      "starter_fields": [
+        "요구 ID",
+        "출처·범위",
+        "요구 동작",
+        "수용 조건",
+        "FR/NFR",
+        "관계·충돌·상태"
+      ],
+      "suggested_primary_skill": "requirements-authoring",
+      "review_skill": "document-review",
+      "verification_skill": "requirements-verification",
+      "template_rules_are_not_skill_rules": true,
+      "checked_date": "2026-10-21"
+    },
+    {
+      "notion_section": "1.2.1",
+      "id": "feature-spec",
+      "name": "기능 정의서",
+      "original_status": "example_verified",
+      "original_observation": "기능 Sheet의 메뉴 계층·기능 설명·구현사항·출처·우선순위 필드 확인",
+      "public_reference_ids": [
+        "PRD"
+      ],
+      "starter_fields": [
+        "기능 ID",
+        "기존 요구 ID",
+        "입력·동작·결과",
+        "예외·제약",
+        "영향 기능",
+        "수용 조건"
+      ],
+      "suggested_primary_skill": "requirements-authoring",
+      "review_skill": "document-review",
+      "verification_skill": "requirements-verification",
+      "template_rules_are_not_skill_rules": true,
+      "checked_date": "2026-10-21"
+    },
+    {
+      "notion_section": "1.3",
+      "id": "feasibility",
+      "name": "타당성 분석서",
+      "original_status": "inaccessible",
+      "original_observation": "VDI 내부 자료 경로만 존재",
+      "public_reference_ids": [
+        "FEAS",
+        "PM2"
+      ],
+      "starter_fields": [
+        "검토 질문",
+        "가능 대안",
+        "기술·데이터·운영 근거",
+        "검증 실험",
+        "비용·위험",
+        "판단·남은 조건"
+      ],
+      "suggested_primary_skill": "document-writing-workflow",
+      "review_skill": "document-review",
+      "verification_skill": "requirements-verification",
+      "template_rules_are_not_skill_rules": true,
+      "checked_date": "2026-10-21"
+    },
+    {
+      "notion_section": "1.4",
+      "id": "wbs",
+      "name": "WBS",
+      "original_status": "example_verified",
+      "original_observation": "Notion 기능 분해 표와 Sheet의 계층·담당·계획/실제 일정·완료 비율 확인",
+      "public_reference_ids": [
+        "PM2"
+      ],
+      "starter_fields": [
+        "작업 ID·계층",
+        "제공 결과",
+        "선행 작업",
+        "담당",
+        "계획·실제",
+        "수용 조건·근거"
+      ],
+      "suggested_primary_skill": "development-workflow",
+      "review_skill": "document-review",
+      "verification_skill": "requirements-verification",
+      "template_rules_are_not_skill_rules": true,
+      "checked_date": "2026-10-21"
+    },
+    {
+      "notion_section": "1.5",
+      "id": "market-research",
+      "name": "시장 조사 보고서",
+      "original_status": "empty",
+      "original_observation": "연결 Notion 페이지가 빈 페이지",
+      "public_reference_ids": [
+        "MARKET"
+      ],
+      "starter_fields": [
+        "조사 질문",
+        "시장·사용자 범위",
+        "출처·시점",
+        "관찰·대안 비교",
+        "가설 검증",
+        "판단·한계"
+      ],
+      "suggested_primary_skill": "reference-research",
+      "review_skill": "document-review",
+      "verification_skill": "requirements-verification",
+      "template_rules_are_not_skill_rules": true,
+      "checked_date": "2026-10-21"
+    },
+    {
+      "notion_section": "1.6",
+      "id": "business-model-canvas",
+      "name": "비즈니스 모델 캔버스",
+      "original_status": "omitted_in_source",
+      "original_observation": "원문에서 생략·기획서로 갈음",
+      "public_reference_ids": [
+        "BMC"
+      ],
+      "starter_fields": [
+        "고객·가치",
+        "관계·채널",
+        "활동·자원·파트너",
+        "비용·수익",
+        "가정·근거"
+      ],
+      "suggested_primary_skill": "document-writing-workflow",
+      "review_skill": "document-review",
+      "verification_skill": "requirements-verification",
+      "template_rules_are_not_skill_rules": true,
+      "checked_date": "2026-10-21"
+    },
+    {
+      "notion_section": "1.7",
+      "id": "swot",
+      "name": "SWOT 분석서",
+      "original_status": "omitted_in_source",
+      "original_observation": "원문에서 생략·기획서로 갈음",
+      "public_reference_ids": [
+        "SWOT"
+      ],
+      "starter_fields": [
+        "강점",
+        "약점",
+        "기회",
+        "위협",
+        "근거",
+        "대응·미정"
+      ],
+      "suggested_primary_skill": "document-writing-workflow",
+      "review_skill": "document-review",
+      "verification_skill": "requirements-verification",
+      "template_rules_are_not_skill_rules": true,
+      "checked_date": "2026-10-21"
+    },
+    {
+      "notion_section": "1.8",
+      "id": "chat-scenario",
+      "name": "Chat 시나리오 정의서",
+      "original_status": "example_verified",
+      "original_observation": "Sheet의 요건/기능 ID·시나리오·입력·예외·제약 필드와 대화 예시 확인",
+      "public_reference_ids": [
+        "DIALOG"
+      ],
+      "starter_fields": [
+        "시나리오 ID",
+        "요건·기능",
+        "사전 맥락",
+        "턴별 입력·응답",
+        "도구·상태",
+        "예외·제약"
+      ],
+      "suggested_primary_skill": "product-planning-with-ui",
+      "review_skill": "document-review",
+      "verification_skill": "requirements-verification",
+      "template_rules_are_not_skill_rules": true,
+      "checked_date": "2026-10-21"
+    },
+    {
+      "notion_section": "2.1",
+      "id": "system-architecture",
+      "name": "시스템 아키텍처 설계서",
+      "original_status": "example_verified",
+      "original_observation": "Notion 첨부 draw.io 1페이지의 계층·구성요소·연결을 XML로 확인",
+      "public_reference_ids": [
+        "ARC42",
+        "ARC42-EX",
+        "C4"
+      ],
+      "starter_fields": [
+        "시스템 경계",
+        "외부 주체",
+        "구성·책임",
+        "주요 흐름",
+        "품질·제약",
+        "설계 결정"
+      ],
+      "suggested_primary_skill": "diagram-authoring",
+      "review_skill": "document-review",
+      "verification_skill": "requirements-verification",
+      "template_rules_are_not_skill_rules": true,
+      "checked_date": "2026-10-21"
+    },
+    {
+      "notion_section": "2.2",
+      "id": "database-design",
+      "name": "데이터베이스 설계서",
+      "original_status": "inaccessible",
+      "original_observation": "공유 Drive draw.io fetch가 transport 오류; 별도 ERD 예시 미확인",
+      "public_reference_ids": [
+        "ERD"
+      ],
+      "starter_fields": [
+        "엔티티·관계",
+        "열·자료형",
+        "키·제약",
+        "인덱스",
+        "보존·권한",
+        "migration"
+      ],
+      "suggested_primary_skill": "software-engineering",
+      "review_skill": "document-review",
+      "verification_skill": "requirements-verification",
+      "template_rules_are_not_skill_rules": true,
+      "checked_date": "2026-10-21"
+    },
+    {
+      "notion_section": "2.3",
+      "id": "screen-design",
+      "name": "화면 설계서",
+      "original_status": "partial_verified",
+      "original_observation": "Screen Flow·업무/온보딩 문서와 화면 목록은 확인, Figma 실제 화면 미확인",
+      "public_reference_ids": [
+        "PRD"
+      ],
+      "starter_fields": [
+        "화면 ID",
+        "진입·전환",
+        "구성·조작",
+        "로딩·빈·오류",
+        "권한·반응형",
+        "요구·API 연결"
+      ],
+      "suggested_primary_skill": "product-planning-with-ui",
+      "review_skill": "document-review",
+      "verification_skill": "requirements-verification",
+      "template_rules_are_not_skill_rules": true,
+      "checked_date": "2026-10-21"
+    },
+    {
+      "notion_section": "2.4",
+      "id": "api-spec",
+      "name": "API 명세서",
+      "original_status": "no_reference",
+      "original_observation": "OpenAPI로 현행화한다는 설명만 있으며 실제 schema URL 없음",
+      "public_reference_ids": [
+        "OAS"
+      ],
+      "starter_fields": [
+        "경로·method",
+        "인증·권한",
+        "입력 schema",
+        "응답·오류",
+        "멱등·버전",
+        "예시·검증"
+      ],
+      "suggested_primary_skill": "software-engineering",
+      "review_skill": "document-review",
+      "verification_skill": "requirements-verification",
+      "template_rules_are_not_skill_rules": true,
+      "checked_date": "2026-10-21"
+    },
+    {
+      "notion_section": "2.5",
+      "id": "sequence-diagram",
+      "name": "시퀀스 다이어그램",
+      "original_status": "inaccessible",
+      "original_observation": "공유 Drive 파일 접근 실패, 첨부 시스템 그림을 시퀀스로 간주하지 않음",
+      "public_reference_ids": [
+        "SEQ"
+      ],
+      "starter_fields": [
+        "시나리오",
+        "참여자",
+        "메시지 순서",
+        "분기·반복",
+        "실패·timeout",
+        "상태·근거"
+      ],
+      "suggested_primary_skill": "diagram-authoring",
+      "review_skill": "document-review",
+      "verification_skill": "requirements-verification",
+      "template_rules_are_not_skill_rules": true,
+      "checked_date": "2026-10-21"
+    },
+    {
+      "notion_section": "2.6",
+      "id": "network-infra",
+      "name": "네트워크 구성도",
+      "original_status": "inaccessible",
+      "original_observation": "공유 Drive 파일 접근 실패, 환경별 실제 네트워크 도식 미확인",
+      "public_reference_ids": [
+        "C4",
+        "ARC42"
+      ],
+      "starter_fields": [
+        "환경",
+        "네트워크 경계",
+        "노드·배치",
+        "통신·접근",
+        "secret·관측",
+        "배포·복구"
+      ],
+      "suggested_primary_skill": "diagram-authoring",
+      "review_skill": "document-review",
+      "verification_skill": "requirements-verification",
+      "template_rules_are_not_skill_rules": true,
+      "checked_date": "2026-10-21"
+    },
+    {
+      "notion_section": "2.7",
+      "id": "screen-list",
+      "name": "화면 목록",
+      "original_status": "example_verified",
+      "original_observation": "Excel의 화면 ID·명칭·유형·Wireframe/Figma·설계/퍼블리싱 완료 열 확인",
+      "public_reference_ids": [
+        "PRD"
+      ],
+      "starter_fields": [
+        "화면 ID",
+        "분류·사용자",
+        "화면명·목적",
+        "유형",
+        "요구 ID",
+        "시안 링크",
+        "단계별 상태"
+      ],
+      "suggested_primary_skill": "product-ui-ux-design",
+      "review_skill": "document-review",
+      "verification_skill": "requirements-verification",
+      "template_rules_are_not_skill_rules": true,
+      "checked_date": "2026-10-21"
+    },
+    {
+      "notion_section": "3.1",
+      "id": "coding-standard",
+      "name": "코딩 표준 문서",
+      "original_status": "partial_verified",
+      "original_observation": "PEP/formatter 설명은 있으나 template repository 주소 없음",
+      "public_reference_ids": [
+        "STYLE"
+      ],
+      "starter_fields": [
+        "적용 언어·범위",
+        "서식·명명",
+        "구조·오류·타입",
+        "테스트",
+        "검사 도구",
+        "예외"
+      ],
+      "suggested_primary_skill": "software-engineering",
+      "review_skill": "document-review",
+      "verification_skill": "requirements-verification",
+      "template_rules_are_not_skill_rules": true,
+      "checked_date": "2026-10-21"
+    },
+    {
+      "notion_section": "3.2",
+      "id": "module-design",
+      "name": "모듈 설계서",
+      "original_status": "no_reference",
+      "original_observation": "정의 설명만 있고 예시·양식 링크 없음",
+      "public_reference_ids": [
+        "ARC42",
+        "ARC42-EX"
+      ],
+      "starter_fields": [
+        "모듈 책임",
+        "입출력·계약",
+        "의존성",
+        "데이터·상태",
+        "오류·권한",
+        "구현 위치·요구"
+      ],
+      "suggested_primary_skill": "software-engineering",
+      "review_skill": "document-review",
+      "verification_skill": "requirements-verification",
+      "template_rules_are_not_skill_rules": true,
+      "checked_date": "2026-10-21"
+    },
+    {
+      "notion_section": "3.3",
+      "id": "installation-guide",
+      "name": "설치 가이드",
+      "original_status": "no_reference",
+      "original_observation": "정의 설명만 있음",
+      "public_reference_ids": [
+        "INSTALL"
+      ],
+      "starter_fields": [
+        "대상 환경",
+        "사전조건",
+        "설치",
+        "설정",
+        "실행·확인",
+        "문제 해결·제거"
+      ],
+      "suggested_primary_skill": "document-writing-workflow",
+      "review_skill": "document-review",
+      "verification_skill": "requirements-verification",
+      "template_rules_are_not_skill_rules": true,
+      "checked_date": "2026-10-21"
+    },
+    {
+      "notion_section": "3.4",
+      "id": "interface-design",
+      "name": "인터페이스 설계서",
+      "original_status": "no_reference",
+      "original_observation": "정의 설명만 있음",
+      "public_reference_ids": [
+        "OAS",
+        "SEQ"
+      ],
+      "starter_fields": [
+        "생산자·소비자",
+        "전송·schema",
+        "인증",
+        "호출·이벤트 순서",
+        "오류·재시도",
+        "버전·호환"
+      ],
+      "suggested_primary_skill": "software-engineering",
+      "review_skill": "document-review",
+      "verification_skill": "requirements-verification",
+      "template_rules_are_not_skill_rules": true,
+      "checked_date": "2026-10-21"
+    },
+    {
+      "notion_section": "3.5",
+      "id": "git-branch",
+      "name": "Git Branch 설계서",
+      "original_status": "example_verified",
+      "original_observation": "브랜치 타입·source·명명·PR·merge·보호 정책 본문 확인",
+      "public_reference_ids": [
+        "BRANCH"
+      ],
+      "starter_fields": [
+        "branch 역할",
+        "분기·통합",
+        "명명",
+        "검토·보호",
+        "릴리즈·hotfix",
+        "증빙"
+      ],
+      "suggested_primary_skill": "development-workflow",
+      "review_skill": "document-review",
+      "verification_skill": "requirements-verification",
+      "template_rules_are_not_skill_rules": true,
+      "checked_date": "2026-10-21"
+    },
+    {
+      "notion_section": "4.1",
+      "id": "test-plan",
+      "name": "테스트 계획서",
+      "original_status": "no_reference",
+      "original_observation": "정의 설명만 있음",
+      "public_reference_ids": [
+        "TESTPLAN"
+      ],
+      "starter_fields": [
+        "대상·범위",
+        "전략",
+        "환경·데이터",
+        "역할·순서",
+        "진입·종료",
+        "리스크·보고"
+      ],
+      "suggested_primary_skill": "development-verification",
+      "review_skill": "document-review",
+      "verification_skill": "requirements-verification",
+      "template_rules_are_not_skill_rules": true,
+      "checked_date": "2026-10-21"
+    },
+    {
+      "notion_section": "4.2",
+      "id": "test-case",
+      "name": "테스트 케이스 정리 문서",
+      "original_status": "no_reference",
+      "original_observation": "정의 설명만 있음",
+      "public_reference_ids": [
+        "TESTCASE"
+      ],
+      "starter_fields": [
+        "케이스 ID·revision",
+        "요구·수용 조건",
+        "사전조건·입력",
+        "절차·기대값",
+        "실제 결과·run",
+        "환경·증빙"
+      ],
+      "suggested_primary_skill": "requirements-verification",
+      "review_skill": "document-review",
+      "verification_skill": "requirements-verification",
+      "template_rules_are_not_skill_rules": true,
+      "checked_date": "2026-10-21"
+    },
+    {
+      "notion_section": "4.3",
+      "id": "load-test-report",
+      "name": "부하 테스트 보고서",
+      "original_status": "no_reference",
+      "original_observation": "정의 설명만 있음",
+      "public_reference_ids": [
+        "LOAD"
+      ],
+      "starter_fields": [
+        "대상 commit·환경",
+        "시나리오·부하",
+        "측정·목표 출처",
+        "결과·오류",
+        "병목·한계",
+        "재검증"
+      ],
+      "suggested_primary_skill": "development-verification",
+      "review_skill": "document-review",
+      "verification_skill": "requirements-verification",
+      "template_rules_are_not_skill_rules": true,
+      "checked_date": "2026-10-21"
+    },
+    {
+      "notion_section": "4.4",
+      "id": "qa-checklist",
+      "name": "QA 체크리스트",
+      "original_status": "no_reference",
+      "original_observation": "정의 설명만 있음",
+      "public_reference_ids": [
+        "PM2",
+        "TESTPLAN"
+      ],
+      "starter_fields": [
+        "항목 ID",
+        "요구·품질 기준",
+        "확인 방법",
+        "결과·사유",
+        "증빙·결함",
+        "미해결 조치"
+      ],
+      "suggested_primary_skill": "document-review",
+      "review_skill": "document-review",
+      "verification_skill": "requirements-verification",
+      "template_rules_are_not_skill_rules": true,
+      "checked_date": "2026-10-21"
+    },
+    {
+      "notion_section": "4.5",
+      "id": "qa-chat-scenario",
+      "name": "QA Chat 시나리오",
+      "original_status": "no_reference",
+      "original_observation": "작성 전 대화 시나리오만 있고 별도 QA 실행 예시는 없음",
+      "public_reference_ids": [
+        "CHATQA",
+        "DIALOG"
+      ],
+      "starter_fields": [
+        "대화 케이스·revision",
+        "초기 상태",
+        "턴·의도·기대 도구",
+        "기대 응답·금지 결과",
+        "실제 실행",
+        "회귀·근거"
+      ],
+      "suggested_primary_skill": "requirements-verification",
+      "review_skill": "document-review",
+      "verification_skill": "requirements-verification",
+      "template_rules_are_not_skill_rules": true,
+      "checked_date": "2026-10-21"
+    },
+    {
+      "notion_section": "5.0",
+      "id": "ci-cd-design",
+      "name": "CI/CD 파이프라인 설계서",
+      "original_status": "no_reference",
+      "original_observation": "정의 설명만 있음",
+      "public_reference_ids": [
+        "CI"
+      ],
+      "starter_fields": [
+        "트리거·대상",
+        "job·runner·의존",
+        "검사·빌드·산출물",
+        "권한·secret",
+        "배포·실패",
+        "실행 근거"
+      ],
+      "suggested_primary_skill": "software-engineering",
+      "review_skill": "document-review",
+      "verification_skill": "requirements-verification",
+      "template_rules_are_not_skill_rules": true,
+      "checked_date": "2026-10-21"
+    },
+    {
+      "notion_section": "5.1",
+      "id": "deployment-plan",
+      "name": "배포 계획서",
+      "original_status": "no_reference",
+      "original_observation": "정의 설명만 있음",
+      "public_reference_ids": [
+        "PM2",
+        "C4"
+      ],
+      "starter_fields": [
+        "대상 release",
+        "환경·사전조건",
+        "적용 순서",
+        "데이터·호환",
+        "확인·중단",
+        "rollback·책임"
+      ],
+      "suggested_primary_skill": "development-workflow",
+      "review_skill": "document-review",
+      "verification_skill": "requirements-verification",
+      "template_rules_are_not_skill_rules": true,
+      "checked_date": "2026-10-21"
+    },
+    {
+      "notion_section": "5.2",
+      "id": "release-notes",
+      "name": "릴리즈 노트",
+      "original_status": "no_reference",
+      "original_observation": "GitHub·Jira 관리 예정이라는 설명만 있으며 실제 파일 없음",
+      "public_reference_ids": [
+        "RELEASE"
+      ],
+      "starter_fields": [
+        "release·날짜",
+        "추가·변경·수정",
+        "호환·migration",
+        "알려진 문제",
+        "관련 요구·PR",
+        "검증 범위"
+      ],
+      "suggested_primary_skill": "document-writing-workflow",
+      "review_skill": "document-review",
+      "verification_skill": "requirements-verification",
+      "template_rules_are_not_skill_rules": true,
+      "checked_date": "2026-10-21"
+    },
+    {
+      "notion_section": "5.3",
+      "id": "backup-recovery",
+      "name": "백업 및 복구 계획서",
+      "original_status": "no_reference",
+      "original_observation": "정의 설명만 있음",
+      "public_reference_ids": [
+        "DR"
+      ],
+      "starter_fields": [
+        "보호 데이터",
+        "목표·근거",
+        "백업·보관·접근",
+        "복구 절차",
+        "일관성·해시",
+        "복구 훈련 결과"
+      ],
+      "suggested_primary_skill": "software-engineering",
+      "review_skill": "document-review",
+      "verification_skill": "requirements-verification",
+      "template_rules_are_not_skill_rules": true,
+      "checked_date": "2026-10-21"
+    },
+    {
+      "notion_section": "5.4",
+      "id": "sla",
+      "name": "서비스 수준 협약서",
+      "original_status": "no_reference",
+      "original_observation": "정의 설명만 있음",
+      "public_reference_ids": [
+        "SLA",
+        "SLO"
+      ],
+      "starter_fields": [
+        "당사자·서비스 범위",
+        "지표·측정 창",
+        "지원·책임",
+        "예외·제외",
+        "미달 조치",
+        "검토·변경"
+      ],
+      "suggested_primary_skill": "document-writing-workflow",
+      "review_skill": "document-review",
+      "verification_skill": "requirements-verification",
+      "template_rules_are_not_skill_rules": true,
+      "checked_date": "2026-10-21"
+    },
+    {
+      "notion_section": "6.1",
+      "id": "meeting-minutes",
+      "name": "회의록",
+      "original_status": "example_verified",
+      "original_observation": "회의 DB와 실제 Template 페이지의 Pre-read·Agenda·Body·Q&A·Action Items 확인",
+      "public_reference_ids": [
+        "PM2"
+      ],
+      "starter_fields": [
+        "일시·참석",
+        "안건·자료",
+        "논의",
+        "결정·이견",
+        "Action·담당·기한",
+        "미정 질문"
+      ],
+      "suggested_primary_skill": "meeting-notes",
+      "review_skill": "document-review",
+      "verification_skill": "requirements-verification",
+      "template_rules_are_not_skill_rules": true,
+      "checked_date": "2026-10-21"
+    },
+    {
+      "notion_section": "6.2",
+      "id": "progress-report",
+      "name": "프로젝트 진행 보고서",
+      "original_status": "no_reference",
+      "original_observation": "정의 설명만 있음",
+      "public_reference_ids": [
+        "PM2"
+      ],
+      "starter_fields": [
+        "기준선·보고 기간",
+        "계획·실적",
+        "산출물·검증",
+        "편차·차단",
+        "위험·변경",
+        "다음 행동"
+      ],
+      "suggested_primary_skill": "outline-report-writing",
+      "review_skill": "document-review",
+      "verification_skill": "requirements-verification",
+      "template_rules_are_not_skill_rules": true,
+      "checked_date": "2026-10-21"
+    },
+    {
+      "notion_section": "6.3",
+      "id": "risk-management",
+      "name": "리스크 관리 계획서",
+      "original_status": "no_reference",
+      "original_observation": "정의 설명만 있음",
+      "public_reference_ids": [
+        "PM2"
+      ],
+      "starter_fields": [
+        "식별·분류",
+        "평가 기준·근거",
+        "대응·책임",
+        "발동 조건",
+        "점검·에스컬레이션",
+        "리스크 로그"
+      ],
+      "suggested_primary_skill": "development-workflow",
+      "review_skill": "document-review",
+      "verification_skill": "requirements-verification",
+      "template_rules_are_not_skill_rules": true,
+      "checked_date": "2026-10-21"
+    },
+    {
+      "notion_section": "6.4",
+      "id": "change-request",
+      "name": "변경 관리 요청서",
+      "original_status": "no_reference",
+      "original_observation": "정의 설명만 있음",
+      "public_reference_ids": [
+        "PM2"
+      ],
+      "starter_fields": [
+        "원안·변경 ID",
+        "현재·목표 동작",
+        "요구·기능 관계",
+        "설계·작업·회귀 영향",
+        "비용·위험·대안",
+        "판정·반영 증거"
+      ],
+      "suggested_primary_skill": "requirements-authoring",
+      "review_skill": "document-review",
+      "verification_skill": "requirements-verification",
+      "template_rules_are_not_skill_rules": true,
+      "checked_date": "2026-10-21"
+    }
+  ],
+  "document_profiles": [
+    {
+      "id": "functional-plan",
+      "name": "기능 기획서",
+      "artifact_id": "feature-spec",
+      "suggested_primary_skill": "product-planning-with-ui",
+      "review_skill": "document-review",
+      "verification_skill": "requirements-verification"
+    },
+    {
+      "id": "ui-plan",
+      "name": "UI 기획서",
+      "artifact_id": "screen-design",
+      "suggested_primary_skill": "product-planning-with-ui",
+      "review_skill": "document-review",
+      "verification_skill": "requirements-verification"
+    },
+    {
+      "id": "system-architecture",
+      "name": "System Architecture 설계서",
+      "artifact_id": "system-architecture",
+      "suggested_primary_skill": "software-engineering",
+      "review_skill": "document-review",
+      "verification_skill": "requirements-verification"
+    },
+    {
+      "id": "infra-design",
+      "name": "Infra 설계서",
+      "artifact_id": "network-infra",
+      "suggested_primary_skill": "software-engineering",
+      "review_skill": "document-review",
+      "verification_skill": "requirements-verification"
+    },
+    {
+      "id": "application-design",
+      "name": "Application 설계서",
+      "artifact_id": "module-design",
+      "suggested_primary_skill": "software-engineering",
+      "review_skill": "document-review",
+      "verification_skill": "requirements-verification"
+    },
+    {
+      "id": "interface-design",
+      "name": "Interface 설계서",
+      "artifact_id": "interface-design",
+      "suggested_primary_skill": "software-engineering",
+      "review_skill": "document-review",
+      "verification_skill": "requirements-verification"
+    },
+    {
+      "id": "implementation-plan",
+      "name": "구현 계획서",
+      "artifact_id": "wbs",
+      "suggested_primary_skill": "development-workflow",
+      "review_skill": "document-review",
+      "verification_skill": "requirements-verification"
+    }
+  ]
+}

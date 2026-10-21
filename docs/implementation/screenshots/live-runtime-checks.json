@@ -1,0 +1,75 @@
+{
+  "provider": "codex_login",
+  "checks": [
+    "Hub 원문·현재 Codex 로그인으로 문서 신규 작성·명시 적용",
+    "실제 LLM 국소 수정·비대상 본문 보존·적용 전 원문 불변",
+    "실제 LLM 문서 검수·검수 기록 저장·본문 불변",
+    "실제 아이디어 요건화·기존 기능 대조·작업·회귀 케이스 선택 생성"
+  ],
+  "runs": [
+    {
+      "id": "0e836147-e085-44a3-9146-5b1806e19450",
+      "operation": "write_document",
+      "status": "review_ready",
+      "skills": [
+        {
+          "id": "document-writing-workflow",
+          "source_revision": "06215a2c0fd7b81c779d48f9615a085d74d52f1d",
+          "cache_key": "da75e7820758d5a1fdf1910f0bd71df1fdc99590f3968fadad66c2e47d47c1fe"
+        },
+        {
+          "id": "sentence-writing",
+          "source_revision": "06215a2c0fd7b81c779d48f9615a085d74d52f1d",
+          "cache_key": "c65225ae815c80216b46f876d713d5a091dfe07f38dd9533da6a87f262d39b39"
+        }
+      ]
+    },
+    {
+      "id": "6d9c2a16-f830-4f08-81b4-19ec5aafc040",
+      "operation": "revise_document",
+      "status": "review_ready",
+      "skills": [
+        {
+          "id": "document-writing-workflow",
+          "source_revision": "06215a2c0fd7b81c779d48f9615a085d74d52f1d",
+          "cache_key": "da75e7820758d5a1fdf1910f0bd71df1fdc99590f3968fadad66c2e47d47c1fe"
+        },
+        {
+          "id": "sentence-writing",
+          "source_revision": "06215a2c0fd7b81c779d48f9615a085d74d52f1d",
+          "cache_key": "c65225ae815c80216b46f876d713d5a091dfe07f38dd9533da6a87f262d39b39"
+        }
+      ]
+    },
+    {
+      "id": "cbdb237c-0e7f-444e-ac27-ff0712995704",
+      "operation": "review_document",
+      "status": "review_ready",
+      "skills": [
+        {
+          "id": "document-review",
+          "source_revision": "06215a2c0fd7b81c779d48f9615a085d74d52f1d",
+          "cache_key": "7fc580804c1b92c8b2122b11a790ccae43f3f588c00cc847fd357146fefa0f53"
+        }
+      ]
+    },
+    {
+      "id": "12aab14b-5596-4ece-bed2-9463b4121e86",
+      "operation": "analyze_idea",
+      "status": "review_ready",
+      "skills": [
+        {
+          "id": "requirements-authoring",
+          "source_revision": "06215a2c0fd7b81c779d48f9615a085d74d52f1d",
+          "cache_key": "99833b4cbf29f54add2dbac509b008d5c59faef6c9cf9c11dd09b03a005631ae"
+        },
+        {
+          "id": "requirements-verification",
+          "source_revision": "06215a2c0fd7b81c779d48f9615a085d74d52f1d",
+          "cache_key": "bc5892f61e49f358b407f0abde7a83d03cb343e7aa5b1f3ce92ed70fe4fa88c7"
+        }
+      ]
+    }
+  ],
+  "project_id": "6915e0be-015f-4522-9043-f5858fd9690b"
+}

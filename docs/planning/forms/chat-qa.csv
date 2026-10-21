@@ -1,0 +1,1 @@
+scenario_id,case_revision,requirement_id,feature_id,turn_index,initial_context,user_input,expected_intent,expected_tool_actions,expected_response_properties,forbidden_result,expected_state_transition,exception_handling,source_refs

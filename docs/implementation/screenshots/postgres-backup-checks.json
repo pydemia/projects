@@ -1,0 +1,30 @@
+{
+  "checked_at": "2026-10-21T07:27:47.313876+00:00",
+  "schema": "projects_backup_2e4a6468833f4cc1b05fe263c63ce405",
+  "method": "Compose pg_dump → drop owned QA schema → psql restore",
+  "dump_sha256": "1e1661d503eb743802199dcb6b17de5930387d72a810bd9f32909a9548a5f56d",
+  "tables_compared": [
+    "accounts",
+    "login_sessions",
+    "projects",
+    "baselines",
+    "items",
+    "links",
+    "revisions",
+    "skill_runs",
+    "test_runs"
+  ],
+  "row_counts": {
+    "accounts": 1,
+    "login_sessions": 0,
+    "projects": 1,
+    "baselines": 1,
+    "items": 2,
+    "links": 1,
+    "revisions": 3,
+    "skill_runs": 0,
+    "test_runs": 0
+  },
+  "result": "all IDs, revisions, bodies, links and baselines equal",
+  "scope": "synthetic QA schema; no existing project data changed"
+}

@@ -1,0 +1,51 @@
+{
+  "checked_at": "2026-10-21T07:34:11.552614+00:00",
+  "mode": "standalone archive; no database, API or bundle download",
+  "skills": [
+    {
+      "id": "development-workflow",
+      "source_url": "https://skills.pydemia.ai/api/skills/development-workflow/bundle",
+      "source_revision": "06215a2c0fd7b81c779d48f9615a085d74d52f1d",
+      "cache_key": "f9a284bf4229d7fb3fd80d9883a4eb5b591314f42970a00fd93e07ee8f738858",
+      "files": [
+        {
+          "path": "agents/openai.yaml",
+          "sha256": "a1690a71c2913d0da45fca001f8ee0127709750f2920f6b641eee04c8f2667fa",
+          "mode": "644"
+        },
+        {
+          "path": "references/change-plan.md",
+          "sha256": "b64a7f53ddfc922555648a0746a5d0a232632052f9e72dad8b7743ea32ee8cf5",
+          "mode": "644"
+        },
+        {
+          "path": "references/evaluation.md",
+          "sha256": "1ab8939aeffa408681bc72e37d8aee34043b66e8f03fc538dec8afc896f30368",
+          "mode": "644"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "eadbae32497effcedcf9221ad650d31b80d7bb3baa141908839c73d7a1f518aa",
+          "mode": "644"
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "ded08555b624b008bf360c1f69cd3dd9c18a745881da82308af256860cf9c519",
+          "mode": "644"
+        }
+      ],
+      "read_resources": [
+        "agents/openai.yaml",
+        "references/change-plan.md",
+        "references/evaluation.md",
+        "references/sources.md",
+        "SKILL.md"
+      ]
+    }
+  ],
+  "profile": "implementation-plan",
+  "input_sha256": "ba815e128d0098c9262ed0a5eafe517f191f760e4bad500444613429ee8c6730",
+  "output_sha256": "15896c8b59bf61304fd976f6ce72948d78212466f99915fb138aadc8a0e344f0",
+  "result": "actual current-login local edit; all other text preserved",
+  "review": "제공된 development-workflow 지침을 적용해 HTML 주석의 'EXTERNAL-CHECK: BEFORE'만 'EXTERNAL-CHECK: AFTER'로 변경했습니다. 나머지 문자·공백·줄바꿈은 보존했습니다. 도구, 스크립트, 자동 diff 검사, 렌더링, 테스트 및 외부 URL 조회는 실행하지 않았으며 독립 검증은 수행하지 않았습니다. 외부 참조의 inspection은 이전 관찰 메타데이터이며 이번 실행의 열람·검증 근거가 아닙니다."
+}

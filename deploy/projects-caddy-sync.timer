@@ -1,0 +1,11 @@
+[Unit]
+Description=Check the Projects Caddy site after server restarts
+
+[Timer]
+OnBootSec=30s
+OnUnitActiveSec=1min
+Persistent=true
+Unit=projects-caddy-sync.service
+
+[Install]
+WantedBy=timers.target

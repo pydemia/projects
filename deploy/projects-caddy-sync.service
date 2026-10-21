@@ -1,0 +1,7 @@
+[Unit]
+Description=Keep the Projects site in the existing Caddy runtime
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/home/pydemia/git/projects/deploy/sync-caddy.sh

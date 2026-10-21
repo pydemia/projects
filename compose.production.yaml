@@ -1,0 +1,125 @@
+x-logging: &logging
+    driver: json-file
+    options:
+        max-size: "10m"
+        max-file: "3"
+
+name: pydemia-projects
+services:
+    db:
+        image: postgres:17.11
+        restart: unless-stopped
+        environment:
+            POSTGRES_USER: projects
+            POSTGRES_DB: projects
+            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set the private server environment}
+        volumes:
+            - postgres:/var/lib/postgresql/data
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U projects -d projects"]
+            interval: 5s
+            timeout: 5s
+            retries: 12
+        mem_limit: 256m
+        networks:
+            - backend
+        logging: *logging
+    app:
+        image: ${PROJECTS_IMAGE:-pydemia-projects:current}
+        build: .
+        # This rootless Docker host maps container root to the unprivileged
+        # pydemia account, which owns the mode-0600 bind-mounted secrets.
+        user: "0:0"
+        restart: unless-stopped
+        depends_on:
+            db:
+                condition: service_healthy
+        environment:
+            PROJECTS_DATABASE_URL: ${PROJECTS_DATABASE_URL:?Set the private server environment}
+            PROJECTS_SECURE_COOKIES: "true"
+            PROJECTS_REGISTRATION_ENABLED: "false"
+            PROJECTS_PROXY_AUTH_EMAIL: pydemia@pydemia.ai
+            PROJECTS_PROXY_AUTH_USERNAME: pydemia
+            PROJECTS_CONFIG: /run/secrets/projects.local.yaml
+        volumes:
+            - ./state:/app/.projects
+            - ./.secrets/projects.local.yaml:/run/secrets/projects.local.yaml:ro
+            - ./.secrets/auth.json:/run/secrets/auth.json:ro
+        read_only: true
+        tmpfs:
+            - /tmp:rw,nosuid,nodev,size=256m,uid=0,gid=0,mode=0700
+        security_opt:
+            - no-new-privileges:true
+        cap_drop:
+            - ALL
+        mem_limit: 768m
+        cpus: 1.5
+        networks:
+            - backend
+            - egress
+        logging: *logging
+        stop_grace_period: 30s
+        command:
+            - sh
+            - -c
+            - >-
+                uv run --no-sync projects migrate &&
+                exec uv run --no-sync projects serve --host 0.0.0.0 --port 8000 --forwarded-allow-ips '*'
+    oauth2-proxy:
+        image: quay.io/oauth2-proxy/oauth2-proxy:v7.15.2@sha256:7c25fd50e1998798b79d051bd7d98ebac8dc4c6c1e54c99f4cb06f3e7d117dbd
+        restart: unless-stopped
+        env_file:
+            - ./.secrets/oauth.env
+        command:
+            - --provider=entra-id
+            - --http-address=0.0.0.0:4180
+            - --upstream=http://app:8000/
+            - --redirect-url=https://projects.pydemia.ai/oauth2/callback
+            - --scope=openid profile email
+            - --authenticated-emails-file=/etc/projects/authenticated-emails.txt
+            - --code-challenge-method=S256
+            - --insecure-oidc-skip-nonce=false
+            - --cookie-name=__Host-projects
+            - --cookie-secure=true
+            - --cookie-httponly=true
+            - --cookie-samesite=lax
+            - --cookie-path=/
+            - --cookie-expire=8h
+            - --reverse-proxy=true
+            - --api-route=^/api
+            - --pass-host-header=true
+            - --pass-access-token=false
+            - --pass-authorization-header=false
+            - --pass-basic-auth=false
+            - --pass-user-headers=true
+            - --skip-auth-strip-headers=true
+            - --set-authorization-header=false
+            - --set-xauthrequest=false
+            - --request-logging=false
+            - --auth-logging=false
+        ports:
+            - "127.0.0.1:14323:4180"
+        volumes:
+            - ./deploy/authenticated-emails.txt:/etc/projects/authenticated-emails.txt:ro
+        depends_on:
+            app:
+                condition: service_healthy
+        read_only: true
+        tmpfs:
+            - /tmp:size=8m,mode=1777
+        security_opt:
+            - no-new-privileges:true
+        cap_drop:
+            - ALL
+        mem_limit: 128m
+        cpus: 0.25
+        networks:
+            - backend
+            - egress
+        logging: *logging
+networks:
+    backend:
+        internal: true
+    egress:
+volumes:
+    postgres:

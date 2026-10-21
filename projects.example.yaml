@@ -1,0 +1,20 @@
+# Copy to projects.local.yaml. Keep that file out of version control.
+llm:
+  provider: codex_login
+  timeout_seconds: 120
+  # model: your-enabled-model  # Omit to use the Codex default.
+  # auth_file: ./private/auth.json
+  # auth_inline:             # Mutually exclusive with auth_file.
+  #   auth_mode: chatgpt
+  #   tokens:
+  #     access_token: REPLACE_LOCALLY
+  #     refresh_token: REPLACE_LOCALLY
+  #     id_token: REPLACE_LOCALLY
+  #     account_id: REPLACE_LOCALLY
+
+# OpenAI-compatible alternative:
+# llm:
+#   provider: openai_compatible
+#   base_url: https://api.openai.com/v1
+#   model: your-enabled-model
+#   api_key: REPLACE_LOCALLY

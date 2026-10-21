@@ -54,6 +54,8 @@ def test_built_web_does_not_mask_api_routes_or_expose_parent(app, tmp_path):
     web = tmp_path / "web"
     web.mkdir()
     (web / "index.html").write_text("<title>Projects deployment</title>")
+    favicon = b'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"/>'
+    (web / "favicon.svg").write_bytes(favicon)
     (tmp_path / "private.txt").write_text("synthetic-private")
     deployed = create_app(
         replace(app.state.settings, web_dir=web),
@@ -63,6 +65,12 @@ def test_built_web_does_not_mask_api_routes_or_expose_parent(app, tmp_path):
     )
     with TestClient(deployed) as browser:
         assert "Projects deployment" in browser.get("/").text
+        icon_response = browser.get("/favicon.svg")
+        assert icon_response.status_code == 200
+        assert icon_response.headers["content-type"].startswith(
+            "image/svg+xml"
+        )
+        assert icon_response.content == favicon
         assert browser.get("/health").json() == {"status": "ok"}
         assert browser.get("/api/projects").status_code == 401
         assert browser.get("/%2e%2e/private.txt").status_code == 404

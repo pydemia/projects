@@ -21,7 +21,14 @@ FILES = (
     "web/tsconfig.json",
     "web/vite.config.ts",
 )
-DIRECTORIES = ("src", "migrations", "web/src", "web/public", "web/scripts", "deploy")
+DIRECTORIES = (
+    "src",
+    "migrations",
+    "web/src",
+    "web/public",
+    "web/scripts",
+    "deploy",
+)
 
 
 def main() -> None:

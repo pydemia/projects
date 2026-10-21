@@ -25,6 +25,11 @@ Entra 프록시 인증 경로를 구현했습니다. 앱은 프록시가 전달�
   실행 중입니다. 앱·DB health check 통과, 미인증 `/api` 요청은 401입니다.
   Caddy runtime에 `projects.pydemia.ai` 경로를 로드했고 기존 네 개 사이트
   호스트 설정이 함께 남아 있음을 확인했습니다.
+- GitHub `main`의 커밋 `802c50d`에서
+  [Actions 백엔드·웹 검사](https://github.com/pydemia/projects/actions/runs/39570658439)가
+  모두 통과했습니다. 첫 CI에서 발견한 Linux mypy의 Windows 전용 상수
+  오류는 같은 커밋에서 수정했습니다. 서버 앱 이미지는 수정한 소스 묶음
+  `02fabbd610af5433`으로 재빌드했고 health check를 통과했습니다.
 - 현재 DNS A 레코드와 실제 Entra 앱 등록/비밀 값이 미완료입니다. OAuth
   프록시는 임시 비밀 값으로 기동 상태만 확인했으며, 공개 HTTPS 접속·실제
   Microsoft 로그인·운영 브라우저 흐름은 **미검증**입니다.
@@ -139,7 +144,8 @@ Hub bundle에 없는 추가 스킬·binary·외부 도구가 필요하면 review
 - 초기 독립 코드 리뷰에서 발견한 생성 제목/목록 길이와 DB 한도 불일치를
   수정했습니다. 301자 제목·101개 수용 조건 거부 및 300자 설계 제목의 실제
   저장 회귀 검사를 추가했습니다. 전체 보안 감사로 확대해 주장하지 않습니다.
-- CI 파일은 준비했지만 원격 CI·commit·push·PR·배포는 수행하지 않았습니다.
+- 위 로컬 MVP 기록 당시에는 CI·commit·push·PR·배포를 수행하지
+  않았습니다. 이후 GitHub push/CI와 부분 배포는 위 배포 절을 따릅니다.
 
 ## 승인받은 임시 인증 복사본 정리
 

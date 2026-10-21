@@ -145,8 +145,8 @@ export function TaskWorkspace({ projectId, userId, route, items, catalog, onChan
             <ActionButton onClick={() => setNewDetailed(true)}>+ 상세 작업</ActionButton>
         </PageHead>
         <div className="task-mode-bar" role="group" aria-label="작업 화면 밀도">
-            <ActionButton aria-pressed={mode === "simple"} className={mode === "simple" ? "selected" : ""} onClick={() => changeMode("simple")}>간편 · To-do</ActionButton>
-            <ActionButton aria-pressed={mode === "complex"} className={mode === "complex" ? "selected" : ""} onClick={() => changeMode("complex")}>정교 · 프로젝트</ActionButton>
+            <ActionButton aria-pressed={mode === "simple"} variant={mode === "simple" ? "primary" : "outline"} onClick={() => changeMode("simple")}>간편 · To-do</ActionButton>
+            <ActionButton aria-pressed={mode === "complex"} variant={mode === "complex" ? "primary" : "outline"} onClick={() => changeMode("complex")}>정교 · 프로젝트</ActionButton>
             <span className="muted small">같은 작업 데이터 · 보기만 변경</span>
         </div>
         <form className="task-quick-add" onSubmit={event => { void quickAdd(event); }}>

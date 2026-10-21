@@ -25,6 +25,19 @@ ABC·Issue URL 거부는 실제 PostgreSQL을 쓰는 무작위 전용 schema 통
 브라우저에서 작업 저장·재방문을 끝냈다는 증거는 아닙니다. 운영 이미지와
 브라우저 검사는 배포 후 별도로 기록합니다.
 
+## 2026-10-21 작업공간 운영 브라우저 검사
+
+`projects.pydemia.ai`의 실제 Entra 로그인 세션에서 새 배포 이미지를 열고,
+`개인 작업` 프로젝트(간편 프로필)를 만들었습니다. 빠른 입력으로
+`오늘 할 일 정리` 개인 작업을 저장하자 오늘 목록에 나타났습니다. 체크로
+완료한 뒤 정교 목록에서 같은 작업을 다시 열었고, 보드의 할 일 열과 10월
+캘린더 21일, 현재 집계의 할 일 1건에 같은 제목이 표시됐습니다. 이
+작업은 현재 열린 할 일로 남겨 사용자가 이어 쓸 수 있게 했습니다.
+Basic light/dark의 집계 화면도 확인했습니다. 브라우저에서 구현 작업의
+근거 gate, GTD/ABC 상세 편집, GitHub Issue 외부 상태 동기화, 모바일 폭은
+이번 운영 검사의 증거가 아닙니다. 그중 gate·입력 검증·정렬은 위의
+PostgreSQL/Vitest에서 검사했고, 외부 동기화는 구현하지 않았습니다.
+
 ## 2026-10-21 pydemia UI·favicon 후속 검사
 
 [편입 기록](ui-component-integration.md)의 고정 소스를 사용해 로그인·프로젝트·문서·스킬·추적 화면의 버튼·입력과 공통 상태 컴포넌트를 바꿨습니다. `npm --prefix web run check`는 TypeScript와 **14개 테스트**가 통과했고 `npm --prefix web run build`는 production build와 favicon 검증 스크립트가 통과했습니다. 빌드의 `favicon.svg` SHA-256은 `210e38b2f2f4dace4d0bf32f76dc54c17c8b335a5a056868aebf4795ae8eae33`으로 원본과 일치합니다. 배포 archive 검사에서 favicon·검증 스크립트·폰트 고지 포함과 인증 파일 미포함을 확인했습니다.

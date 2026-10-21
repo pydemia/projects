@@ -47,6 +47,11 @@ UID 0으로 실행하고 권한 상승·Linux capability를 제거했습니다.
 `deploy/authenticated-emails.txt`가 허용 이메일을 관리합니다. 운영
 배포의 엔트라 issuer는 실제 단일 테넌트 ID로 지정됐습니다. 앱
 등록의 redirect URI와 프록시의 URI가 정확히 일치해야 합니다.
+OAuth2 Proxy의 로그인 버튼은 `/oauth2/start` 폼을 제출한 뒤
+`login.microsoftonline.com`으로 이동합니다. Caddy의 CSP `form-action`은
+두 주소를 허용해야 합니다. 처음에는 `'self'`만 허용해 버튼을 눌러도
+브라우저가 Microsoft 리디렉션을 차단했습니다. Microsoft 로그인 주소만
+추가한 뒤 실제 버튼 클릭으로 계정 선택과 작업공간 진입을 확인했습니다.
 
 ## 재배포와 운영 확인
 

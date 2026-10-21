@@ -80,12 +80,13 @@ export function ArtifactFields({ data, onChange, catalog, items }: {
     </>;
 }
 
-export function ItemDataFields({ kind, data, onChange, catalog, items }: {
+export function ItemDataFields({ kind, data, onChange, catalog, items, existingItem }: {
     kind: Kind;
     data: Record<string, unknown>;
     onChange: (data: Record<string, unknown>) => void;
     catalog?: Catalog;
     items: Item[];
+    existingItem?: Item;
 }) {
     const set = (key: string, value: unknown) => onChange({ ...data, [key]: value });
     const textField = (key: string, label: string, hint?: string) => <Field key={key} label={label} hint={hint}>
@@ -131,14 +132,42 @@ export function ItemDataFields({ kind, data, onChange, catalog, items }: {
         </>;
         case "artifact": return <ArtifactFields data={data} onChange={onChange} catalog={catalog} items={items} />;
         case "task": return <>
-            <Field label="작업 상태"><select value={textValue(data, "state")} onChange={event => set("state", event.target.value)}>
-                <option value="todo">할 일</option><option value="in_progress">진행 중</option><option value="in_review">검토 중</option><option value="done">완료</option><option value="cancelled">취소</option>
-            </select></Field>
-            {listField("acceptance_criteria", "완료·수용 조건")}
+            <div className="form-grid">
+                <Field label="작업 유형" hint="개인 할 일은 가볍게 완료합니다. 구현 작업은 근거·테스트 완료 조건을 유지합니다. 생성 후 유형은 바꿀 수 없습니다.">
+                    <select value={textValue(data, "workflow") || "delivery"} disabled={!!existingItem} onChange={event => set("workflow", event.target.value)}>
+                        <option value="personal">개인 할 일</option><option value="delivery">구현 작업</option>
+                    </select>
+                </Field>
+                <Field label="작업 상태"><select value={textValue(data, "state")} onChange={event => set("state", event.target.value)}>
+                    <option value="todo">할 일</option><option value="in_progress">진행 중</option><option value="in_review">검토 중</option><option value="done">완료</option><option value="cancelled">취소</option>
+                </select></Field>
+            </div>
+            <div className="form-grid">
+                {textField("list_name", "목록·영역")}
+                <Field label="실행 예정일"><Input type="date" value={textValue(data, "planned_date")} onChange={event => set("planned_date", event.target.value)} /></Field>
+                <Field label="마감일"><Input type="date" value={textValue(data, "due_date")} onChange={event => set("due_date", event.target.value)} /></Field>
+                <Field label="예상 소요 · 분"><Input type="number" min={0} max={100000} value={Number(data.estimated_minutes) || 0} onChange={event => set("estimated_minutes", Number(event.target.value) || 0)} /></Field>
+            </div>
+            <div className="form-grid">
+                {textField("context", "GTD 실행 맥락")}
+                <Field label="필요 에너지"><select value={textValue(data, "energy") || "any"} onChange={event => set("energy", event.target.value)}>
+                    <option value="any">제약 없음</option><option value="low">낮음</option><option value="medium">보통</option><option value="high">높음</option>
+                </select></Field>
+                <Field label="ABC 가치 우선순위"><select value={textValue(data, "abc_priority") || "none"} onChange={event => set("abc_priority", event.target.value)}>
+                    <option value="none">미지정</option><option value="A">A · 핵심 가치</option><option value="B">B · 중요</option><option value="C">C · 선택</option>
+                </select></Field>
+                <Field label="ABC 그룹 내 순서"><Input type="number" min={0} max={999} value={Number(data.abc_order) || 0} onChange={event => set("abc_order", Number(event.target.value) || 0)} /></Field>
+            </div>
+            <label className="check-row"><input type="checkbox" checked={data.next_action !== false} onChange={event => set("next_action", event.target.checked)} />GTD 다음 행동으로 표시</label>
+            {textField("goal", "연결된 목표·가치")}
+            <Field label="GitHub Issue URL" hint="github.com의 Issue 주소를 연결합니다. 상태 동기화·Issue 생성은 별도 연동 단계입니다.">
+                <Input type="url" value={textValue(data, "github_issue_url")} onChange={event => set("github_issue_url", event.target.value)} placeholder="https://github.com/owner/repo/issues/123" />
+            </Field>
+            {textValue(data, "workflow") !== "personal" && listField("acceptance_criteria", "완료·수용 조건")}
             {(data.state === "cancelled" || textValue(data, "cancellation_reason")) && areaField("cancellation_reason", "작업 취소 사유")}
-            <div className="form-grid">{textField("result_url", "결과물·PR·문서 URL")}{textField("target_sha", "검증 대상 commit SHA")}</div>
-            <label className="check-row"><input type="checkbox" checked={data.requires_test !== false} onChange={event => set("requires_test", event.target.checked)} />이 작업의 완료에 테스트 근거가 필요함</label>
-            <p className="hint">완료 전환 시 서버가 결과물·수용 조건·연결된 현행 테스트를 검사합니다.</p>
+            {textValue(data, "workflow") !== "personal" && <><div className="form-grid">{textField("result_url", "결과물·PR·문서 URL")}{textField("target_sha", "검증 대상 commit SHA")}</div>
+                <label className="check-row"><input type="checkbox" checked={data.requires_test !== false} onChange={event => set("requires_test", event.target.checked)} />이 작업의 완료에 테스트 근거가 필요함</label>
+                <p className="hint">구현 작업 완료 전환 시 서버가 결과물·수용 조건·연결된 현행 테스트를 검사합니다.</p></>}
         </>;
         case "test_case": return <>
             {listField("steps", "실행 절차")}{areaField("expected", "기대 결과")}

@@ -42,6 +42,7 @@ Note 연계에 앞선 임시 문서 범위로 로컬 앱을 구현했습니다.
 9. [요구사항 기준](09-requirements.md): 사용자 요구와 기획 반영 위치
 10. [산출물 예시 확인](10-reference-audit.md): 원문 35종과 실제 접근·확인 범위
 11. [공개 양식 라이브러리](11-template-reference-library.md): 대체 참조·다운로드·자체 시작 양식
+12. [작업공간 벤치마크](12-task-workspace-benchmark.md): Jira·Confluence·ClickUp·To Do·TickTick·Todoist 비교, 간편/정교 보기와 GTD/ABC 기획
 
 ## 먼저 구현할 사용 흐름
 

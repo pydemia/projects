@@ -8,6 +8,23 @@ SkillRun을 소유합니다. 원래 로컬 검사 이후 GitHub CI, 공개 배�
 실제 Microsoft Entra 로그인을 별도로 확인했습니다. 팀 협업과 Note
 실연동은 후속 범위입니다.
 
+## 2026-10-21 작업공간 확장 로컬 검사
+
+[작업공간 구현 계획](task-workspace.md)의 APP-REQ-015~019를 대상으로
+PostgreSQL Compose를 기동하고 `uv run projects migrate`를 다시 실행했습니다.
+`uv run pytest`는 **135개 통과**했습니다. 개인 할 일의 생성·완료·다시 열기,
+기존 구현 작업의 완료 근거 gate, 생성 후 유형 변경 차단, 잘못된 날짜·소요·
+ABC·Issue URL 거부는 실제 PostgreSQL을 쓰는 무작위 전용 schema 통합
+검사입니다. `uv run ruff check src tests migrations`, `uv run ruff format
+--check src tests migrations`, `uv run mypy src/projects`도 통과했습니다.
+
+`npm --prefix web run check`는 TypeScript와 **19개 Vitest**가 통과했습니다.
+간편 입력·revision을 포함한 완료 요청, 보드·현재 집계, GTD/ABC 정렬,
+캘린더 날짜 검사는 mock API와 DOM 기반입니다. `npm --prefix web run build`는
+통과했고 favicon 해시도 기존 승인 자산과 같습니다. 이 결과는 실제
+브라우저에서 작업 저장·재방문을 끝냈다는 증거는 아닙니다. 운영 이미지와
+브라우저 검사는 배포 후 별도로 기록합니다.
+
 ## 2026-10-21 pydemia UI·favicon 후속 검사
 
 [편입 기록](ui-component-integration.md)의 고정 소스를 사용해 로그인·프로젝트·문서·스킬·추적 화면의 버튼·입력과 공통 상태 컴포넌트를 바꿨습니다. `npm --prefix web run check`는 TypeScript와 **14개 테스트**가 통과했고 `npm --prefix web run build`는 production build와 favicon 검증 스크립트가 통과했습니다. 빌드의 `favicon.svg` SHA-256은 `210e38b2f2f4dace4d0bf32f76dc54c17c8b335a5a056868aebf4795ae8eae33`으로 원본과 일치합니다. 배포 archive 검사에서 favicon·검증 스크립트·폰트 고지 포함과 인증 파일 미포함을 확인했습니다.

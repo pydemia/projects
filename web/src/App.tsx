@@ -9,6 +9,7 @@ import { Input } from "./pydemia-ui/input";
 import { Textarea } from "./pydemia-ui/textarea";
 import { ThemeControls } from "./theme";
 import { ItemsPage } from "./ItemsPage";
+import { TaskWorkspace } from "./TaskWorkspace";
 import { RunsPage } from "./RunsPage";
 import { Overview, TracePage } from "./ProjectPages";
 import {
@@ -17,7 +18,7 @@ import {
 
 const menu = [
     ["overview", "◫", "개요"], ["planning", "✎", "기획"],
-    ["documents", "▤", "임시 문서"], ["tasks", "☷", "구현 작업"],
+    ["documents", "▤", "임시 문서"], ["tasks", "☷", "작업"],
     ["tests", "✓", "테스트"], ["trace", "⌁", "추적·변경"],
     ["runs", "↗", "스킬 작업"],
 ];
@@ -165,7 +166,7 @@ function ProjectWorkspace({ project, userId, revision, onChanged, catalog, runti
     if (items.status === "error") return <ErrorNotice error={items.error} retry={items.reload} />;
     return <>
         {catalog.status === "error" && (route.view === "documents" || route.view === "runs") && <ErrorNotice error={`문서 종류·참조 목록을 읽지 못했습니다. ${catalog.error}`} retry={catalog.reload} />}
-        {route.view === "overview" ? <Overview project={project} items={items.data} revision={revision} /> : route.view === "trace" ? <TracePage projectId={project.id} items={items.data} baselineId={route.baseline} revision={revision} onChanged={onChanged} /> : route.view === "runs" ? <RunsPage projectId={project.id} userId={userId} route={route} items={items.data} catalog={catalog.status === "ready" ? catalog.data : undefined} runtime={runtime} onRuntimeReload={runtime.reload} onChanged={onChanged} /> : ["planning", "documents", "tasks", "tests"].includes(route.view) ? <ItemsPage projectId={project.id} userId={userId} route={route} items={items.data} catalog={catalog.status === "ready" ? catalog.data : undefined} onChanged={onChanged} /> : <Empty title="이 화면을 찾을 수 없습니다."><RouteLink patch={{ view: "overview" }}>개요로 이동</RouteLink></Empty>}
+        {route.view === "overview" ? <Overview project={project} items={items.data} revision={revision} /> : route.view === "trace" ? <TracePage projectId={project.id} items={items.data} baselineId={route.baseline} revision={revision} onChanged={onChanged} /> : route.view === "runs" ? <RunsPage projectId={project.id} userId={userId} route={route} items={items.data} catalog={catalog.status === "ready" ? catalog.data : undefined} runtime={runtime} onRuntimeReload={runtime.reload} onChanged={onChanged} /> : route.view === "tasks" ? <TaskWorkspace projectId={project.id} userId={userId} route={route} items={items.data} catalog={catalog.status === "ready" ? catalog.data : undefined} onChanged={onChanged} /> : ["planning", "documents", "tests"].includes(route.view) ? <ItemsPage projectId={project.id} userId={userId} route={route} items={items.data} catalog={catalog.status === "ready" ? catalog.data : undefined} onChanged={onChanged} /> : <Empty title="이 화면을 찾을 수 없습니다."><RouteLink patch={{ view: "overview" }}>개요로 이동</RouteLink></Empty>}
         <footer className="footer-note">Projects · 개인 작업공간 · 임시 문서 저장소는 Note 연계 예정</footer>
     </>;
 }

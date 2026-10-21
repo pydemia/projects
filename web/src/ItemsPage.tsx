@@ -11,7 +11,7 @@ import { itemRoute, Relations, TestExecutions } from "./Relations";
 import { Input } from "./pydemia-ui/input";
 import { Textarea } from "./pydemia-ui/textarea";
 import {
-    ActionButton, Badge, Empty, ErrorNotice, Field, Loading, Markdown, Modal,
+    ActionButton, Badge, Empty, ErrorNotice, ExternalLink, Field, Loading, Markdown, Modal,
     PageHead, RouteLink, StringList,
 } from "./ui";
 
@@ -86,7 +86,7 @@ export function ItemsPage({ projectId, userId, route, items, catalog, onChanged 
     </>;
 }
 
-function NewItem({ kind, projectId, userId, items, catalog, onClose, onCreated }: {
+export function NewItem({ kind, projectId, userId, items, catalog, onClose, onCreated }: {
     kind: Kind; projectId: string; userId: string; items: Item[]; catalog?: Catalog;
     onClose: () => void; onCreated: (item: Item) => void;
 }) {
@@ -234,7 +234,7 @@ export function RecordEditor({ item, items, catalog, userId, onChanged }: Editor
                 <Textarea className="editor" value={draft.body} onChange={event => setDraft({ ...draft, body: event.target.value })} />
             </Field>
             <details className="draft-preview"><summary>편집 중인 본문 미리보기</summary><Markdown body={draft.body} /></details>
-            <ItemDataFields kind={item.kind} data={draft.data} onChange={data => setDraft({ ...draft, data })} catalog={catalog} items={items.filter(entry => entry.id !== item.id)} />
+            <ItemDataFields kind={item.kind} data={draft.data} onChange={data => setDraft({ ...draft, data })} catalog={catalog} items={items.filter(entry => entry.id !== item.id)} existingItem={item} />
             <div className="form-actions"><ActionButton type="button" disabled={busy || !dirty} onClick={() => setDiscardOpen(true)}>내 초안 버리기</ActionButton>
                 <span className="muted small">{busy ? "서버 응답을 기다리는 중…" : dirty ? "서버 미저장" : `서버 r${serverItem.revision}과 같음`}</span>
                 <ActionButton type="submit" className="primary" disabled={busy || !dirty || !!conflict || !draft.title.trim()}>{busy ? "저장 중…" : "초안 저장"}</ActionButton></div>
@@ -254,7 +254,12 @@ function ItemDetails({ item, catalog }: { item: Item; catalog?: Catalog }) {
         {item.kind === "idea" && <><h3>가정·질문</h3><p className="preserve-lines">{item.data.notes || "등록된 메모 없음"}</p>{item.data.source_url && <p>출처: {item.data.source_url}</p>}</>}
         {item.kind === "feature" && <><h3>현재 동작</h3><p className="preserve-lines">{item.data.current_behavior || "미기록"}</p><p className="muted">근거 {item.data.evidence_url || "미기록"}<br />대상 SHA {item.data.target_sha || "미기록"}</p></>}
         {item.kind === "requirement" && <><h3>수용 조건</h3><StringList values={item.data.acceptance_criteria} /><p className="muted">{item.data.category === "functional" ? "기능" : "비기능"} 요구사항 · 우선순위 {item.data.priority} · <Badge value={item.data.disposition} /></p>{item.data.excluded_reason && <p>사유: {item.data.excluded_reason}</p>}</>}
-        {item.kind === "task" && <><h3>완료·수용 조건</h3><StringList values={item.data.acceptance_criteria} /><p><Badge value={item.data.state} /> · 테스트 근거 {item.data.requires_test ? "필요" : "비적용"}</p><p className="muted">결과 {item.data.result_url || "미기록"}<br />대상 SHA {item.data.target_sha || "미기록"}</p></>}
+        {item.kind === "task" && <><h3>작업 계획</h3><p><Badge value={item.data.state} /> · {item.data.workflow === "personal" ? "개인 할 일" : "구현 작업"} · {item.data.list_name}</p>
+            <p className="muted">실행 {item.data.planned_date || "미지정"} · 마감 {item.data.due_date || "미지정"} · 예상 {item.data.estimated_minutes ? `${item.data.estimated_minutes}분` : "미산정"}<br />
+                GTD {item.data.next_action ? "다음 행동" : "보류"} · {item.data.context || "맥락 무관"} · 에너지 {item.data.energy}<br />
+                ABC {item.data.abc_priority === "none" ? "미지정" : `${item.data.abc_priority}${item.data.abc_order || ""}`} · {item.data.goal || "연결 목표 없음"}</p>
+            {item.data.github_issue_url && <p><ExternalLink href={item.data.github_issue_url}>GitHub Issue 열기 ↗</ExternalLink></p>}
+            {item.data.workflow === "delivery" && <><h3>완료·수용 조건</h3><StringList values={item.data.acceptance_criteria} /><p>테스트 근거 {item.data.requires_test ? "필요" : "비적용"}</p><p className="muted">결과 {item.data.result_url || "미기록"}<br />대상 SHA {item.data.target_sha || "미기록"}</p></>}</>}
         {item.kind === "test_case" && <><h3>실행 절차</h3><StringList values={item.data.steps} /><h3>기대 결과</h3><p className="preserve-lines">{item.data.expected || "미기록"}</p></>}
         {item.kind === "decision" && <><h3>결정 이유</h3><p>{item.data.reason || "미기록"}</p><h3>대안</h3><StringList values={item.data.alternatives} /></>}
         {item.kind === "artifact" && <><h3>양식·참조 manifest</h3>

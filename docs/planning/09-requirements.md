@@ -21,9 +21,17 @@
 | APP-REQ-011 | DB는 PostgreSQL | Compose 17.11·SQLAlchemy·Alembic, 실제 DB 통합 테스트와 전용 schema dump/복구 | SQLite 대체 없음. 운영 환경 복구 훈련은 별도 |
 | APP-REQ-012 | Codex 로그인 기본, auth 경로/inline YAML 및 OpenAI API YAML | 안전한 YAML·경로 해석·provider 선택·비노출, Codex 실제 호출 및 API HTTP 계약 검증 | OpenAI 원격 API는 키 미설정으로 미검증. Codex 인증 refresh 복사본의 한계는 설정 문서 참고 |
 | APP-REQ-013 | `ui.pydemia.ai` 컴포넌트와 UI 모드·light/dark 테마 | 선택한 registry 소스·토큰을 고정해 공통 화면 요소와 전체 테마에 적용. 모드·테마 저장 및 브라우저 전환 확인 | 일부 업무별 고유 레이아웃과 native 컨트롤은 Projects CSS를 유지. 전체 모드별 접근성 수동 검수는 후속 |
-| APP-REQ-014 | 프런트엔드 배포에 favicon 포함 | 승인 pydemia 엠블럼 파생 SVG, 문서 head와 Vite 빌드 자산 연결 | 운영 배포의 실제 응답 bytes·브라우저 탭 확인 후 최종 판정 |
+| APP-REQ-014 | 프런트엔드 배포에 favicon 포함 | 승인 pydemia 엠블럼 파생 SVG, head·Vite 빌드 검증, 운영 `/favicon.svg`의 `image/svg+xml`·SHA-256 일치 및 로그인 브라우저 직접 표시 확인 | 브라우저 확장의 탭 배지가 원래 아이콘을 덮어써 탭 이미지 자체의 독립 확인은 제한됨 |
+| APP-REQ-015 | 간편/정교 작업 화면을 같은 데이터의 보기로 전환 | `taskMode`·`taskView` URL, 오늘·Inbox·예정과 목록·보드·캘린더·집계. 전환 시 ID·revision 불변 | 전 프로젝트 Today와 저장된 보기 공유는 후속 |
+| APP-REQ-016 | GTD 실행 조건과 Franklin ABC 가치 우선순위를 혼용 | 다음 행동·맥락·가용 시간·에너지와 A/B/C·그룹 내 순서·목표를 별도 필드/정렬 기준으로 구현 | 자동 우선순위 추천·일정 최적화는 후속 |
+| APP-REQ-017 | 개인 할 일을 빠르게 추가·완료하면서 구현 작업 완료 gate 유지 | 개인/구현 작업 유형, 한 줄 추가·완료·다시 열기, 유형 변경 차단. 구현 작업의 근거·테스트 gate 유지 | 반복·알림·실측 시간은 후속 |
+| APP-REQ-018 | 작업을 여러 보기와 집계 그래프로 관리 | 상태 보드·월간 실행/마감 캘린더·상태/지난 마감/ABC 현재 분포·예상 분 합계 | 이력 추세·Gantt·작업량·드래그·저장 필터는 후속 |
+| APP-REQ-019 | GitHub Issue와 작업 연결 | 정규화된 Issue URL을 저장·링크로 열람하고 외부 호스트 거부 | 인증·비공개 Issue·상태 읽기/양방향 동기화는 별도 연동 계약 후 구현 |
 
 APP-REQ-009는 상시 웹 수집이나 공개 양식 전체의 재배포를 요구하지 않습니다.
 양식·예시는 입력 자료이며 스킬 원문 규칙과 구분합니다. 원본 접근 실패를
 공개 보완 자료의 존재로 바꾸지 않고, 실행 시 URL을 읽지 않았다면
 `read_in_this_run=false`를 유지합니다.
+
+APP-REQ-015~019의 제품 비교·화면·수용 기준은
+[작업공간 벤치마크](12-task-workspace-benchmark.md)에 있습니다.

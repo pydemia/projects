@@ -46,6 +46,24 @@ flowchart LR
 
 후속 프런트엔드 구현 결정: 웹 구조는 React·TypeScript·Vite를 유지한다. 시각 컴포넌트와 토큰은 [ui.pydemia.ai](https://ui.pydemia.ai/)의 고정 소스를 필요한 범위만 편입하고, `ThemeScope`가 UI 모드·light/dark 색·portal 범위를 적용한다. 업무 데이터 상태와 화면 외형 설정을 분리하며 테마 선택은 브라우저 로컬 설정이다. `@pydemia/ui`를 공개 npm 패키지로 설치하지 않는다. 선택 항목·revision·라이선스·검사 범위는 [편입 기록](../implementation/ui-component-integration.md)을 따른다. 웹 정적 산출물에는 엠블럼 favicon을 포함하고 HTML head의 링크와 실제 운영 응답을 릴리즈 검사에서 대조한다.
 
+작업 화면 확장은 [벤치마크와 기능 기획](12-task-workspace-benchmark.md)에
+따라 `TaskWorkspace`에서 같은 작업 API 결과를 간편/정교 보기로 투영한다.
+`taskMode`, `taskView`, 선택 항목은 URL 상태이며 시각 디자인 모드와
+별개다. 검색·GTD 현재 조건·ABC 렌즈는 현재 화면의 조작 상태다.
+작업 데이터는 PostgreSQL `items.data`의 검증된 JSON에 추가하므로
+별도 문서 저장 모델이나 SQLite 경로를 만들지 않는다. 개인 할 일과
+구현 작업은 `workflow`로 구분하고 생성 후 바꾸지 않는다. 개인 할 일의
+완료는 수용 조건/결과 URL을 요구하지 않지만 선행 작업 검사는 유지한다.
+구현 작업에는 기존 완료 gate를 그대로 적용한다. 신규 날짜는 ISO
+`YYYY-MM-DD`의 날짜 값이며 시간대가 필요한 알림·반복은 후속 계약이다.
+
+집계 그래프는 현재 접근 가능한 프로젝트 작업에서 즉시 계산하는
+스냅샷이다. 이력/속도 그래프는 작업 전이 시각과 변경 사건의 서버 집계가
+준비된 뒤 구현한다. GitHub Issue 연결은 이번 단계에서 검증된 URL을
+보존·열람하는 외부 참조다. 외부 응답을 Projects의 상태나 완료 증거로
+자동 반영하지 않는다. 읽기 동기화·webhook은 별도 credential·권한·멱등
+계약을 필요로 한다.
+
 ## Infra
 
 개발 환경은 웹·API·worker와 로컬 DB·첨부 디렉터리로 시작한다. 컨테이너 구성을 제공하되 로컬 실행 경로도 명시한다. 첫 외부 배포는 HTTPS reverse proxy 뒤의 웹/API/worker, 관리형 DB 또는 별도 백업이 검증된 DB, 비공개 파일 저장소로 구성한다. 배포 공급자와 가격은 아직 결정하지 않는다.

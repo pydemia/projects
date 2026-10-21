@@ -280,6 +280,70 @@ def test_task_completion_needs_current_case_and_same_commit(
     assert summary["tests"] == {"passed": 0, "total": 1}
 
 
+def test_personal_task_completion_keeps_delivery_gate(
+    client, project, create_item
+):
+    personal = create_item(
+        "task",
+        "짧은 개인 할 일",
+        data={
+            "workflow": "personal",
+            "estimated_minutes": 15,
+            "context": "desk",
+            "abc_priority": "A",
+            "abc_order": 1,
+            "planned_date": "2026-10-21",
+            "github_issue_url": "https://github.com/pydemia/projects/issues/12",
+        },
+    )
+    assert personal["data"]["workflow"] == "personal"
+    assert personal["data"]["estimated_minutes"] == 15
+    completed = update(
+        client, personal, data={**personal["data"], "state": "done"}
+    )
+    assert completed.status_code == 200, completed.text
+    completed_task = completed.json()
+    reopened = update(
+        client,
+        completed_task,
+        data={**completed_task["data"], "state": "todo"},
+    )
+    assert reopened.status_code == 200, reopened.text
+    assert reopened.json()["data"]["state"] == "todo"
+    delivery = create_item("task", "구현 근거 필요")
+    assert (
+        update(
+            client, delivery, data={**delivery["data"], "state": "done"}
+        ).status_code
+        == 409
+    )
+    assert (
+        update(
+            client, delivery, data={**delivery["data"], "workflow": "personal"}
+        ).status_code
+        == 409
+    )
+
+
+def test_task_planning_fields_reject_invalid_values(
+    client, project, create_item
+):
+    for data in (
+        {"workflow": "personal", "due_date": "2026-02-30"},
+        {"workflow": "personal", "estimated_minutes": -1},
+        {"workflow": "personal", "abc_priority": "D"},
+        {
+            "workflow": "personal",
+            "github_issue_url": "https://evil.example/issues/1",
+        },
+    ):
+        response = client.post(
+            f"/api/projects/{project['id']}/items",
+            json={"kind": "task", "title": "유효성 검사", "data": data},
+        )
+        assert response.status_code == 422, response.text
+
+
 def test_baseline_snapshot_and_change_review(client, project, create_item):
     req = create_item("requirement", "요구")
     artifact = create_item()

@@ -117,6 +117,10 @@ def revise_item(
     if len(title) > 300 or len(body) > 500000:
         raise Problem(422, "제목 또는 본문 크기가 저장 한도를 초과했습니다.")
     validated = validate_item_data(item.kind, data)
+    if item.kind == "task" and (
+        item.data.get("workflow", "delivery") != validated["workflow"]
+    ):
+        raise Problem(409, "작업 유형은 생성 후 변경할 수 없습니다.")
     if item.kind == "task" and validated["state"] == "done":
         check_task_completion(db, item, validated)
     item.title = title.strip()
@@ -220,17 +224,19 @@ def latest_case_run(db: Session, case: Item) -> TestRun | None:
 
 
 def check_task_completion(db: Session, task: Item, data: dict) -> None:
-    if (
-        not any(x.strip() for x in data["acceptance_criteria"])
-        or not data["result_url"].strip()
-    ):
-        raise Problem(409, "완료 조건과 결과 근거를 기록해 주세요.")
     items = {x.id: x for x in project_items(db, task.project_id)}
     links = project_links(db, task.project_id)
     for link in links:
         if link.source_id == task.id and link.relation == "depends_on":
             if items[link.target_id].data.get("state") != "done":
                 raise Problem(409, "선행 작업이 완료되지 않았습니다.")
+    if data["workflow"] == "personal":
+        return
+    if (
+        not any(x.strip() for x in data["acceptance_criteria"])
+        or not data["result_url"].strip()
+    ):
+        raise Problem(409, "완료 조건과 결과 근거를 기록해 주세요.")
     if data["requires_test"]:
         cases = [
             items[x.source_id]

@@ -33,9 +33,20 @@ export const dataSchemas = {
         project_source_refs: textList.default([]),
     }).passthrough(),
     task: z.object({
+        workflow: z.enum(["delivery", "personal"]).default("delivery"),
         state: z.enum([
             "todo", "in_progress", "in_review", "done", "cancelled",
         ]).default("todo"),
+        list_name: text.default("Inbox"),
+        planned_date: text.default(""), due_date: text.default(""),
+        estimated_minutes: z.number().int().nonnegative().default(0),
+        context: text.default(""),
+        energy: z.enum(["any", "low", "medium", "high"]).default("any"),
+        next_action: z.boolean().default(true),
+        abc_priority: z.enum(["none", "A", "B", "C"]).default("none"),
+        abc_order: z.number().int().nonnegative().default(0),
+        goal: text.default(""),
+        github_issue_url: text.default(""),
         acceptance_criteria: textList.default([]),
         result_url: text.default(""), target_sha: text.default(""),
         requires_test: z.boolean().default(true),
@@ -196,7 +207,7 @@ export const reconnectSchema = z.object({
 
 export const kindLabels: Record<Kind, string> = {
     idea: "아이디어", feature: "기존 기능", requirement: "요구사항",
-    artifact: "임시 문서", task: "구현 작업", test_case: "테스트 케이스",
+    artifact: "임시 문서", task: "작업", test_case: "테스트 케이스",
     decision: "결정 기록",
 };
 export const statusLabels: Record<string, string> = {

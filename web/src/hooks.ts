@@ -39,6 +39,7 @@ export function useResource<T>(
 export type Route = {
     project: string; view: string; item: string; kind: string;
     q: string; run: string; baseline: string;
+    taskMode?: string; taskView?: string;
 };
 function readRoute(): Route {
     const query = new URLSearchParams(window.location.search);
@@ -47,6 +48,7 @@ function readRoute(): Route {
         item: query.get("item") ?? "", kind: query.get("kind") ?? "",
         q: query.get("q") ?? "", run: query.get("run") ?? "",
         baseline: query.get("baseline") ?? "",
+        taskMode: query.get("taskMode") ?? "", taskView: query.get("taskView") ?? "",
     };
 }
 export function routeUrl(patch: Partial<Route>): string {

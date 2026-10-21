@@ -1,6 +1,6 @@
 # Projects 구현 goal
 
-2026-10-21 · 상태: 로컬 MVP·CI 통과, 공개 HTTPS 배포·실제 Entra 로그인 확인 · 최신 근거: APP-REQ-001~012
+2026-10-21 · 상태: 로컬 MVP·CI 통과, 공개 HTTPS 배포·실제 Entra 로그인 확인 · 최신 요구: APP-REQ-001~019
 
 사용자의 후속 요청으로 `projects.pydemia.ai` 배포와
 `pydemia@pydemia.ai` Microsoft Entra 로그인 연결을 현재 실행 범위에
@@ -13,13 +13,26 @@ Note 앱으로 연계하며, 이번 구현은 [임시 문서 기능](note-docume
 제한한다. 아래 초기 goal보다 이 사용자 지시를 우선한다.
 LLM 기본은 Codex 로그인이며 auth.json 파일 경로 또는 inline 인증을 YAML로
 설정한다. OpenAI-compatible API의 키·모델·주소도 YAML로 선택할 수 있다.
-전체 최신 요구 ID는 APP-REQ-001~014다.
+전체 최신 요구 ID는 APP-REQ-001~019다.
 
 후속 UI 작업: [공통 UI 편입 기록](ui-component-integration.md)에 따라
 `ui.pydemia.ai`의 실제 컴포넌트·토큰·21개 출시 UI 모드를 적용하고
 light/dark 선택을 제공한다. favicon을 빌드·배포 검증 대상으로 추가한다.
-따라서 현재 요구 ID는 APP-REQ-001~014다. 아래 초기 구현 판정은 UI 개편
+따라서 현재 요구 ID는 APP-REQ-001~019다. 아래 초기 구현 판정은 UI 개편
 이전 근거이므로 신규 UI 검증과 구분한다.
+
+후속 작업공간 goal: [제품 벤치마크](../planning/12-task-workspace-benchmark.md)를
+근거로 개인 할 일과 구현 작업을 한 PostgreSQL 작업 모델에 유지한다.
+간편/정교 모드는 항목 유형이 아니라 보기 밀도이며, 오늘·Inbox·예정과
+목록·보드·캘린더·집계 사이의 전환은 동일 ID·revision을 사용한다.
+GTD의 행동·시간·맥락·에너지와 Franklin ABC의 가치·순서를 독립 입력/정렬
+축으로 구현한다. GitHub Issue는 이번 단계에서 유효한 URL 연결까지만 하며
+원격 상태 동기화는 후속 계약이다. 실행 항목·단계별 판정은
+[작업공간 구현 계획](task-workspace.md)을 따른다.
+
+2026-10-21 로컬 재검증: Docker가 다시 동작해 PostgreSQL migration,
+`uv run pytest` 135개, 웹 TypeScript/Vitest 17개, Ruff·mypy·웹 빌드가
+통과했다. 작업공간 운영 배포/브라우저 판정은 별도로 기록한다.
 
 ## 최종 판정
 

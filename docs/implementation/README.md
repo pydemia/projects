@@ -61,6 +61,8 @@ PostgreSQL 연결을 지정할 수 있습니다. 테스트 자체가 개발 프�
 Hub·Codex, 독립 파일 실행과 브라우저 검사를 구분합니다.
 [공통 UI 편입 기록](ui-component-integration.md)은 pydemia UI의 고정 소스,
 모드·테마·favicon 자산과 브라우저/배포 확인 범위를 기록합니다.
+[작업공간 구현 계획](task-workspace.md)은 개인 할 일·구현 작업의 공통 모델,
+간편/정교 보기, GTD/ABC, GitHub Issue 연결과 후속 연동 단계를 기록합니다.
 다음 명령은 추가 검증용입니다. 브라우저·실제 LLM 검사는 합성 QA 계정과
 프로젝트를 만들며, LLM 검사는 현재 공급자의 실제 사용량을 소비합니다.
 

@@ -1,0 +1,105 @@
+/* Projects layout remains local; all color and material roles come from pydemia/ui. */
+.projects-theme {
+  --ink: var(--foreground);
+  --line: var(--border);
+  --soft: var(--surface-subtle);
+  --green: var(--success);
+  --amber: var(--warning);
+  --red: var(--danger);
+  min-height: 100dvh;
+  color: var(--foreground);
+  background: var(--background);
+  font-family: var(--font-ui);
+}
+.projects-theme button:not([data-ui="button"]),
+.projects-theme .button,
+.projects-theme select,
+.projects-theme input,
+.projects-theme textarea {
+  color: var(--foreground);
+  background-color: var(--surface);
+  border-color: var(--border);
+}
+.projects-theme input[type="checkbox"] { accent-color: var(--accent); }
+.projects-theme button:hover:not(:disabled),
+.projects-theme .button:hover { background-color: var(--surface-subtle); }
+.projects-theme .primary,
+.projects-theme button.primary,
+.projects-theme .button.primary,
+.projects-theme a.primary {
+  color: var(--accent-foreground);
+  background-color: var(--accent);
+  border-color: var(--accent);
+}
+.projects-theme .primary:hover:not(:disabled) { filter: brightness(.94); background-color: var(--accent); }
+.projects-theme button:disabled { opacity: .55; }
+.projects-theme a { color: var(--accent); }
+.projects-theme a.primary { display: inline-flex; align-items: center; justify-content: center; min-height: var(--control-height); padding: 8px 14px; border: 1px solid var(--accent); border-radius: var(--control-radius); text-decoration: none; }
+.projects-theme a.primary:hover { color: var(--accent-foreground); }
+.projects-theme .sidebar { background: var(--surface-subtle); }
+.projects-theme .topbar,
+.projects-theme .apply-area,
+.projects-theme .modal-head { background: var(--surface); }
+.projects-theme .sidebar .brand { color: var(--foreground); }
+.projects-theme .brandmark { background: var(--surface); padding: 2px; border: 1px solid var(--border); }
+.projects-theme .stage.current .stage-circle { color: var(--accent-foreground); background: var(--accent); border-color: var(--accent); }
+.projects-theme .nav a { color: var(--foreground); }
+.projects-theme .nav a:hover,
+.projects-theme .doc-item:hover { background: var(--surface); }
+.projects-theme .nav a.active,
+.projects-theme .doc-item.active,
+.projects-theme .view-switch [aria-current],
+.projects-theme .view-switch .selected,
+.projects-theme .editor-tabs button.selected,
+.projects-theme .filterset button.selected { color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--surface)); }
+.projects-theme .scope-note,
+.projects-theme .reference-note,
+.projects-theme .markdown pre,
+.projects-theme pre,
+.projects-theme .markdown code,
+.projects-theme .avatar,
+.projects-theme .track,
+.projects-theme th,
+.projects-theme .modal-footer { background: var(--surface-subtle); }
+.projects-theme .doc-body p { color: var(--foreground); }
+.projects-theme .stage-circle,
+.projects-theme .search,
+.projects-theme .editor,
+.projects-theme .project-choice,
+.projects-theme .field input:not([type="checkbox"]),
+.projects-theme .field textarea,
+.projects-theme .field select,
+.projects-theme .list-search input { color: var(--foreground); background: var(--surface); border-color: var(--border); }
+.projects-theme .field input[readonly] { background: var(--surface-subtle); }
+.projects-theme .notice.error,
+.projects-theme .status-failed,
+.projects-theme .status-conflict { color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, var(--surface)); }
+.projects-theme .notice.local,
+.projects-theme .status-in_review,
+.projects-theme .status-defer,
+.projects-theme .status-aborted { color: var(--warning); background: color-mix(in srgb, var(--warning) 12%, var(--surface)); }
+.projects-theme .notice.runtime-ready,
+.projects-theme .success-message,
+.projects-theme .status-confirmed,
+.projects-theme .status-done,
+.projects-theme .status-passed,
+.projects-theme .status-applied { color: var(--success); background: color-mix(in srgb, var(--success) 12%, var(--surface)); }
+.projects-theme .status-running,
+.projects-theme .status-queued,
+.projects-theme .status-review_ready,
+.projects-theme .status-in_progress { color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--surface)); }
+.projects-theme .conflict-section { background: color-mix(in srgb, var(--warning) 9%, var(--surface)); }
+.projects-theme dialog { color: var(--foreground); background: var(--surface); border-color: var(--border); box-shadow: var(--shadow-float); }
+.projects-theme dialog::backdrop { background: var(--overlay); }
+.projects-theme .skip-link { color: var(--foreground); background: var(--surface); }
+.projects-theme .theme-controls { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+.projects-theme .theme-controls select { width: auto; max-width: 150px; min-height: 34px; padding: 5px 8px; font-size: 12px; border-radius: var(--field-radius); }
+.projects-theme .theme-controls select:first-of-type { max-width: 176px; }
+.projects-theme .auth-theme { grid-column: 1 / -1; justify-self: end; margin-top: -54px; margin-bottom: 24px; }
+.projects-theme [data-ui="empty"] { align-items: flex-start; text-align: left; }
+.projects-theme [data-ui="alert"] { display: block; }
+@media (max-width: 760px) {
+  .projects-theme .auth-theme { margin: -28px 0 24px; }
+  .projects-theme .topbar .theme-controls select { max-width: 120px; min-height: 32px; font-size: 10px; }
+  .projects-theme .topbar .theme-controls select:first-of-type { max-width: 140px; }
+}

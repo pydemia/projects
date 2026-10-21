@@ -1,5 +1,7 @@
 import type { Catalog, Item, Kind } from "./models";
 import { artifactDefinition } from "./models";
+import { Input } from "./pydemia-ui/input";
+import { Textarea } from "./pydemia-ui/textarea";
 import { ExternalLink, Field, StringList } from "./ui";
 
 export function textValue(data: Record<string, unknown>, key: string): string {
@@ -40,7 +42,7 @@ export function ArtifactFields({ data, onChange, catalog, items }: {
                 </select>
             </Field>
             <Field label="양식 버전·확인 시점">
-                <input value={textValue(data, "template_version")} onChange={event => set("template_version", event.target.value || null)} placeholder="예: v3.1 · 2026-10-21 확인" />
+                <Input value={textValue(data, "template_version")} onChange={event => set("template_version", event.target.value || null)} placeholder="예: v3.1 · 2026-10-21 확인" />
             </Field>
             <Field label="참조 확인 상태" hint="원문 자료를 직접 확인한 경우에만 확인 상태를 변경해 주세요.">
                 <select value={textValue(data, "inspection_status")} onChange={event => set("inspection_status", event.target.value)}>
@@ -87,13 +89,13 @@ export function ItemDataFields({ kind, data, onChange, catalog, items }: {
 }) {
     const set = (key: string, value: unknown) => onChange({ ...data, [key]: value });
     const textField = (key: string, label: string, hint?: string) => <Field key={key} label={label} hint={hint}>
-        <input value={textValue(data, key)} onChange={event => set(key, event.target.value)} />
+        <Input value={textValue(data, key)} onChange={event => set(key, event.target.value)} />
     </Field>;
     const areaField = (key: string, label: string) => <Field key={key} label={label}>
-        <textarea rows={3} value={textValue(data, key)} onChange={event => set(key, event.target.value)} />
+        <Textarea rows={3} value={textValue(data, key)} onChange={event => set(key, event.target.value)} />
     </Field>;
     const listField = (key: string, label: string) => <Field key={key} label={label} hint="한 줄에 한 항목씩 작성해 주세요.">
-        <textarea rows={4} value={listValue(data, key).join("\n")} onChange={event => {
+        <Textarea rows={4} value={listValue(data, key).join("\n")} onChange={event => {
             // Keep the trailing empty line while editing a list in a textarea.
             set(key, event.target.value.split("\n"));
         }} />

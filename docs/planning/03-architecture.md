@@ -44,6 +44,8 @@ flowchart LR
 
 이는 추천 조합이며 저장소에 설치하거나 호환성을 검증한 상태는 아니다. FastAPI의 OpenAPI·검증 지원은 [공식 문서](https://fastapi.tiangolo.com/features/), React의 구성 방식은 [공식 문서](https://react.dev/learn)를 참고했다.
 
+후속 프런트엔드 구현 결정: 웹 구조는 React·TypeScript·Vite를 유지한다. 시각 컴포넌트와 토큰은 [ui.pydemia.ai](https://ui.pydemia.ai/)의 고정 소스를 필요한 범위만 편입하고, `ThemeScope`가 UI 모드·light/dark 색·portal 범위를 적용한다. 업무 데이터 상태와 화면 외형 설정을 분리하며 테마 선택은 브라우저 로컬 설정이다. `@pydemia/ui`를 공개 npm 패키지로 설치하지 않는다. 선택 항목·revision·라이선스·검사 범위는 [편입 기록](../implementation/ui-component-integration.md)을 따른다. 웹 정적 산출물에는 엠블럼 favicon을 포함하고 HTML head의 링크와 실제 운영 응답을 릴리즈 검사에서 대조한다.
+
 ## Infra
 
 개발 환경은 웹·API·worker와 로컬 DB·첨부 디렉터리로 시작한다. 컨테이너 구성을 제공하되 로컬 실행 경로도 명시한다. 첫 외부 배포는 HTTPS reverse proxy 뒤의 웹/API/worker, 관리형 DB 또는 별도 백업이 검증된 DB, 비공개 파일 저장소로 구성한다. 배포 공급자와 가격은 아직 결정하지 않는다.

@@ -4,11 +4,15 @@ import { api, ApiError, downloadArchive, errorMessage, setCsrf } from "./api";
 import { navigate, useResource, useRoute } from "./hooks";
 import type { Session, Project } from "./models";
 import { dateLabel } from "./models";
+import { Button } from "./pydemia-ui/button";
+import { Input } from "./pydemia-ui/input";
+import { Textarea } from "./pydemia-ui/textarea";
+import { ThemeControls } from "./theme";
 import { ItemsPage } from "./ItemsPage";
 import { RunsPage } from "./RunsPage";
 import { Overview, TracePage } from "./ProjectPages";
 import {
-    Empty, ErrorNotice, Field, Loading, Modal, PageHead, RouteLink,
+    ActionButton, Empty, ErrorNotice, Field, Loading, Modal, PageHead, RouteLink,
 } from "./ui";
 
 const menu = [
@@ -22,7 +26,7 @@ class AppErrorBoundary extends Component<{ children: ReactNode }, { failed: bool
     state = { failed: false };
     static getDerivedStateFromError() { return { failed: true }; }
     render() {
-        if (this.state.failed) return <main className="fatal-error"><h1>화면을 표시하지 못했습니다.</h1><p>서버에 저장한 내용과 브라우저에 보관한 초안은 다시 로그인한 뒤 확인할 수 있습니다.</p><button onClick={() => window.location.reload()}>앱 새로고침</button></main>;
+        if (this.state.failed) return <main className="fatal-error"><h1>화면을 표시하지 못했습니다.</h1><p>서버에 저장한 내용과 브라우저에 보관한 초안은 다시 로그인한 뒤 확인할 수 있습니다.</p><ActionButton onClick={() => window.location.reload()}>앱 새로고침</ActionButton></main>;
         return this.props.children;
     }
 }
@@ -58,7 +62,7 @@ export default function App() {
 }
 
 function Brand() {
-    return <div className="brand"><span className="brandmark" aria-hidden="true">P</span><span>Projects</span></div>;
+    return <div className="brand"><img className="brandmark" src="/favicon.svg" alt="" aria-hidden="true" /><span>Projects</span></div>;
 }
 function AuthPage({ onSignedIn, sessionError, retrySession }: {
     onSignedIn: (session: Session) => void; sessionError: string;
@@ -79,16 +83,16 @@ function AuthPage({ onSignedIn, sessionError, retrySession }: {
         catch (error) { setError(errorMessage(error)); }
         finally { setBusy(false); }
     }
-    return <main className="auth-page"><Brand /><div className="auth-intro"><div className="eyebrow">YOUR PROJECT WORKSPACE</div><h1>아이디어부터<br />실행의 근거까지.</h1><p>메모, 요건, 스킬 작업과 검증 기록을 한 프로젝트에서 이어갑니다.</p></div>
-        <section className="auth-form">{!microsoftLogin && <nav className="view-switch" aria-label="계정 작업"><button aria-pressed={mode === "login"} className={mode === "login" ? "selected" : ""} onClick={() => { setMode("login"); setError(""); }}>로그인</button>{registrationEnabled && <button aria-pressed={mode === "register"} className={mode === "register" ? "selected" : ""} onClick={() => { setMode("register"); setError(""); }}>계정 만들기</button>}</nav>}
+    return <main className="auth-page"><Brand /><div className="auth-theme"><ThemeControls /></div><div className="auth-intro"><div className="eyebrow">YOUR PROJECT WORKSPACE</div><h1>아이디어부터<br />실행의 근거까지.</h1><p>메모, 요건, 스킬 작업과 검증 기록을 한 프로젝트에서 이어갑니다.</p></div>
+        <section className="auth-form">{!microsoftLogin && <nav className="view-switch" aria-label="계정 작업"><ActionButton aria-pressed={mode === "login"} className={mode === "login" ? "selected" : ""} onClick={() => { setMode("login"); setError(""); }}>로그인</ActionButton>{registrationEnabled && <ActionButton aria-pressed={mode === "register"} className={mode === "register" ? "selected" : ""} onClick={() => { setMode("register"); setError(""); }}>계정 만들기</ActionButton>}</nav>}
             {microsoftLogin && <p className="muted">pydemia@pydemia.ai Microsoft 계정으로 로그인합니다.</p>}
             {authOptions.status === "ready" && !registrationEnabled && !microsoftLogin && <p className="muted">개인 작업공간입니다. 발급된 계정으로 로그인해 주세요.</p>}
             <h2>{mode === "login" ? "작업공간으로 돌아가기" : "개인 작업공간 시작하기"}</h2>
-            {microsoftLogin ? <a className="primary full-width" href="/oauth2/start?rd=%2F">Microsoft 계정으로 로그인</a> : <form onSubmit={event => { void submit(event); }}><Field label="사용자 이름" hint={mode === "register" ? "3~80자 · 문자, 숫자, 밑줄, 점, 하이픈을 사용할 수 있습니다." : undefined}><input required minLength={3} maxLength={80} autoFocus autoComplete="username" value={username} onChange={event => setUsername(event.target.value)} /></Field><Field label="비밀번호" hint={mode === "register" ? "12자 이상으로 설정해 주세요." : undefined}><input required type="password" minLength={mode === "register" ? 12 : 1} maxLength={256} autoComplete={mode === "register" ? "new-password" : "current-password"} value={password} onChange={event => setPassword(event.target.value)} /></Field>
+            {microsoftLogin ? <a className="primary full-width" href="/oauth2/start?rd=%2F">Microsoft 계정으로 로그인</a> : <form onSubmit={event => { void submit(event); }}><Field label="사용자 이름" hint={mode === "register" ? "3~80자 · 문자, 숫자, 밑줄, 점, 하이픈을 사용할 수 있습니다." : undefined}><Input required minLength={3} maxLength={80} autoFocus autoComplete="username" value={username} onChange={event => setUsername(event.target.value)} /></Field><Field label="비밀번호" hint={mode === "register" ? "12자 이상으로 설정해 주세요." : undefined}><Input required type="password" minLength={mode === "register" ? 12 : 1} maxLength={256} autoComplete={mode === "register" ? "new-password" : "current-password"} value={password} onChange={event => setPassword(event.target.value)} /></Field>
                 {error && <ErrorNotice error={error} />}
-                <button className="primary full-width" type="submit" disabled={busy}>{busy ? "서버 확인 중…" : mode === "login" ? "로그인" : "계정 만들기"}</button></form>}
+                <Button className="primary full-width" type="submit" disabled={busy}>{busy ? "서버 확인 중…" : mode === "login" ? "로그인" : "계정 만들기"}</Button></form>}
             {sessionError && <ErrorNotice error={sessionError} retry={retrySession} />}
-            <p className="auth-health">{health.status === "loading" ? "API 연결 확인 중…" : health.status === "ready" ? "API 서버 연결됨" : "API 서버에 연결되지 않았습니다."}{health.status === "error" && <button className="linkbtn" onClick={health.reload}>다시 확인</button>}</p>
+            <p className="auth-health">{health.status === "loading" ? "API 연결 확인 중…" : health.status === "ready" ? "API 서버 연결됨" : "API 서버에 연결되지 않았습니다."}{health.status === "error" && <ActionButton className="linkbtn" onClick={health.reload}>다시 확인</ActionButton>}</p>
         </section>
     </main>;
 }
@@ -129,14 +133,15 @@ function Workbench({ session, onLogout }: { session: Session; onLogout: () => vo
         <aside className="sidebar" aria-label="프로젝트 탐색"><div><Brand /><div className="workspace">개인 작업공간</div></div>
             <div className="project-nav"><label className="side-label" htmlFor="project-choice">PROJECT</label><select id="project-choice" className="project-choice" value={route.project} onChange={event => navigate({ project: event.target.value, item: "", run: "", baseline: "", q: "", view: "overview" })}>
                 <option value="">프로젝트 목록</option>{projects.status === "ready" && projects.data.map(project => <option value={project.id} key={project.id}>{project.name}</option>)}</select>
-                <button className="linkbtn small new-project" onClick={() => setCreateOpen(true)}>+ 프로젝트 만들기</button>
+                <ActionButton className="linkbtn small new-project" onClick={() => setCreateOpen(true)}>+ 프로젝트 만들기</ActionButton>
                 <nav className="nav" aria-label="프로젝트 메뉴">{menu.map(([view, icon, label]) => <RouteLink key={view} patch={{ view, item: "", run: "", q: "", kind: "" }} className={route.view === view && route.project ? "active" : ""} current={route.view === view && !!route.project}><span className="nav-icon" aria-hidden="true">{icon}</span>{label}</RouteLink>)}</nav>
-            </div><div className="sidebar-bottom"><span className="avatar" aria-hidden="true">{session.user.username.slice(0, 2).toUpperCase()}</span><strong>{session.user.username}</strong><p className="muted small">개인 모드</p><button className="small" disabled={logoutBusy} onClick={() => { void logout(); }}>{logoutBusy ? "처리 중…" : "로그아웃"}</button></div>
+            </div><div className="sidebar-bottom"><span className="avatar" aria-hidden="true">{session.user.username.slice(0, 2).toUpperCase()}</span><strong>{session.user.username}</strong><p className="muted small">개인 모드</p><ActionButton className="small" disabled={logoutBusy} onClick={() => { void logout(); }}>{logoutBusy ? "처리 중…" : "로그아웃"}</ActionButton></div>
         </aside>
         <div className="workspace-main"><header className="topbar"><div className="crumb"><RouteLink patch={{ project: "", item: "", run: "", baseline: "" }}>프로젝트</RouteLink>{selected && <><span>/</span><strong>{selected.name}</strong><span>/</span><span>{title}</span></>}</div><div className="actions">
+            <ThemeControls />
             {runtime.status === "ready" && <span className={`runtime-label ${runtime.data.configured ? "configured" : ""}`}>{runtime.data.configured ? "LLM 연결 설정됨" : "LLM 미설정"}</span>}
-            {selected && <button className="small" disabled={exportBusy} onClick={() => { void exportProject(); }}>{exportBusy ? "ZIP 받는 중…" : "프로젝트 ZIP"}</button>}
-            <button className="mobile-logout small" disabled={logoutBusy} onClick={() => { void logout(); }}>로그아웃</button>
+            {selected && <ActionButton className="small" disabled={exportBusy} onClick={() => { void exportProject(); }}>{exportBusy ? "ZIP 받는 중…" : "프로젝트 ZIP"}</ActionButton>}
+            <ActionButton className="mobile-logout small" disabled={logoutBusy} onClick={() => { void logout(); }}>로그아웃</ActionButton>
         </div></header>
             <main id="main" className="page" tabIndex={-1}>
                 {error && <ErrorNotice error={error} />}
@@ -178,12 +183,12 @@ function CreateProject({ onClose, onCreated }: { onClose: () => void; onCreated:
         finally { setBusy(false); }
     }
     return <Modal title="프로젝트 만들기" onClose={onClose}><form onSubmit={event => { void create(event); }}>
-        <Field label="프로젝트 이름"><input required autoFocus maxLength={200} value={name} onChange={event => setName(event.target.value)} /></Field>
-        <Field label="목표"><textarea rows={4} value={goal} onChange={event => setGoal(event.target.value)} placeholder="이 프로젝트로 해결할 문제와 만들 결과를 적어 주세요." /></Field>
+        <Field label="프로젝트 이름"><Input required autoFocus maxLength={200} value={name} onChange={event => setName(event.target.value)} /></Field>
+        <Field label="목표"><Textarea rows={4} value={goal} onChange={event => setGoal(event.target.value)} placeholder="이 프로젝트로 해결할 문제와 만들 결과를 적어 주세요." /></Field>
         <Field label="프로필"><select value={profile} onChange={event => setProfile(event.target.value)}><option value="simple">간편 · 개인 아이디어부터 시작</option><option value="standard">표준 · 기획·설계·검증 근거 함께 관리</option></select></Field>
         <p className="hint">문서 종류 35종은 선택 항목입니다. 모든 문서를 필수로 만들지 않습니다.</p>
         {error && <ErrorNotice error={error} />}
-        <div className="form-actions"><button type="button" onClick={onClose}>취소</button><button className="primary" disabled={busy || !name.trim()}>{busy ? "만드는 중…" : "프로젝트 만들기"}</button></div>
+        <div className="form-actions"><Button variant="outline" type="button" onClick={onClose}>취소</Button><Button className="primary" type="submit" disabled={busy || !name.trim()}>{busy ? "만드는 중…" : "프로젝트 만들기"}</Button></div>
     </form></Modal>;
 }
 
@@ -208,8 +213,8 @@ function ProjectsList({ projects, onCreate, onImported }: {
         finally { setBusy(false); }
     }
     return <>
-        <PageHead title="프로젝트" description="이어갈 일을 고르거나, 새로운 아이디어를 프로젝트로 시작하세요." eyebrow="YOUR WORKSPACE"><button onClick={() => setImportOpen(true)}>ZIP 가져오기</button><button className="primary" onClick={onCreate}>+ 프로젝트 만들기</button></PageHead>
-        {projects.length ? <div className="project-list">{projects.map(project => <RouteLink key={project.id} patch={{ project: project.id, view: "overview", item: "", run: "", baseline: "", q: "" }} className="project-row"><div><h2>{project.name}</h2><p>{project.goal || "아직 작성한 목표가 없습니다."}</p></div><span>{project.profile === "simple" ? "간편" : "표준"}<small>{dateLabel(project.created_at)}</small></span><span aria-hidden="true">→</span></RouteLink>)}</div> : <Empty title="처음 시작하는 프로젝트"><p>원문 아이디어를 남기고, 스킬로 문서와 실행 계획을 구체화해 보세요.</p><button className="primary" onClick={onCreate}>프로젝트 만들기</button></Empty>}
-        {importOpen && <Modal title="프로젝트 ZIP 가져오기" onClose={() => setImportOpen(false)}><form onSubmit={event => { void importFile(event); }}><p>Projects에서 반출한 ZIP을 선택해 주세요. 서버가 hash·경로·참조와 ID 중복을 검사합니다.</p><Field label="프로젝트 ZIP · 최대 8 MB"><input type="file" required accept=".zip,application/zip" onChange={event => setFile(event.target.files?.[0] ?? null)} /></Field>{error && <ErrorNotice error={error} />}<div className="form-actions"><button type="button" onClick={() => setImportOpen(false)}>닫기</button><button className="primary" type="submit" disabled={busy || !file}>{busy ? "검사·가져오는 중…" : "서버에서 검사 후 가져오기"}</button></div></form></Modal>}
+        <PageHead title="프로젝트" description="이어갈 일을 고르거나, 새로운 아이디어를 프로젝트로 시작하세요." eyebrow="YOUR WORKSPACE"><ActionButton onClick={() => setImportOpen(true)}>ZIP 가져오기</ActionButton><ActionButton className="primary" onClick={onCreate}>+ 프로젝트 만들기</ActionButton></PageHead>
+        {projects.length ? <div className="project-list">{projects.map(project => <RouteLink key={project.id} patch={{ project: project.id, view: "overview", item: "", run: "", baseline: "", q: "" }} className="project-row"><div><h2>{project.name}</h2><p>{project.goal || "아직 작성한 목표가 없습니다."}</p></div><span>{project.profile === "simple" ? "간편" : "표준"}<small>{dateLabel(project.created_at)}</small></span><span aria-hidden="true">→</span></RouteLink>)}</div> : <Empty title="처음 시작하는 프로젝트"><p>원문 아이디어를 남기고, 스킬로 문서와 실행 계획을 구체화해 보세요.</p><ActionButton className="primary" onClick={onCreate}>프로젝트 만들기</ActionButton></Empty>}
+        {importOpen && <Modal title="프로젝트 ZIP 가져오기" onClose={() => setImportOpen(false)}><form onSubmit={event => { void importFile(event); }}><p>Projects에서 반출한 ZIP을 선택해 주세요. 서버가 hash·경로·참조와 ID 중복을 검사합니다.</p><Field label="프로젝트 ZIP · 최대 8 MB"><Input type="file" required accept=".zip,application/zip" onChange={event => setFile(event.target.files?.[0] ?? null)} /></Field>{error && <ErrorNotice error={error} />}<div className="form-actions"><ActionButton type="button" onClick={() => setImportOpen(false)}>닫기</ActionButton><ActionButton className="primary" type="submit" disabled={busy || !file}>{busy ? "검사·가져오는 중…" : "서버에서 검사 후 가져오기"}</ActionButton></div></form></Modal>}
     </>;
 }

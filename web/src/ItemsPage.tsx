@@ -8,8 +8,10 @@ import {
 import type { Catalog, Item, Kind, Revision } from "./models";
 import { cleanData, ItemDataFields } from "./ItemFields";
 import { itemRoute, Relations, TestExecutions } from "./Relations";
+import { Input } from "./pydemia-ui/input";
+import { Textarea } from "./pydemia-ui/textarea";
 import {
-    Badge, Empty, ErrorNotice, Field, Loading, Markdown, Modal,
+    ActionButton, Badge, Empty, ErrorNotice, Field, Loading, Markdown, Modal,
     PageHead, RouteLink, StringList,
 } from "./ui";
 
@@ -48,7 +50,7 @@ export function ItemsPage({ projectId, userId, route, items, catalog, onChanged 
     const description = route.view === "tasks" ? "완료 기준, 선행 작업과 실제 결과를 함께 관리합니다." : route.view === "tests" ? "케이스와 실행 기록을 구분하고 검증 근거를 남깁니다." : route.view === "documents" ? "임시 문서 저장소 · Note 연계 예정. Markdown 초안과 스킬 작업을 연결합니다." : "아이디어를 보존하며 기능·요구사항·결정으로 구체화합니다.";
     return <>
         <PageHead title={title} description={description}>
-            <button className="primary" onClick={() => setNewKind(validKind)}>+ {kindLabels[validKind]} 만들기</button>
+            <ActionButton className="primary" onClick={() => setNewKind(validKind)}>+ {kindLabels[validKind]} 만들기</ActionButton>
             <RouteLink className="button" patch={{ view: "runs", item: "", run: "" }}>스킬 작업</RouteLink>
         </PageHead>
         {viewKinds.length > 1 && <nav className="view-switch" aria-label="기획 대상 종류">
@@ -58,10 +60,10 @@ export function ItemsPage({ projectId, userId, route, items, catalog, onChanged 
             <aside className="doclist" aria-label={`${title} 목록`}>
                 <form className="list-search" onSubmit={event => { event.preventDefault(); navigate({ q: query }); }}>
                     <label className="sr-only" htmlFor="item-search">제목·ID·본문 검색</label>
-                    <input id="item-search" type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="제목·ID·본문 검색" />
-                    <button type="submit" className="small">검색</button>
+                    <Input id="item-search" type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="제목·ID·본문 검색" />
+                    <ActionButton type="submit" className="small">검색</ActionButton>
                 </form>
-                {route.q && <button className="linkbtn small" onClick={() => { setQuery(""); navigate({ q: "" }); }}>검색 초기화</button>}
+                {route.q && <ActionButton className="linkbtn small" onClick={() => { setQuery(""); navigate({ q: "" }); }}>검색 초기화</ActionButton>}
                 <div className="list-count">{filtered.length}개 {route.q ? "검색 결과" : kindLabels[validKind]}</div>
                 <div className="doc-list-items">
                     {filtered.map(item => <RouteLink key={item.id} patch={{ item: item.id }} className={`doc-item ${selected?.id === item.id ? "active" : ""}`} current={selected?.id === item.id}>
@@ -75,7 +77,7 @@ export function ItemsPage({ projectId, userId, route, items, catalog, onChanged 
             <div className="document-main">
                 {selected ? <RecordEditor key={selected.id} item={selected} items={items} catalog={catalog} userId={userId} onChanged={onChanged} /> : <Empty title={route.item ? "선택한 항목을 찾을 수 없습니다." : `첫 ${kindLabels[validKind]}부터 시작해 보세요.`}>
                     <p>{route.item ? "다른 종류를 선택했거나 접근할 수 없는 항목일 수 있습니다. 목록에서 다시 선택해 주세요." : "왼쪽 목록에서 항목을 열거나 새로 작성할 수 있습니다."}</p>
-                    <button onClick={() => setNewKind(validKind)}>+ {kindLabels[validKind]} 만들기</button>
+                    <ActionButton onClick={() => setNewKind(validKind)}>+ {kindLabels[validKind]} 만들기</ActionButton>
                 </Empty>}
             </div>
         </div>
@@ -113,12 +115,12 @@ function NewItem({ kind, projectId, userId, items, catalog, onClose, onCreated }
     return <Modal title={`${kindLabels[kind]} 만들기`} wide onClose={onClose}>
         <form onSubmit={event => { void create(event); }}>
             <p className="muted">{storageAvailable ? "작성 내용은 이 브라우저에 임시 보관합니다. 서버 저장은 만들기 버튼으로 완료합니다." : "브라우저 임시 보관이 불가능합니다. 닫기 전에 작성 내용을 별도로 복사해 주세요."}</p>
-            <Field label="제목"><input autoFocus required maxLength={300} value={draft.title} onChange={event => setDraft({ ...draft, title: event.target.value })} /></Field>
-            <Field label="본문 · Markdown"><textarea rows={8} value={draft.body} onChange={event => setDraft({ ...draft, body: event.target.value })} /></Field>
+            <Field label="제목"><Input autoFocus required maxLength={300} value={draft.title} onChange={event => setDraft({ ...draft, title: event.target.value })} /></Field>
+            <Field label="본문 · Markdown"><Textarea rows={8} value={draft.body} onChange={event => setDraft({ ...draft, body: event.target.value })} /></Field>
             <ItemDataFields kind={kind} data={draft.data} onChange={data => setDraft({ ...draft, data })} catalog={catalog} items={items} />
             {error && <ErrorNotice error={error} />}
-            <div className="form-actions"><button type="button" onClick={onClose}>닫기 · 초안 보관</button>
-                <button className="primary" type="submit" disabled={busy || !draft.title.trim()}>{busy ? "저장 중…" : "만들기"}</button></div>
+            <div className="form-actions"><ActionButton type="button" onClick={onClose}>닫기 · 초안 보관</ActionButton>
+                <ActionButton className="primary" type="submit" disabled={busy || !draft.title.trim()}>{busy ? "저장 중…" : "만들기"}</ActionButton></div>
         </form>
     </Modal>;
 }
@@ -201,9 +203,9 @@ export function RecordEditor({ item, items, catalog, userId, onChanged }: Editor
             <h2>{serverItem.title}</h2><div className="doc-meta"><Badge value={serverItem.status} />
                 <span>revision {serverItem.revision}</span><span className="mono">{shortId(item.id)}</span><span>{dateLabel(serverItem.updated_at)}</span>
             </div></div><div className="actions">
-                {item.kind === "artifact" && <><button className="small" onClick={markdownDownload}>Markdown 내려받기</button><button className="small" disabled={busy} onClick={() => { void portable(); }}>실행 묶음 ZIP</button></>}
+                {item.kind === "artifact" && <><ActionButton className="small" onClick={markdownDownload}>Markdown 내려받기</ActionButton><ActionButton className="small" disabled={busy} onClick={() => { void portable(); }}>실행 묶음 ZIP</ActionButton></>}
                 <RouteLink className="button small" patch={{ view: "runs", item: item.id, run: "" }}>스킬로 작업</RouteLink>
-                {item.kind !== "artifact" && <button className="small" disabled={busy || dirty || serverItem.status === "confirmed"} onClick={() => { void confirm(); }}>현재 revision 확정</button>}
+                {item.kind !== "artifact" && <ActionButton className="small" disabled={busy || dirty || serverItem.status === "confirmed"} onClick={() => { void confirm(); }}>현재 revision 확정</ActionButton>}
             </div></div>
         {dirty && <div className="notice local" role="status"><strong>서버에 저장하지 않은 초안이 있습니다.</strong><p>{storageAvailable ? `이 브라우저에 보관 중입니다. 편집 기준은 r${draft.baseRevision}입니다.` : "브라우저 임시 저장에 실패했습니다. 페이지를 닫기 전에 본문을 복사해 주세요."}</p></div>}
         {notice && <p className="success-message" role="status">{notice}</p>}
@@ -213,36 +215,36 @@ export function RecordEditor({ item, items, catalog, userId, onChanged }: Editor
             <p>내 기준 r{draft.baseRevision} / 서버 r{conflict.revision}. 아래 두 본문을 비교한 뒤 편집 내용에 필요한 변경을 합쳐 주세요.</p>
             <div className="comparison"><div><h4>내 초안 · {draft.title}</h4><pre>{draft.body}</pre></div><div><h4>서버 최신 · {conflict.title}</h4><pre>{conflict.body}</pre></div></div>
             <details><summary>제목·분류 등 전체 필드 비교</summary><div className="comparison"><pre>{JSON.stringify({ title: draft.title, data: draft.data }, null, 2)}</pre><pre>{JSON.stringify({ title: conflict.title, data: conflict.data }, null, 2)}</pre></div></details>
-            <button onClick={() => {
+            <ActionButton onClick={() => {
                 setServerItem(conflict); setDraft({ ...draft, baseRevision: conflict.revision });
                 setConflict(null); setTab("edit"); setError("");
                 setNotice("서버 최신 revision을 편집 기준으로 선택했습니다. 합칠 내용을 편집한 뒤 저장해 주세요.");
-            }}>서버 최신 revision을 기준으로 병합 편집</button>
+            }}>서버 최신 revision을 기준으로 병합 편집</ActionButton>
         </section>}
         <nav className="editor-tabs" aria-label="항목 작업">
-            {tabs.map(([value, label]) => <button key={value} aria-pressed={tab === value} className={tab === value ? "selected" : ""} onClick={() => setTab(value ?? "preview")}>{label}</button>)}
+            {tabs.map(([value, label]) => <ActionButton key={value} aria-pressed={tab === value} className={tab === value ? "selected" : ""} onClick={() => setTab(value ?? "preview")}>{label}</ActionButton>)}
         </nav>
         {tab === "preview" && <div className="doc-split"><div><Markdown body={serverItem.body} /><ItemDetails item={serverItem} catalog={catalog} /></div>
-            <aside className="doc-aside"><h3>문서 기준</h3><p>현재 서버 revision {serverItem.revision}</p><p>{item.kind === "artifact" ? "임시 문서 저장소 · Note 연계 예정. revision 숫자는 저장 충돌 검사에 사용합니다." : serverItem.status === "confirmed" ? "이 revision은 확정되어 있습니다. 편집 후 저장하면 새 초안을 만듭니다." : "초안 저장과 확정은 별개입니다."}</p><h3>연결 근거</h3><p>관계·근거 탭에서 요구사항·작업·테스트와 revision을 연결할 수 있습니다.</p><button onClick={() => setTab("links")}>관계 확인</button></aside>
+            <aside className="doc-aside"><h3>문서 기준</h3><p>현재 서버 revision {serverItem.revision}</p><p>{item.kind === "artifact" ? "임시 문서 저장소 · Note 연계 예정. revision 숫자는 저장 충돌 검사에 사용합니다." : serverItem.status === "confirmed" ? "이 revision은 확정되어 있습니다. 편집 후 저장하면 새 초안을 만듭니다." : "초안 저장과 확정은 별개입니다."}</p><h3>연결 근거</h3><p>관계·근거 탭에서 요구사항·작업·테스트와 revision을 연결할 수 있습니다.</p><ActionButton onClick={() => setTab("links")}>관계 확인</ActionButton></aside>
         </div>}
         {tab === "edit" && <form onSubmit={event => { void save(event); }}>
             {serverItem.status === "confirmed" && <p className="hint">확정본을 보존하며 다음 초안 revision으로 저장합니다.</p>}
-            <Field label="제목"><input required maxLength={300} value={draft.title} onChange={event => setDraft({ ...draft, title: event.target.value })} /></Field>
+            <Field label="제목"><Input required maxLength={300} value={draft.title} onChange={event => setDraft({ ...draft, title: event.target.value })} /></Field>
             <Field label="본문 · Markdown" hint="표와 코드 블록을 지원합니다. HTML은 미리보기에 실행하지 않습니다.">
-                <textarea className="editor" value={draft.body} onChange={event => setDraft({ ...draft, body: event.target.value })} />
+                <Textarea className="editor" value={draft.body} onChange={event => setDraft({ ...draft, body: event.target.value })} />
             </Field>
             <details className="draft-preview"><summary>편집 중인 본문 미리보기</summary><Markdown body={draft.body} /></details>
             <ItemDataFields kind={item.kind} data={draft.data} onChange={data => setDraft({ ...draft, data })} catalog={catalog} items={items.filter(entry => entry.id !== item.id)} />
-            <div className="form-actions"><button type="button" disabled={busy || !dirty} onClick={() => setDiscardOpen(true)}>내 초안 버리기</button>
+            <div className="form-actions"><ActionButton type="button" disabled={busy || !dirty} onClick={() => setDiscardOpen(true)}>내 초안 버리기</ActionButton>
                 <span className="muted small">{busy ? "서버 응답을 기다리는 중…" : dirty ? "서버 미저장" : `서버 r${serverItem.revision}과 같음`}</span>
-                <button type="submit" className="primary" disabled={busy || !dirty || !!conflict || !draft.title.trim()}>{busy ? "저장 중…" : "초안 저장"}</button></div>
+                <ActionButton type="submit" className="primary" disabled={busy || !dirty || !!conflict || !draft.title.trim()}>{busy ? "저장 중…" : "초안 저장"}</ActionButton></div>
         </form>}
         {tab === "history" && <RevisionHistory item={serverItem} dirty={dirty} onRestored={updated => { setServerItem(updated); setDraft(fromItem(updated)); setTab("preview"); onChanged(); }} />}
         {tab === "links" && <Relations item={serverItem} items={items} onChanged={onChanged} />}
         {tab === "executions" && <TestExecutions item={serverItem} onChanged={onChanged} />}
         {discardOpen && <Modal title="저장하지 않은 초안 버리기" onClose={() => setDiscardOpen(false)}>
             <p>이 브라우저의 편집 내용을 지우고 현재 서버 r{serverItem.revision}을 불러옵니다.</p>
-            <div className="form-actions"><button onClick={() => setDiscardOpen(false)}>계속 편집</button><button className="danger" onClick={() => { removeDraft(key); setDraft(fromItem(serverItem)); setConflict(null); setError(""); setDiscardOpen(false); }}>내 초안 버리기</button></div>
+            <div className="form-actions"><ActionButton onClick={() => setDiscardOpen(false)}>계속 편집</ActionButton><ActionButton className="danger" onClick={() => { removeDraft(key); setDraft(fromItem(serverItem)); setConflict(null); setError(""); setDiscardOpen(false); }}>내 초안 버리기</ActionButton></div>
         </Modal>}
     </article>;
 }
@@ -285,13 +287,13 @@ function RevisionHistory({ item, dirty, onRestored }: {
         {revisions.status === "loading" && <Loading />}
         {revisions.status === "error" && <ErrorNotice error={revisions.error} retry={revisions.reload} />}
         {revisions.status === "ready" && <ul className="record-list">{[...revisions.data].sort((a, b) => b.revision - a.revision).map(revision => <li key={revision.revision}>
-            <div className="row-head"><strong>r{revision.revision} · {revision.title}</strong><Badge value={revision.status} /><time>{dateLabel(revision.created_at)}</time><button className="small" onClick={() => setSelected(revision)}>내용·복원</button></div>
+            <div className="row-head"><strong>r{revision.revision} · {revision.title}</strong><Badge value={revision.status} /><time>{dateLabel(revision.created_at)}</time><ActionButton className="small" onClick={() => setSelected(revision)}>내용·복원</ActionButton></div>
         </li>)}</ul>}
         {selected && <Modal title={`revision ${selected.revision} · ${selected.title}`} wide onClose={() => setSelected(null)}>
             <Markdown body={selected.body} />
             <details><summary>이 revision의 분류·참조 데이터</summary><pre>{JSON.stringify(selected.data, null, 2)}</pre></details>
             {error && <ErrorNotice error={error} />}
-            <div className="form-actions"><button onClick={() => setSelected(null)}>닫기</button><button className="primary" disabled={busy || dirty || selected.revision === item.revision} onClick={() => { void restore(); }}>{busy ? "복원 중…" : "이 버전을 새 초안으로 복원"}</button></div>
+            <div className="form-actions"><ActionButton onClick={() => setSelected(null)}>닫기</ActionButton><ActionButton className="primary" disabled={busy || dirty || selected.revision === item.revision} onClick={() => { void restore(); }}>{busy ? "복원 중…" : "이 버전을 새 초안으로 복원"}</ActionButton></div>
         </Modal>}
     </section>;
 }

@@ -13,7 +13,13 @@ Note 앱으로 연계하며, 이번 구현은 [임시 문서 기능](note-docume
 제한한다. 아래 초기 goal보다 이 사용자 지시를 우선한다.
 LLM 기본은 Codex 로그인이며 auth.json 파일 경로 또는 inline 인증을 YAML로
 설정한다. OpenAI-compatible API의 키·모델·주소도 YAML로 선택할 수 있다.
-전체 최신 요구 ID는 APP-REQ-001~012다.
+전체 최신 요구 ID는 APP-REQ-001~014다.
+
+후속 UI 작업: [공통 UI 편입 기록](ui-component-integration.md)에 따라
+`ui.pydemia.ai`의 실제 컴포넌트·토큰·21개 출시 UI 모드를 적용하고
+light/dark 선택을 제공한다. favicon을 빌드·배포 검증 대상으로 추가한다.
+따라서 현재 요구 ID는 APP-REQ-001~014다. 아래 초기 구현 판정은 UI 개편
+이전 근거이므로 신규 UI 검증과 구분한다.
 
 ## 최종 판정
 

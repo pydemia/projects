@@ -5,7 +5,9 @@ import {
     dateLabel, kindLabels, relationLabels, relationSchema, shortId,
 } from "./models";
 import type { Item, Link } from "./models";
-import { Badge, Empty, ErrorNotice, ExternalLink, Field, Loading, RouteLink } from "./ui";
+import { Input } from "./pydemia-ui/input";
+import { Textarea } from "./pydemia-ui/textarea";
+import { ActionButton, Badge, Empty, ErrorNotice, ExternalLink, Field, Loading, RouteLink } from "./ui";
 
 export function itemRoute(item: Item) {
     return { view: item.kind === "task" ? "tasks" : item.kind === "test_case" ? "tests" : item.kind === "artifact" ? "documents" : "planning", kind: item.kind, item: item.id };
@@ -50,7 +52,7 @@ export function Relations({ item, items, onChanged }: {
                     <small>r{link.source_revision} → {relationLabels[link.relation]} → r{link.target_revision}</small>
                     {to ? <RouteLink patch={itemRoute(to)}>{to.title}</RouteLink> : shortId(link.target_id)}
                     {stale && <Badge value="in_review" label="재검토 필요" />}
-                </div><button className="small" disabled={busy} onClick={() => { void remove(link); }}>연결 해제</button></li>;
+                </div><ActionButton className="small" disabled={busy} onClick={() => { void remove(link); }}>연결 해제</ActionButton></li>;
             })}
             {!links.data.some(link => link.source_id === item.id || link.target_id === item.id) && <li className="muted">연결된 관계가 없습니다.</li>}
         </ul>}
@@ -69,7 +71,7 @@ export function Relations({ item, items, onChanged }: {
                 </select></Field>
             </div>
             {error && <ErrorNotice error={error} />}
-            <button type="submit" disabled={busy || !target}>{busy ? "처리 중…" : "관계 저장"}</button>
+            <ActionButton type="submit" disabled={busy || !target}>{busy ? "처리 중…" : "관계 저장"}</ActionButton>
         </form>
     </section>;
 }
@@ -113,15 +115,15 @@ export function TestExecutions({ item, onChanged }: { item: Item; onChanged: () 
                 <Field label="결과"><select value={outcome} onChange={event => setOutcome(event.target.value)}>
                     <option value="passed">통과</option><option value="failed">실패</option><option value="aborted">중단</option>
                 </select></Field>
-                <Field label="실행 환경"><input required value={environment} onChange={event => setEnvironment(event.target.value)} placeholder="예: Windows 11 · Chrome 141 · dev" /></Field>
+                <Field label="실행 환경"><Input required value={environment} onChange={event => setEnvironment(event.target.value)} placeholder="예: Windows 11 · Chrome 141 · dev" /></Field>
             </div>
-            <Field label="실제 실행 결과"><textarea required rows={4} value={actual} onChange={event => setActual(event.target.value)} placeholder="관찰한 결과와 실패·중단 사유를 기록해 주세요." /></Field>
+            <Field label="실제 실행 결과"><Textarea required rows={4} value={actual} onChange={event => setActual(event.target.value)} placeholder="관찰한 결과와 실패·중단 사유를 기록해 주세요." /></Field>
             <div className="form-grid">
-                <Field label="대상 commit SHA"><input required maxLength={128} value={sha} onChange={event => setSha(event.target.value)} /></Field>
-                <Field label="로그·증빙 URL"><input type="url" value={evidence} onChange={event => setEvidence(event.target.value)} /></Field>
+                <Field label="대상 commit SHA"><Input required maxLength={128} value={sha} onChange={event => setSha(event.target.value)} /></Field>
+                <Field label="로그·증빙 URL"><Input type="url" value={evidence} onChange={event => setEvidence(event.target.value)} /></Field>
             </div>
             {error && <ErrorNotice error={error} />}
-            <button type="submit" className="primary" disabled={busy}>{busy ? "기록 중…" : "실행 결과 저장"}</button>
+            <ActionButton type="submit" className="primary" disabled={busy}>{busy ? "기록 중…" : "실행 결과 저장"}</ActionButton>
         </form>
     </section>;
 }

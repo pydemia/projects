@@ -4,8 +4,10 @@ import { navigate, useResource } from "./hooks";
 import { dateLabel, kindLabels, relationLabels, shortId } from "./models";
 import type { Item, Link, Project } from "./models";
 import { itemRoute } from "./Relations";
+import { Input } from "./pydemia-ui/input";
+import { Textarea } from "./pydemia-ui/textarea";
 import {
-    Badge, Empty, ErrorNotice, Field, Loading, Modal, PageHead, RouteLink,
+    ActionButton, Badge, Empty, ErrorNotice, Field, Loading, Modal, PageHead, RouteLink,
 } from "./ui";
 
 export function Overview({ project, items, revision }: {
@@ -99,7 +101,7 @@ export function TracePage({ projectId, items, baselineId, onChanged, revision }:
             {!trace.data.requirements.length && <Empty title="등록된 요구사항이 없습니다."><RouteLink patch={{ view: "planning", kind: "requirement", item: "" }}>요구사항 작성으로 이동</RouteLink></Empty>}
             <section className="section-space"><h2>변경 영향 검토 · {trace.data.stale_links.length}건</h2>
                 <p className="hint">연결 누락과 영향 검토 완료는 서로 다릅니다. ‘근거 변경 없음’은 구현·검증 완료를 뜻하지 않습니다.</p>
-                <ul className="relation-list">{trace.data.stale_links.map(link => <li key={link.id}><div><strong>{all.get(link.source_id)?.title ?? shortId(link.source_id)}</strong><small>r{link.source_revision} → {relationLabels[link.relation]} → r{link.target_revision}</small><span>{all.get(link.target_id)?.title ?? shortId(link.target_id)}</span><small>현재 r{all.get(link.source_id)?.revision ?? "?"} → r{all.get(link.target_id)?.revision ?? "?"}</small></div><button className="small" onClick={() => { setReview(link); setReason(""); setError(""); setImpact("none"); }}>영향 판단</button></li>)}</ul>
+                <ul className="relation-list">{trace.data.stale_links.map(link => <li key={link.id}><div><strong>{all.get(link.source_id)?.title ?? shortId(link.source_id)}</strong><small>r{link.source_revision} → {relationLabels[link.relation]} → r{link.target_revision}</small><span>{all.get(link.target_id)?.title ?? shortId(link.target_id)}</span><small>현재 r{all.get(link.source_id)?.revision ?? "?"} → r{all.get(link.target_id)?.revision ?? "?"}</small></div><ActionButton className="small" onClick={() => { setReview(link); setReason(""); setError(""); setImpact("none"); }}>영향 판단</ActionButton></li>)}</ul>
                 {!trace.data.stale_links.length && <p className="muted">현재 API가 보고한 재검토 관계가 없습니다.</p>}
             </section>
         </>}
@@ -110,14 +112,14 @@ export function TracePage({ projectId, items, baselineId, onChanged, revision }:
                 <Field label="저장한 기준선"><select value={baselineId} onChange={event => navigate({ baseline: event.target.value })}><option value="">기준선 선택</option>{baselines.data.map(entry => <option key={entry.id} value={entry.id}>{entry.name} · {dateLabel(entry.created_at)}</option>)}</select></Field>
                 {baseline && <details open className="reference-details"><summary>{baseline.name} · {Object.keys(baseline.revisions).length}개 revision</summary><ul className="baseline-list">{Object.entries(baseline.revisions).map(([id, revision]) => { const item = all.get(id); return <li key={id}><span>{item ? <RouteLink patch={itemRoute(item)}>{item.title}</RouteLink> : shortId(id)}</span><span>r{revision}{item && item.revision !== revision && <small className="muted"> · 현재 r{item.revision}</small>}</span></li>; })}</ul></details>}
             </>}
-            <form className="inline-form" onSubmit={event => { void createBaseline(event); }}><Field label="새 기준선 이름"><input required value={baselineName} onChange={event => setBaselineName(event.target.value)} placeholder="예: 첫 구현 범위 · 2026-10-21" /></Field><button disabled={busy || !baselineName.trim()} type="submit">{busy ? "처리 중…" : "현재 revision 묶음 저장"}</button></form>
+            <form className="inline-form" onSubmit={event => { void createBaseline(event); }}><Field label="새 기준선 이름"><Input required value={baselineName} onChange={event => setBaselineName(event.target.value)} placeholder="예: 첫 구현 범위 · 2026-10-21" /></Field><ActionButton disabled={busy || !baselineName.trim()} type="submit">{busy ? "처리 중…" : "현재 revision 묶음 저장"}</ActionButton></form>
         </section>
         {review && <Modal title="변경 영향 판단" onClose={() => setReview(null)}>
             <form onSubmit={event => { void recordReview(event); }}><p><strong>{all.get(review.source_id)?.title}</strong> → {relationLabels[review.relation]} → <strong>{all.get(review.target_id)?.title}</strong></p>
                 <Field label="영향 판정"><select value={impact} onChange={event => setImpact(event.target.value)}><option value="none">영향 없음 · 현재 revision으로 연결</option><option value="action_required">영향 있음 · 후속 조치 필요</option></select></Field>
-                <Field label="판단 근거와 필요한 조치"><textarea required rows={5} value={reason} onChange={event => setReason(event.target.value)} /></Field>
+                <Field label="판단 근거와 필요한 조치"><Textarea required rows={5} value={reason} onChange={event => setReason(event.target.value)} /></Field>
                 {error && <ErrorNotice error={error} />}
-                <div className="form-actions"><button type="button" onClick={() => setReview(null)}>닫기</button><button className="primary" type="submit" disabled={busy || !reason.trim()}>{busy ? "저장 중…" : "영향 판단 저장"}</button></div>
+                <div className="form-actions"><ActionButton type="button" onClick={() => setReview(null)}>닫기</ActionButton><ActionButton className="primary" type="submit" disabled={busy || !reason.trim()}>{busy ? "저장 중…" : "영향 판단 저장"}</ActionButton></div>
             </form>
         </Modal>}
     </>;

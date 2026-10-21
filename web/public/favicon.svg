@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 864 864" role="img" aria-labelledby="title desc">
+<title id="title">pydemia logo v2 — pydemia-logo-colorful</title>
+<desc id="desc">Approved hexagonal p/d emblem. Emblem only. Transparent background.</desc>
+<metadata>{"outer_and_diagonal_width": 74.0, "inner_vertical_width": 82.0, "connector_vertical_width": 70.0, "channel_gap": 44.0, "normal_terminal_gap": 40.0, "matching_diagonal_cap_length": 94.68544414709864, "rotation": 180}</metadata>
+<style>.primary{fill:#103344}.secondary{fill:#BA365B}@media(prefers-color-scheme:dark){.primary{fill:#EEF3F5}}</style>
+<defs><path id="p-module" d="M 0.000000 -374.122974 L 206.000000 -255.188819 L 206.000000 -128.171760 L 124.000000 -80.829038 L 0.000000 -152.420471 L -124.000000 -80.829038 L -124.000000 34.641016 L -206.000000 81.983738 L -206.000000 -118.934155 L 0.000000 -237.868311 L 136.000000 -159.348674 L 136.000000 -210.155498 L 0.000000 -288.675135 L -250.000000 -144.337567 L -250.000000 229.785407 L -324.000000 187.061487 L -324.000000 -187.061487 Z"/></defs>
+
+<g transform="translate(432 432)"><use href="#p-module" class="primary"/><use href="#p-module" class="secondary" transform="rotate(180)"/></g>
+
+</svg>

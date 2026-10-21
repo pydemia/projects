@@ -8,6 +8,12 @@ SkillRun을 소유합니다. 원래 로컬 검사 이후 GitHub CI, 공개 배�
 실제 Microsoft Entra 로그인을 별도로 확인했습니다. 팀 협업과 Note
 실연동은 후속 범위입니다.
 
+## 2026-10-21 pydemia UI·favicon 후속 검사
+
+[편입 기록](ui-component-integration.md)의 고정 소스를 사용해 로그인·프로젝트·문서·스킬·추적 화면의 버튼·입력과 공통 상태 컴포넌트를 바꿨습니다. `npm --prefix web run check`는 TypeScript와 **14개 테스트**가 통과했고 `npm --prefix web run build`는 production build와 favicon 검증 스크립트가 통과했습니다. 빌드의 `favicon.svg` SHA-256은 `210e38b2f2f4dace4d0bf32f76dc54c17c8b335a5a056868aebf4795ae8eae33`으로 원본과 일치합니다. 배포 archive 검사에서 favicon·검증 스크립트·폰트 고지 포함과 인증 파일 미포함을 확인했습니다.
+
+로컬 Edge의 로그인 화면에서 21개 UI 모드 선택, Basic light/dark 및 Glassmorphism dark 외형 전환을 관찰했습니다. Vitest는 모드·테마 저장 후 재렌더와 dark 전용 모드의 light 비활성화를 확인합니다. 이 시점에 로컬 Docker Desktop이 시작되지 않아 PostgreSQL migration·pytest와 로그인 후 업무 화면의 신규 브라우저 검사는 재실행하지 못했습니다. 백엔드 변경은 없고 Ruff check·format·mypy는 통과했습니다. 운영 HTTPS 자산 hash와 실제 탭 표시는 배포 후 확인해 별도로 판정합니다.
+
 ## 2026-10-21 배포·Entra 추가 검사
 
 개인 계정의 데이터 소유권을 유지하면서 `pydemia@pydemia.ai`만 허용하는

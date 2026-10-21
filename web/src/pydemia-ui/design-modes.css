@@ -1,0 +1,1270 @@
+/* Optional presentation layer. Each scope resets materials before inheritance. */
+@import "./design-fonts.css";
+[data-design] {
+  --corner-shape: round;
+  --heading-font-style: normal;
+  --control-decoration: none;
+  --field-decoration: none;
+  --card-decoration: none;
+  --surface-filter: none;
+  --surface-image: none;
+  --surface-fill: var(--surface);
+  --canvas-image: none;
+  --title-fill: var(--surface-subtle);
+  --title-ink: var(--muted);
+  --component-heading-weight: 600;
+  --control-image: none;
+  --field-image: none;
+  --control-radius: var(--radius);
+  --field-radius: var(--radius);
+  --compact-radius: min(12px, var(--radius));
+  --pin-radius: min(12px, var(--field-radius));
+  --check-radius: min(5px, var(--radius));
+  --inline-code-radius: min(4px, var(--radius));
+  --control-border-style: solid;
+  --control-clip: none;
+  --control-tracking: normal;
+  --control-casing: none;
+  --pressed-decoration: var(--control-decoration);
+  --panel-border-style: solid;
+  --panel-clip: none;
+  --panel-radius-material: var(--panel-radius, var(--radius));
+  --table-heading-fill: transparent;
+  --table-heading-ink: var(--muted);
+  --field-fill: var(--surface);
+  --field-filled-fill: var(--surface-subtle);
+  --canvas-size: auto;
+  --canvas-repeat: no-repeat;
+  --tile-second-fill: var(--surface-fill);
+  --tile-third-fill: var(--surface-fill);
+  --tile-fourth-fill: var(--surface-fill);
+  --metric-first-span: auto;
+  --bar-image: none;
+  --chrome-fill: var(--surface);
+  --rail-fill: var(--surface-subtle);
+  --scene-padding: 0px;
+  --scene-border: 0px;
+  --scene-shadow: none;
+  --heading-tracking: normal;
+  --heading-decoration: none;
+  --control-focus-offset: 2px;
+  --material-highlight: rgb(255 255 255 / 88%);
+  --recipe-panel-columns: initial;
+  --recipe-mid-columns: minmax(0, 1fr);
+  --recipe-panel-gap: initial;
+  --recipe-chart-row: auto;
+  --recipe-last-column: auto;
+  --recipe-header-margin: 0;
+  --recipe-floating-radius: 0;
+  --recipe-header-shadow: none;
+  --recipe-sidebar-margin: 0;
+  --recipe-sidebar-shadow: none;
+  --recipe-main-padding: var(--space-4);
+  --recipe-workspace-shadow: none;
+  --recipe-workspace-radius: 0;
+  --recipe-panel-lift: 0px;
+  --recipe-panel-rest: 0px;
+  --overlay-fill: var(--surface-fill);
+  --overlay-image: var(--surface-image);
+  --overlay-filter: var(--surface-filter);
+  --control-border-width: var(--border-width, 1px);
+  --control-press-translate: none;
+  --secondary-decoration: var(--control-decoration);
+  --featured-decoration: initial;
+  --data-fill: initial;
+  --data-font: initial;
+  --field-height: max(42px, var(--control-height));
+  --field-inline-padding: 14px;
+  --field-block-padding: 12px;
+  --field-border-style: solid;
+  --field-gap: 12px;
+  --editor-inset: 20px;
+  --editor-gap: 16px;
+  --selection-decoration: var(--pressed-decoration);
+  --selection-radius: var(--control-radius);
+  --code-surface-inset: initial;
+  --navigation-fill: color-mix(in srgb, var(--accent) 5%, var(--surface));
+  --navigation-hover-fill: color-mix(in srgb, var(--accent) 9%, var(--surface));
+  --navigation-selected-fill: color-mix(in srgb, var(--accent) 16%, var(--surface));
+  --navigation-selected-ink: var(--foreground);
+  --navigation-selected-shadow: var(--selection-decoration);
+  --navigation-radius: var(--selection-radius);
+  --navigation-gap: 6px;
+  --navigation-row-inset: 10px;
+  --embedded-hover-fill: color-mix(in srgb, var(--accent) 9%, transparent);
+  --embedded-selected-fill: color-mix(in srgb, var(--accent) 18%, transparent);
+  --schedule-fill: color-mix(in srgb, var(--accent) 4%, var(--surface));
+  --schedule-sticky-fill: color-mix(in srgb, var(--accent) 8%, var(--surface));
+  --schedule-grid: color-mix(in srgb, var(--border) 70%, transparent);
+  --schedule-bar-fill: color-mix(in srgb, var(--accent) 18%, var(--surface));
+  --schedule-bar-radius: var(--radius);
+  --schedule-cell-fill: transparent;
+  --schedule-cell-shadow: none;
+  --schedule-heading-ink: var(--title-ink);
+  --calendar-gap: 3px;
+  --reading-fill: color-mix(in srgb, var(--accent) 3%, var(--surface));
+}
+
+[data-design="glass"], [data-design="material"], [data-design="fluent"],
+[data-design="neumorphic"], [data-design="flat"], [data-design="bento"],
+[data-design="clay"], [data-design="skeuo"], [data-design="dark-ui"],
+[data-design="minimal"], [data-design="aurora"], [data-design="spatial"] {
+  --corner-shape: squircle;
+}
+
+/* Shape follows each local theme, including its portaled surfaces. */
+@supports (corner-shape: squircle) {
+  @scope ([data-design]:not([data-design="basic"])) to ([data-design]) {
+    :scope, :where(*) { corner-shape: var(--corner-shape); }
+    /* Explicit circles and indicator rails keep their component geometry. */
+    :where(.rounded-full, [data-shape="circle"]) { corner-shape: round; }
+    :where(input)::file-selector-button { corner-shape: var(--corner-shape); }
+  }
+}
+[data-design][data-appearance="dark"] {
+  --material-highlight: rgb(255 255 255 / 7%);
+}
+[data-design="basic"] {
+  /* Inline Gantt paint must take its original fallbacks in a Basic scope. */
+  --schedule-grid: initial;
+  --schedule-bar-fill: initial;
+}
+[data-design="glass"] {
+  --data-fill: color-mix(in srgb, var(--surface) 96%, transparent);
+  --surface-filter: blur(22px) saturate(145%);
+  --surface-fill: color-mix(in srgb, var(--surface) 60%, transparent);
+  --surface-image: linear-gradient(135deg, rgb(255 255 255 / 36%), rgb(255 255 255 / 3%) 55%, color-mix(in srgb, var(--accent) 12%, transparent));
+  --control-image: linear-gradient(135deg, rgb(255 255 255 / 25%), transparent 70%);
+  --field-image: linear-gradient(135deg, rgb(255 255 255 / 30%), transparent);
+  --control-decoration: inset 0 1px 0 rgb(255 255 255 / 65%), 0 5px 14px color-mix(in srgb, var(--accent) 24%, transparent);
+  --field-decoration: inset 0 1px 1px rgb(255 255 255 / 60%);
+  --card-decoration: var(--panel-shadow);
+  --canvas-image: radial-gradient(ellipse at 10% 8%, color-mix(in srgb, var(--accent) 60%, transparent), transparent 56%), radial-gradient(ellipse at 90% 40%, rgb(40 188 224 / 48%), transparent 54%), radial-gradient(ellipse at 65% 100%, rgb(173 77 220 / 42%), transparent 52%);
+  --chrome-fill: color-mix(in srgb, var(--surface) 64%, transparent);
+  --rail-fill: color-mix(in srgb, var(--surface) 40%, transparent);
+  --scene-padding: 28px;
+  --scene-border: 1px;
+  --field-fill: color-mix(in srgb, var(--surface) 52%, transparent);
+  --field-filled-fill: color-mix(in srgb, var(--surface-subtle) 60%, transparent);
+}
+[data-design="fluent"] {
+  --surface-filter: none;
+  --surface-fill: var(--surface);
+  --surface-image: none;
+  --overlay-filter: blur(28px) saturate(125%);
+  --overlay-fill: color-mix(in srgb, var(--surface) 78%, transparent);
+  --overlay-image: repeating-linear-gradient(115deg, rgb(255 255 255 / 8%) 0 1px, transparent 1px 3px), radial-gradient(at 10% 0%, rgb(255 255 255 / 40%), transparent 65%);
+  --data-fill: var(--surface);
+  --control-image: linear-gradient(rgb(255 255 255 / 12%), transparent);
+  --control-decoration: inset 0 1px 0 rgb(255 255 255 / 65%), 0 2px 3px rgb(12 28 45 / 10%);
+  --card-decoration: var(--panel-shadow);
+  --canvas-image: radial-gradient(ellipse at 100% 0%, color-mix(in srgb, var(--accent) 38%, transparent), transparent 62%), linear-gradient(135deg, transparent 35%, color-mix(in srgb, var(--accent) 16%, transparent));
+  --chrome-fill: var(--surface);
+  --rail-fill: var(--surface-subtle);
+  --scene-padding: 22px;
+  --scene-border: 1px;
+}
+[data-design="material"] {
+  --control-radius: 12px;
+  --selection-radius: 10px;
+  --control-decoration: 0 3px 7px color-mix(in srgb, var(--accent) 25%, transparent);
+  --pressed-decoration: inset 0 0 0 999px rgb(0 0 0 / 12%);
+  --field-radius: 12px 12px 3px 3px;
+  --pin-radius: var(--field-radius);
+  --field-image: linear-gradient(color-mix(in srgb, var(--accent) 8%, transparent), color-mix(in srgb, var(--accent) 8%, transparent));
+  --card-decoration: var(--panel-shadow);
+  --title-fill: color-mix(in srgb, var(--accent) 16%, var(--surface));
+  --rail-fill: color-mix(in srgb, var(--accent) 9%, var(--surface));
+  --table-heading-fill: color-mix(in srgb, var(--accent) 10%, var(--surface));
+}
+[data-design="neumorphic"] {
+  --control-border-width: 1px;
+  --control-decoration: 5px 5px 10px rgb(0 0 0 / 20%), -5px -5px 10px var(--material-highlight);
+  --field-decoration: inset 4px 4px 8px rgb(0 0 0 / 18%), inset -4px -4px 8px var(--material-highlight);
+  --pressed-decoration: var(--field-decoration);
+  --card-decoration: var(--panel-shadow);
+  --title-fill: var(--background);
+  --chrome-fill: var(--background);
+  --rail-fill: var(--background);
+  --scene-padding: 26px;
+}
+[data-design="clay"] {
+  --data-fill: var(--surface);
+  --secondary-decoration: 0 2px 4px color-mix(in srgb, var(--foreground) 12%, transparent);
+  --featured-decoration: var(--panel-shadow);
+  --control-radius: 12px;
+  --control-image: linear-gradient(145deg, rgb(255 255 255 / 24%), transparent 65%);
+  --control-decoration: inset 4px 5px 8px rgb(255 255 255 / 48%), inset -5px -6px 9px rgb(51 29 68 / 24%), 5px 9px 13px rgb(69 43 85 / 25%);
+  --pressed-decoration: inset 3px 4px 7px rgb(51 29 68 / 24%), inset -3px -3px 7px rgb(255 255 255 / 32%);
+  --field-decoration: inset 3px 4px 8px rgb(87 52 107 / 12%), inset -3px -3px 8px rgb(255 255 255 / 75%);
+  --card-decoration: var(--panel-shadow);
+  --surface-image: linear-gradient(145deg, rgb(255 255 255 / 28%), transparent 70%);
+  --title-fill: color-mix(in srgb, var(--accent) 18%, var(--surface));
+  --rail-fill: color-mix(in srgb, var(--accent) 8%, var(--background));
+  --canvas-image: radial-gradient(ellipse at 15% 10%, rgb(255 208 158 / 28%), transparent 58%), radial-gradient(ellipse at 95% 85%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 56%);
+  --scene-padding: 30px;
+  --tile-second-fill: color-mix(in srgb, var(--success) 22%, var(--surface));
+  --tile-third-fill: color-mix(in srgb, var(--warning) 22%, var(--surface));
+  --tile-fourth-fill: color-mix(in srgb, var(--accent) 24%, var(--surface));
+}
+[data-design="skeuo"] {
+  --control-image: linear-gradient(rgb(255 255 255 / 42%), transparent 48%, rgb(0 0 0 / 10%) 52%, rgb(0 0 0 / 18%));
+  --control-decoration: inset 0 2px 0 rgb(255 255 255 / 72%), inset 0 -3px 0 rgb(0 0 0 / 28%), 0 4px 5px rgb(0 0 0 / 30%);
+  --pressed-decoration: inset 0 2px 5px rgb(0 0 0 / 38%), 0 1px 0 rgb(255 255 255 / 45%);
+  --field-decoration: inset 2px 3px 5px rgb(0 0 0 / 28%), 0 1px 0 rgb(255 255 255 / 80%);
+  --surface-image: repeating-linear-gradient(0deg, rgb(255 255 255 / 10%) 0 1px, rgb(0 0 0 / 3%) 1px 3px), linear-gradient(rgb(255 255 255 / 12%), rgb(0 0 0 / 6%));
+  --card-decoration: var(--panel-shadow);
+  --title-fill: color-mix(in srgb, var(--accent) 20%, var(--surface));
+  --canvas-image: repeating-linear-gradient(90deg, rgb(0 0 0 / 3%) 0 1px, transparent 1px 5px);
+}
+[data-design="retro"] {
+  --title-fill: var(--accent);
+  --title-ink: var(--accent-foreground);
+  --control-image: linear-gradient(rgb(255 255 255 / 18%), rgb(0 0 0 / 6%));
+  --control-decoration: inset 2px 2px 0 rgb(255 255 255 / 85%), inset -2px -2px 0 rgb(0 0 0 / 42%), 1px 1px 0 var(--border);
+  --pressed-decoration: inset 2px 2px 0 rgb(0 0 0 / 36%), inset -1px -1px 0 rgb(255 255 255 / 68%);
+  --field-decoration: inset 2px 2px 0 rgb(0 0 0 / 36%), inset -2px -2px 0 rgb(255 255 255 / 90%);
+  --card-decoration: var(--panel-shadow);
+  --table-heading-fill: var(--accent);
+  --table-heading-ink: var(--accent-foreground);
+  --scene-padding: 14px;
+  --scene-border: 2px;
+  --scene-shadow: var(--panel-shadow);
+  --canvas-image: linear-gradient(135deg, color-mix(in srgb, var(--accent) 40%, var(--background)), var(--background));
+}
+[data-design="brutal"] {
+  --control-decoration: 3px 3px 0 var(--border);
+  --pressed-decoration: 1px 1px 0 var(--border);
+  --control-press-translate: 2px 2px;
+  --card-decoration: var(--panel-shadow);
+}
+[data-design="brutal"], [data-design="swiss"] { --component-heading-weight: 800; }
+[data-design="flat"] {
+  --title-fill: var(--accent);
+  --title-ink: var(--accent-foreground);
+  --table-heading-fill: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  --rail-fill: color-mix(in srgb, var(--accent) 10%, var(--background));
+}
+[data-design="dark-ui"] {
+  --surface-image: linear-gradient(rgb(255 255 255 / 3%), transparent);
+  --control-decoration: inset 0 1px 0 rgb(255 255 255 / 8%);
+  --card-decoration: 0 12px 24px rgb(0 0 0 / 22%);
+  --table-heading-fill: var(--surface-subtle);
+}
+[data-design="minimal"] {
+  --field-radius: 4px;
+  --control-tracking: -.015em;
+  --table-heading-fill: var(--background);
+  --rail-fill: var(--background);
+}
+[data-design="swiss"] {
+  --control-tracking: .05em;
+  --control-casing: uppercase;
+  --title-fill: var(--foreground);
+  --title-ink: var(--background);
+  --table-heading-fill: var(--foreground);
+  --table-heading-ink: var(--background);
+  --heading-tracking: -.06em;
+}
+[data-design="editorial"] {
+  --control-border-style: double;
+  --title-fill: var(--background);
+  --table-heading-fill: var(--background);
+  --heading-tracking: -.04em;
+  --heading-decoration: underline;
+}
+[data-design="aurora"] {
+  --canvas-image: radial-gradient(ellipse at 5% 15%, color-mix(in srgb, var(--accent) 72%, transparent), transparent 60%), radial-gradient(ellipse at 90% 10%, rgb(29 194 192 / 50%), transparent 52%), radial-gradient(ellipse at 70% 90%, rgb(232 94 173 / 50%), transparent 56%), radial-gradient(ellipse at 0% 95%, rgb(241 181 95 / 30%), transparent 45%);
+  --control-image: linear-gradient(120deg, rgb(255 255 255 / 22%), transparent 60%, rgb(48 209 216 / 18%));
+  --card-decoration: var(--panel-shadow);
+  --scene-padding: 30px;
+  --scene-border: 1px;
+}
+[data-design="cyber"] {
+  --data-fill: var(--surface);
+  --data-font: var(--font-data, var(--font-heading));
+  --secondary-decoration: inset 0 -1px 0 var(--accent);
+  --card-decoration: inset 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent);
+  --control-focus-offset: -4px;
+  --control-decoration: 3px 0 0 var(--focus), 0 0 18px color-mix(in srgb, var(--accent) 35%, transparent);
+  --control-clip: polygon(0 0, calc(100% - 9px) 0, 100% 9px, 100% 100%, 9px 100%, 0 calc(100% - 9px));
+  --control-tracking: .07em;
+  --control-casing: uppercase;
+  --field-decoration: inset 0 -2px 0 var(--accent);
+  --title-ink: var(--accent);
+  --title-fill: color-mix(in srgb, var(--accent) 8%, var(--surface));
+  --canvas-image: repeating-linear-gradient(0deg, transparent 0 4px, rgb(0 0 0 / 14%) 4px 5px), repeating-linear-gradient(90deg, transparent 0 63px, color-mix(in srgb, var(--accent) 8%, transparent) 63px 64px), linear-gradient(135deg, color-mix(in srgb, var(--focus) 18%, transparent), transparent 60%);
+  --table-heading-fill: var(--surface-subtle);
+  --table-heading-ink: var(--accent);
+}
+[data-design="terminal"] {
+  --control-tracking: .03em;
+  --control-casing: uppercase;
+  --control-border-style: dashed;
+  --panel-border-style: dashed;
+  --title-fill: var(--background);
+  --title-ink: var(--accent);
+  --table-heading-fill: var(--background);
+  --table-heading-ink: var(--accent);
+  --bar-image: repeating-linear-gradient(90deg, transparent 0 8px, var(--background) 8px 10px);
+  --canvas-image: repeating-linear-gradient(0deg, transparent 0 3px, rgb(0 0 0 / 8%) 3px 4px);
+}
+[data-design="pixel"] {
+  --control-focus-offset: -4px;
+  --control-clip: polygon(0 6px, 3px 6px, 3px 3px, 6px 3px, 6px 0, calc(100% - 6px) 0, calc(100% - 6px) 3px, calc(100% - 3px) 3px, calc(100% - 3px) 6px, 100% 6px, 100% calc(100% - 6px), calc(100% - 3px) calc(100% - 6px), calc(100% - 3px) calc(100% - 3px), calc(100% - 6px) calc(100% - 3px), calc(100% - 6px) 100%, 6px 100%, 6px calc(100% - 3px), 3px calc(100% - 3px), 3px calc(100% - 6px), 0 calc(100% - 6px));
+  --control-decoration: inset 3px 3px 0 rgb(255 255 255 / 34%), inset -3px -3px 0 rgb(0 0 0 / 28%);
+  --field-decoration: inset 3px 3px 0 color-mix(in srgb, var(--border) 30%, transparent);
+  --card-decoration: 4px 0 0 var(--border), -4px 0 0 var(--border), 0 4px 0 var(--border), 0 -4px 0 var(--border), 8px 8px 0 color-mix(in srgb, var(--accent) 20%, transparent);
+  --canvas-image: repeating-conic-gradient(color-mix(in srgb, var(--accent) 8%, transparent) 0 25%, transparent 0 50%);
+  --control-tracking: .06em;
+  --control-casing: uppercase;
+  --title-fill: var(--foreground);
+  --title-ink: var(--background);
+  --bar-image: repeating-linear-gradient(90deg, transparent 0 12px, var(--surface) 12px 16px);
+  --canvas-size: 16px 16px;
+  --canvas-repeat: repeat;
+}
+[data-design="drawn"] {
+  /* Corner lists need per-role bounds rather than scalar min() parsing. */
+  --compact-radius: var(--radius);
+  --check-radius: 5px 4px 5px 5px;
+  --inline-code-radius: 4px;
+  --heading-font-style: italic;
+  --control-radius: 5px 8px 6px 10px;
+  --field-radius: 6px;
+  --panel-radius-material: 12px 6px 14px 8px;
+  --control-decoration: 2px 3px 0 var(--border), inset 0 0 0 1px color-mix(in srgb, var(--border) 30%, transparent);
+  --card-decoration: var(--panel-shadow);
+  --panel-border-style: dashed;
+  --title-fill: color-mix(in srgb, var(--warning) 12%, var(--surface));
+  --heading-decoration: underline wavy;
+  --canvas-image: repeating-linear-gradient(0deg, transparent 0 27px, color-mix(in srgb, var(--border) 12%, transparent) 27px 28px);
+}
+[data-design="bento"] {
+  --metric-first-span: span 2;
+  --card-decoration: var(--panel-shadow);
+  --title-fill: color-mix(in srgb, var(--accent) 10%, var(--surface));
+  --scene-padding: 20px;
+  --tile-second-fill: color-mix(in srgb, var(--accent) 18%, var(--surface));
+  --tile-third-fill: color-mix(in srgb, var(--success) 14%, var(--surface));
+  --tile-fourth-fill: color-mix(in srgb, var(--warning) 16%, var(--surface));
+}
+[data-design="spatial"] {
+  --data-fill: var(--surface);
+  --featured-decoration: var(--panel-shadow);
+  --surface-filter: blur(18px) saturate(120%);
+  --surface-fill: color-mix(in srgb, var(--surface) 70%, transparent);
+  --surface-image: linear-gradient(145deg, rgb(255 255 255 / 28%), transparent 65%);
+  --control-decoration: inset 0 1px 0 rgb(255 255 255 / 50%), 0 6px 12px color-mix(in srgb, var(--foreground) 18%, transparent);
+  --card-decoration: var(--panel-shadow);
+  /* An original vector room makes the environment visible through floating windows. */
+  --canvas-image: linear-gradient(color-mix(in srgb, var(--background) 36%, transparent), color-mix(in srgb, var(--background) 36%, transparent)), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 800'%3E%3Cdefs%3E%3ClinearGradient id='wall'%3E%3Cstop stop-color='%23b7cbd7'/%3E%3Cstop offset='1' stop-color='%23e5d4c3'/%3E%3C/linearGradient%3E%3ClinearGradient id='floor' x2='0' y2='1'%3E%3Cstop stop-color='%23899fae'/%3E%3Cstop offset='1' stop-color='%23c7d1d6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath fill='url(%23wall)' d='M0 0h1200v800H0z'/%3E%3Cpath fill='%239fb3c0' d='M0 0l220 120v440L0 700z'/%3E%3Cpath fill='%23f0e2d3' d='M1200 0L980 120v440l220 140z'/%3E%3Cpath fill='url(%23floor)' d='M0 700l220-140h760l220 140v100H0z'/%3E%3Cpath fill='%23e6f4fa' stroke='%23c2d8e3' stroke-width='12' d='M300 145h530v285H300z'/%3E%3Cpath stroke='%239eBBCc' stroke-width='8' d='M475 145v285m175-285v285m-350-142h530'/%3E%3Cpath stroke='%238ea4b1' stroke-width='2' opacity='.55' d='M600 560L0 800m600-240L260 800m340-240L940 800m-340-240l600 240M100 640h1000M0 710h1200M0 770h1200'/%3E%3Cpath fill='%23c1a78c' d='M990 455h130v210H990z'/%3E%3Cpath fill='%236c8d86' d='M1054 462c-60-45-48-120-8-93 35-89 82-49 15 37 65-7 57 46-7 56z'/%3E%3C/svg%3E");
+  --canvas-size: cover;
+  --chrome-fill: color-mix(in srgb, var(--surface) 75%, transparent);
+  --rail-fill: color-mix(in srgb, var(--surface) 55%, transparent);
+  --scene-padding: 34px;
+  --scene-border: 1px;
+}
+[data-recipe="bento"] {
+  --recipe-panel-columns: minmax(0, 2fr) minmax(0, 1fr);
+  --recipe-panel-gap: 16px;
+  --recipe-chart-row: span 2;
+  --recipe-last-column: 1 / -1;
+  --recipe-workspace-radius: var(--panel-radius);
+  --recipe-workspace-shadow: var(--panel-shadow);
+}
+[data-recipe="spatial"] {
+  --recipe-panel-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  --recipe-mid-columns: var(--recipe-panel-columns);
+  --recipe-panel-gap: 28px;
+  --recipe-header-margin: var(--space-4);
+  --recipe-floating-radius: var(--radius);
+  --recipe-header-shadow: var(--panel-shadow);
+  --recipe-sidebar-margin: var(--space-4);
+  --recipe-sidebar-shadow: var(--panel-shadow);
+  --recipe-main-padding: var(--space-6);
+  --recipe-workspace-radius: var(--panel-radius);
+  --recipe-workspace-shadow: var(--panel-shadow);
+  --recipe-panel-lift: 24px;
+  --recipe-panel-rest: 24px;
+}
+:where([data-design]) :where([data-ui="button"]:not([data-variant="ghost"])) {
+  border-width: var(--control-border-width);
+  border-style: var(--control-border-style);
+  border-radius: var(--control-radius);
+  box-shadow: var(--control-decoration);
+  background-image: var(--control-image);
+  clip-path: var(--control-clip);
+  letter-spacing: var(--control-tracking);
+  text-transform: var(--control-casing);
+}
+:where([data-design]) :where([data-ui="button"]:not([data-variant="ghost"]):active:not(:disabled), [data-ui="button"][aria-pressed="true"]) {
+  box-shadow: var(--pressed-decoration);
+  translate: var(--control-press-translate);
+}
+:where([data-design]) :where([data-ui="button"][data-variant="outline"]) { box-shadow: var(--secondary-decoration); }
+:where([data-design]) :where(button[aria-pressed]) { box-shadow: var(--control-decoration); }
+:where([data-design]) :where(button[aria-pressed="true"]) { box-shadow: var(--pressed-decoration); }
+:where([data-design]) :where([data-ui="button"]:focus-visible) {
+  /* Angular controls retain an inner focus ring even when corners are clipped. */
+  outline: 2px solid var(--focus);
+  outline-offset: var(--control-focus-offset);
+}
+:where([data-design]) :where([data-ui="input"], [data-ui="textarea"], [data-ui="select-trigger"], [data-ui="native-select"]):not([data-appearance="underline"]) {
+  border-width: var(--control-border-width);
+  border-radius: var(--field-radius);
+  box-shadow: var(--field-decoration);
+  background-image: var(--field-image);
+}
+:where([data-design]) :where([data-ui="input"][data-appearance="outline"], [data-ui="textarea"], [data-ui="select-trigger"], [data-ui="native-select"]) {
+  background-color: var(--field-fill);
+}
+:where([data-design]) :where([data-ui="input"][data-appearance="filled"]) {
+  background-color: var(--field-filled-fill);
+}
+:where([data-design]) :where([data-ui="input"][aria-invalid="true"], [data-ui="textarea"][aria-invalid="true"]) {
+  border-width: max(1px, var(--border-width, 1px));
+}
+:where([data-design]) :where([data-ui="badge"]) {
+  border-width: var(--border-width, 1px);
+  border-radius: var(--control-radius);
+}
+:where([data-design]) :where([data-ui="card"][data-variant="default"]) {
+  border-width: var(--border-width, 1px);
+  border-style: var(--panel-border-style);
+  border-radius: var(--panel-radius-material);
+  box-shadow: var(--card-decoration);
+  background-image: var(--surface-image);
+  background-color: var(--surface-fill);
+  backdrop-filter: var(--surface-filter);
+}
+:where([data-design]) :where([data-ui="heading"]) {
+  font-family: var(--font-heading, var(--font-ui));
+  font-style: var(--heading-font-style, normal);
+  font-weight: var(--component-heading-weight);
+}
+:where([data-design]) :where([data-ui="card"][data-variant="elevated"]) {
+  border-width: var(--border-width, 1px);
+  border-radius: var(--panel-radius-material);
+  background-image: var(--surface-image);
+  background-color: var(--surface-fill);
+  backdrop-filter: var(--surface-filter);
+  box-shadow: var(--panel-shadow, var(--shadow-float));
+}
+:where([data-design]) :where([data-ui="overlay-panel"]):not([data-size="fullscreen"]) {
+  border-width: var(--border-width, 1px);
+  border-radius: var(--panel-radius, var(--radius));
+  background-color: var(--overlay-fill);
+  background-image: var(--overlay-image);
+  backdrop-filter: var(--overlay-filter);
+  box-shadow: var(--panel-shadow, var(--shadow-float));
+}
+:where([data-design]) :where([data-ui="drawer-panel"]) {
+  border-width: var(--border-width, 1px);
+  background-color: var(--overlay-fill);
+  background-image: var(--overlay-image);
+  backdrop-filter: var(--overlay-filter);
+  box-shadow: var(--panel-shadow, var(--shadow-float));
+}
+@scope ([data-design]:not([data-design="basic"])) to ([data-design]) {
+  :where([data-ui="drawer-panel"]) { border-radius: var(--panel-radius-material); }
+  :where([data-ui="drawer-panel"][data-side="left"]) { border-top-left-radius: 0; border-bottom-left-radius: 0; }
+  :where([data-ui="drawer-panel"][data-side="right"]) { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+  :where([data-ui="drawer-panel"][data-side="bottom"]) { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+}
+:where([data-design]) :where([data-ui="app-header"]) {
+  margin: var(--recipe-header-margin);
+  border-radius: var(--recipe-floating-radius);
+  box-shadow: var(--recipe-header-shadow);
+  background-color: var(--chrome-fill);
+  backdrop-filter: var(--surface-filter);
+}
+:where([data-design]) :where([data-ui="app-sidebar"])[data-appearance="attached"] {
+  margin: var(--recipe-sidebar-margin);
+  border-radius: var(--recipe-floating-radius);
+  box-shadow: var(--recipe-sidebar-shadow);
+  background-color: var(--rail-fill);
+  backdrop-filter: var(--surface-filter);
+}
+:where([data-design]) :where([data-ui="app-shell"]) {
+  background-image: var(--canvas-image);
+  background-size: var(--canvas-size);
+  background-repeat: var(--canvas-repeat);
+}
+:where([data-design]) :where([data-ui="dashboard-metrics"]) > [data-ui="card"]:nth-child(2):not([data-variant="featured"]) { background-color: var(--tile-second-fill); }
+:where([data-design]) :where([data-ui="dashboard-metrics"]) > [data-ui="card"]:first-child { grid-column: var(--metric-first-span); }
+:where([data-design]) :where([data-ui="dashboard-metrics"]) > [data-ui="card"]:nth-child(3):not([data-variant="featured"]) { background-color: var(--tile-third-fill); }
+:where([data-design]) :where([data-ui="dashboard-metrics"]) > [data-ui="card"]:nth-child(4):not([data-variant="featured"]) { background-color: var(--tile-fourth-fill); }
+:where([data-design]) :where(table) thead {
+  background-color: var(--table-heading-fill);
+}
+:where([data-design]) :where(table, figure, [role="log"]) {
+  background-color: var(--data-fill, revert-layer);
+}
+:where([data-design]) :where(td, dd, [role="log"]) { font-family: var(--data-font, revert-layer); }
+:where([data-design]) :where([data-ui="card"][data-variant="featured"]) {
+  box-shadow: var(--featured-decoration, revert-layer);
+}
+:where([data-design]) :where(table) th {
+  color: var(--table-heading-ink);
+}
+:where([data-design]) :where([role="switch"], button[role="checkbox"]) {
+  box-shadow: var(--control-decoration);
+  background-image: var(--control-image);
+}
+:where([data-design]) :where([role="progressbar"]) > div {
+  background-image: var(--bar-image);
+}
+:root[data-design] body {
+  background-image: var(--canvas-image);
+  background-size: var(--canvas-size);
+  background-repeat: var(--canvas-repeat);
+  background-attachment: fixed;
+}
+:where([data-design]) :where([data-ui="app-main"]) {
+  padding: var(--recipe-main-padding);
+}
+:where([data-design]) :where([data-ui="workspace-review"], [data-ui="workspace-intake"]) {
+  border-radius: var(--recipe-workspace-radius);
+  box-shadow: var(--recipe-workspace-shadow);
+}
+:where([data-design]) :where([data-ui="dashboard-panels"]) {
+  gap: var(--recipe-panel-gap, var(--dashboard-panel-gap, var(--space-4)));
+}
+@container (min-width: 42rem) {
+  :where([data-design]) :where([data-ui="dashboard-panels"])[data-layout] {
+    grid-template-columns: var(--recipe-mid-columns);
+  }
+}
+@container (min-width: 48rem) {
+  :where([data-design]) :where([data-ui="dashboard-metrics"]) > :nth-child(even) {
+    margin-top: var(--recipe-panel-lift);
+  }
+  :where([data-design]) :where([data-ui="dashboard-metrics"]) > :nth-child(odd) {
+    margin-bottom: var(--recipe-panel-rest);
+  }
+  :where([data-design]) :where([data-ui="dashboard-panels"]) > :nth-child(even) {
+    margin-top: var(--recipe-panel-lift);
+  }
+  :where([data-design]) :where([data-ui="dashboard-panels"])[data-layout="balanced"] {
+    grid-template-columns: var(--recipe-panel-columns, repeat(2, minmax(0, 1fr)));
+  }
+  :where([data-design]) :where([data-ui="dashboard-panels"])[data-layout="primary"] {
+    grid-template-columns: var(--recipe-panel-columns, minmax(0, 2fr) minmax(0, 1fr));
+  }
+  :where([data-design]) :where([data-ui="dashboard-panels"]) > :first-child {
+    grid-row: var(--recipe-chart-row);
+  }
+  :where([data-design]) :where([data-ui="dashboard-panels"]) > :last-child {
+    grid-column: var(--recipe-last-column);
+  }
+}
+/* Role geometry supplements the existing palette/material, without changing density. */
+[data-design="glass"], [data-design="spatial"], [data-design="aurora"] {
+  --field-height: max(46px, var(--control-height));
+  --field-inline-padding: 16px;
+  --field-gap: 14px;
+  --editor-inset: 24px;
+}
+[data-design="clay"], [data-design="neumorphic"] {
+  --field-height: max(48px, var(--control-height));
+  --field-inline-padding: 18px;
+  --field-block-padding: 16px;
+  --field-gap: 14px;
+  --editor-inset: 24px;
+  --editor-gap: 20px;
+}
+[data-design="clay"] { --field-radius: 12px; --selection-radius: 10px; }
+[data-design="material"] { --field-height: max(48px, var(--control-height)); --field-inline-padding: 16px; }
+[data-design="fluent"] { --field-height: max(44px, var(--control-height)); --field-decoration: inset 0 -2px 0 var(--border); }
+[data-design="brutal"] { --field-decoration: 3px 3px 0 var(--border); --field-gap: 16px; }
+[data-design="editorial"] { --field-border-style: double; --field-gap: 16px; --editor-inset: 24px; }
+[data-design="terminal"] { --field-border-style: dashed; --editor-inset: 18px; }
+[data-design="pixel"] { --field-inline-padding: 16px; --selection-radius: 0px; }
+[data-design="drawn"] { --field-decoration: 1px 2px 0 var(--border); --field-gap: 14px; }
+[data-design="bento"] { --field-radius: 12px; --editor-gap: 20px; }
+[data-design="aurora"] { --field-image: linear-gradient(120deg, color-mix(in srgb, var(--accent) 8%, transparent), transparent 65%); }
+[data-design="spatial"] { --field-fill: color-mix(in srgb, var(--surface) 90%, transparent); --field-decoration: inset 0 1px 0 var(--material-highlight); }
+
+/* Navigation and date surfaces share a material, not a fixed white data plane. */
+[data-design="glass"], [data-design="spatial"] {
+  --navigation-fill: var(--rail-fill);
+  --navigation-hover-fill: color-mix(in srgb, var(--surface) 75%, transparent);
+  --navigation-selected-shadow: inset 0 1px 1px var(--material-highlight), 0 3px 10px color-mix(in srgb, var(--accent) 20%, transparent);
+  --schedule-fill: color-mix(in srgb, var(--surface) 36%, transparent);
+  --schedule-cell-fill: color-mix(in srgb, var(--surface) 22%, transparent);
+  --schedule-cell-shadow: inset 0 1px 0 color-mix(in srgb, var(--material-highlight) 45%, transparent);
+}
+[data-design="fluent"] {
+  --navigation-fill: var(--overlay-fill);
+  --navigation-radius: 6px;
+  --navigation-selected-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 25%, transparent);
+  --schedule-cell-fill: color-mix(in srgb, var(--accent) 4%, var(--surface));
+}
+[data-design="material"] {
+  --navigation-radius: 10px;
+  --navigation-selected-shadow: none;
+  --schedule-bar-radius: 8px;
+  --schedule-cell-fill: color-mix(in srgb, var(--accent) 5%, var(--surface));
+}
+[data-design="neumorphic"] {
+  --navigation-fill: var(--background);
+  --navigation-hover-fill: var(--background);
+  --navigation-selected-fill: var(--background);
+  --navigation-gap: 10px;
+  --schedule-fill: var(--background);
+  --schedule-sticky-fill: var(--background);
+  --schedule-cell-fill: var(--background);
+  --schedule-cell-shadow: 2px 2px 4px rgb(0 0 0 / 12%), -2px -2px 4px var(--material-highlight);
+  --calendar-gap: 7px;
+}
+[data-design="clay"] {
+  --navigation-fill: color-mix(in srgb, var(--accent) 8%, var(--surface));
+  --navigation-selected-fill: color-mix(in srgb, var(--accent) 22%, var(--surface));
+  --navigation-gap: 8px;
+  --navigation-row-inset: 12px;
+  --schedule-fill: color-mix(in srgb, var(--accent) 6%, var(--surface));
+  --schedule-cell-fill: color-mix(in srgb, var(--accent) 8%, var(--surface));
+  --schedule-cell-shadow: inset 1px 2px 3px var(--material-highlight), inset -2px -2px 4px color-mix(in srgb, var(--accent) 12%, transparent);
+  --schedule-bar-radius: 10px;
+  --calendar-gap: 5px;
+}
+[data-design="skeuo"] { --navigation-fill: var(--surface-subtle); --schedule-fill: var(--background); --schedule-cell-fill: var(--surface-subtle); --schedule-cell-shadow: var(--field-decoration); --schedule-heading-ink: var(--foreground); }
+[data-design="retro"] {
+  --navigation-fill: var(--surface-subtle);
+  --navigation-selected-fill: var(--accent);
+  --navigation-selected-ink: var(--accent-foreground);
+  --navigation-radius: 0px;
+  --schedule-fill: var(--surface-subtle);
+  --schedule-sticky-fill: var(--surface-subtle);
+  --schedule-cell-fill: var(--surface-subtle);
+  --schedule-cell-shadow: var(--control-decoration);
+  --schedule-bar-radius: 0px;
+}
+[data-design="brutal"] {
+  --navigation-selected-fill: var(--accent);
+  --navigation-selected-ink: var(--accent-foreground);
+  --navigation-selected-shadow: 2px 2px 0 var(--border);
+  --schedule-cell-fill: var(--surface);
+  --schedule-cell-shadow: inset 0 0 0 1px var(--border);
+  --schedule-bar-radius: 0px;
+}
+[data-design="bento"] { --navigation-radius: 12px; --schedule-cell-fill: var(--surface-subtle); --calendar-gap: 6px; }
+[data-design="flat"], [data-design="minimal"], [data-design="swiss"], [data-design="editorial"] { --navigation-selected-shadow: none; }
+[data-design="flat"] { --navigation-radius: 4px; --schedule-cell-fill: var(--surface-subtle); }
+[data-design="swiss"] { --navigation-radius: 0px; --schedule-grid: var(--border); --schedule-bar-radius: 0px; --calendar-gap: 0px; }
+[data-design="editorial"] { --navigation-radius: 0px; --schedule-fill: var(--background); --schedule-sticky-fill: var(--background); --schedule-bar-radius: 0px; }
+[data-design="aurora"] { --navigation-fill: color-mix(in srgb, var(--accent) 9%, var(--surface)); --schedule-cell-fill: color-mix(in srgb, var(--accent) 8%, var(--surface)); --schedule-cell-shadow: inset 0 1px 0 var(--material-highlight); }
+[data-design="cyber"] {
+  --navigation-selected-shadow: inset 0 0 0 1px var(--accent), 0 0 12px color-mix(in srgb, var(--accent) 25%, transparent);
+  --navigation-radius: 0px;
+  --schedule-grid: color-mix(in srgb, var(--accent) 24%, transparent);
+  --schedule-cell-fill: color-mix(in srgb, var(--accent) 7%, var(--surface));
+  --schedule-bar-radius: 0px;
+}
+[data-design="terminal"] {
+  --navigation-selected-fill: var(--accent);
+  --navigation-selected-ink: var(--accent-foreground);
+  --navigation-selected-shadow: none;
+  --navigation-radius: 0px;
+  --schedule-fill: var(--background);
+  --schedule-grid: color-mix(in srgb, var(--accent) 22%, transparent);
+  --schedule-sticky-fill: var(--background);
+  --schedule-bar-radius: 0px;
+}
+[data-design="pixel"] {
+  --navigation-selected-fill: var(--accent);
+  --navigation-selected-ink: var(--accent-foreground);
+  --navigation-radius: 0px;
+  --schedule-cell-fill: var(--surface-subtle);
+  --schedule-cell-shadow: inset 2px 2px 0 var(--material-highlight), inset -2px -2px 0 color-mix(in srgb, var(--border) 35%, transparent);
+  --schedule-bar-radius: 0px;
+  --calendar-gap: 4px;
+}
+[data-design="drawn"] { --schedule-grid: color-mix(in srgb, var(--foreground) 20%, transparent); --schedule-cell-fill: color-mix(in srgb, var(--accent) 5%, var(--surface)); --schedule-bar-radius: 4px 8px 5px 3px; }
+
+@scope ([data-design]:not([data-design="basic"])) to ([data-design]) {
+  :where([data-ui="tree"]:not([data-embedded]), [data-ui="tree-nav"], [data-ui="side-nav"], [data-ui="anchor-nav"], [data-ui="calendar"], [data-ui="calendar-scheduler"], [data-ui="gantt"], [data-ui="calendar-heatmap"][data-appearance="panel"]) {
+    border: var(--border-width) var(--panel-border-style) var(--border);
+    border-radius: var(--panel-radius-material);
+    background-color: var(--navigation-fill);
+    background-image: var(--surface-image);
+    backdrop-filter: var(--surface-filter);
+    box-shadow: var(--card-decoration);
+    padding: var(--editor-inset);
+  }
+  :where([data-ui="tree"][data-embedded]) { border: 0; padding: 0; background: transparent; box-shadow: none; }
+  :where([data-ui="tree-nav"], [data-ui="side-nav"], [data-ui="anchor-nav"]) { gap: var(--navigation-gap); }
+  :where([data-ui="tree-nav"]) ul { row-gap: var(--navigation-gap); }
+  :where([data-ui="tree-nav"]) li { margin: 0; }
+  :where([data-ui="tree"]) [role="group"] { padding-block: 2px; }
+  :where([data-slot="tree-row"], [data-slot="tree-nav-link"], [data-slot="nav-link"], [data-slot="anchor-nav-link"], [data-slot="nav-menu-link"], [data-slot="nav-trigger"]) {
+    border-radius: var(--navigation-radius);
+    padding-block: var(--navigation-row-inset);
+    min-height: 40px;
+    background-color: transparent;
+    background-image: none;
+    box-shadow: none;
+    color: var(--foreground);
+    letter-spacing: var(--control-tracking);
+  }
+  :where([data-slot="tree-row"]) { gap: 10px; margin-block: 2px; padding-inline-end: 12px; }
+  :where([data-slot="tree-nav-link"], [data-slot="nav-link"], [data-slot="anchor-nav-link"]) { border-inline-start-width: 0; margin-inline-start: 0; }
+  :where([data-slot="tree-nav-disclosure"]) { min-height: 36px; }
+  :where([data-slot="nav-link"][data-variant="underline"]) { border-block-end-width: 2px; }
+  :where([data-slot="tree-row"]:hover, [data-slot="tree-nav-link"]:hover, [data-slot="nav-link"]:hover, [data-slot="anchor-nav-link"]:hover, [data-slot="nav-menu-link"]:hover, [data-slot="nav-trigger"]:hover, [data-slot="nav-trigger"][data-state="open"]) {
+    background-color: var(--embedded-hover-fill);
+    background-image: none;
+  }
+  :where([role="treeitem"][aria-selected="true"]) > :where([data-slot="tree-row"]),
+  :where([data-slot="tree-nav-link"][aria-current], [data-slot="nav-link"][aria-current], [data-slot="anchor-nav-link"][aria-current], [data-slot="nav-menu-link"][data-active]) {
+    background-color: var(--navigation-selected-fill);
+    background-image: var(--control-image);
+    color: var(--navigation-selected-ink);
+    box-shadow: var(--navigation-selected-shadow);
+    font-weight: var(--component-heading-weight);
+  }
+  :where([role="treeitem"]:focus-visible) > :where([data-slot="tree-row"]),
+  :where([data-slot="tree-nav-link"]:focus-visible, [data-slot="nav-link"]:focus-visible, [data-slot="anchor-nav-link"]:focus-visible, [data-slot="nav-menu-link"]:focus-visible, [data-slot="nav-trigger"]:focus-visible) { outline: 2px solid var(--focus); outline-offset: -2px; }
+  :where([data-slot="tree-disclosure"], [data-slot="tree-nav-disclosure"]) {
+    border: 0;
+    border-radius: var(--compact-radius);
+    color: var(--foreground);
+    background: transparent;
+    box-shadow: none;
+  }
+  :where([data-slot="tree-nav-disclosure"]:hover:not(:disabled)) { background-color: var(--embedded-hover-fill); }
+  :where([data-slot="tree-nav-disclosure"]:focus-visible) { outline: 2px solid var(--focus); outline-offset: -2px; }
+  :where([data-slot="tree-disclosure"]:empty) { background: transparent; box-shadow: none; }
+  :where([role="treeitem"][aria-disabled="true"]) > :where([data-slot="tree-row"]) { background: transparent; box-shadow: none; }
+  :where([data-slot="tree-nav-branch"]) { border-color: var(--schedule-grid); border-style: var(--panel-border-style); }
+  :where([data-ui="global-nav"], [data-ui="bottom-nav"], [data-ui="navigation-menu"]) {
+    padding: 6px;
+    gap: var(--navigation-gap);
+    border-radius: var(--panel-radius-material);
+    background-color: var(--navigation-fill);
+    background-image: var(--surface-image);
+    backdrop-filter: var(--surface-filter);
+    box-shadow: var(--field-decoration);
+  }
+  :where([data-ui="bottom-nav"]) { border-width: var(--border-width); border-style: var(--panel-border-style); }
+  :where([data-ui="bottom-nav"][data-appearance="dock"]) { box-shadow: var(--card-decoration); }
+  :where([data-ui="bottom-nav"][data-appearance="bar"]) { border-radius: 0; }
+  :where([data-slot="nav-link"][data-variant="filled"][aria-current], [data-ui="tree-nav"][data-variant="filled"] [data-slot="tree-nav-link"][aria-current], [data-ui="bottom-nav"][data-appearance="dock"] [data-slot="nav-link"][aria-current]) {
+    background-color: var(--accent);
+    color: var(--accent-foreground);
+  }
+  :where([data-slot="nav-menu-link"]) { padding-inline: 12px; }
+  :where([data-ui="menubar"]) {
+    border-radius: var(--navigation-radius);
+    border-width: var(--border-width);
+    border-style: var(--panel-border-style);
+    background-color: var(--navigation-fill);
+    background-image: var(--surface-image);
+    backdrop-filter: var(--surface-filter);
+    box-shadow: var(--field-decoration);
+  }
+  :where([data-ui="overlay-panel"])[role="menu"] {
+    border-radius: var(--navigation-radius);
+    border-style: var(--panel-border-style);
+    padding: 6px;
+  }
+  :where([data-ui="overlay-panel"][role="menu"]) :where([role="menuitem"], [role="menuitemcheckbox"], [role="menuitemradio"]) {
+    border-radius: var(--navigation-radius);
+    min-height: 36px;
+    background-image: var(--control-image);
+  }
+  :where([data-ui="overlay-panel"][role="menu"]) :where([role="menuitemcheckbox"][data-state="checked"], [role="menuitemradio"][data-state="checked"]) {
+    background-color: var(--navigation-selected-fill);
+    box-shadow: var(--navigation-selected-shadow);
+    font-weight: var(--component-heading-weight);
+  }
+  :where([data-ui="overlay-panel"][role="menu"]) :where([data-highlighted]:not([data-disabled])) {
+    background-color: var(--navigation-hover-fill);
+    box-shadow: var(--field-decoration);
+  }
+
+  /* Data planes stay quiet; title strips, cells and task paint carry the mode. */
+  :where([data-ui="gantt"]) { padding: 0; overflow: hidden; background-color: var(--schedule-fill); }
+  :where([data-slot="gantt-header"], [data-slot="schedule-header"]) {
+    padding: 14px 16px;
+    background-color: var(--title-fill);
+    background-image: var(--control-image);
+    color: var(--schedule-heading-ink);
+    border-bottom: var(--border-width) var(--panel-border-style) var(--border);
+    font-family: var(--font-heading);
+  }
+  :where([data-slot="gantt-header"]) span { color: inherit; }
+  :where([data-slot="gantt-selection"]) { padding: 14px 16px; background-color: var(--navigation-hover-fill); border-bottom-style: var(--panel-border-style); color: var(--foreground); }
+  :where([data-slot="gantt-selection"]) p { color: inherit; }
+  :where([data-slot="gantt-action"]) { border: 0; border-radius: var(--compact-radius); background: transparent; box-shadow: none; padding: 4px 8px; min-height: 32px; }
+  :where([data-slot="gantt-scroll"]:focus-visible) { outline: 2px solid var(--focus); outline-offset: -3px; }
+  :where([data-slot="gantt-scale"]) { background: var(--title-fill); color: var(--schedule-heading-ink); font-family: var(--font-data); }
+  :where([data-slot="gantt-corner"]) { background: var(--title-fill); color: var(--schedule-heading-ink); }
+  :where([data-slot="gantt-row"], [data-slot="gantt-tick"], [data-slot="gantt-corner"], [data-slot="gantt-label"]) { border-color: var(--schedule-grid); border-style: var(--panel-border-style); }
+  :where([data-slot="gantt-row"]) { height: 56px; }
+  :where([data-slot="gantt-label"]) { background-color: var(--schedule-sticky-fill); background-image: var(--surface-image); }
+  :where([data-slot="gantt-task"]) { box-shadow: none; background: transparent; }
+  :where([data-slot="gantt-task"]:hover, [data-slot="gantt-task"][aria-pressed="true"]) { background: var(--navigation-hover-fill); box-shadow: var(--field-decoration); color: var(--foreground); }
+  :where([data-slot="gantt-task"][aria-pressed="true"]) span { color: inherit; }
+  :where([data-slot="gantt-track"]) { background-color: var(--schedule-fill); }
+  :where([data-slot="gantt-row"]:nth-child(even)) [data-slot="gantt-track"] { background-color: color-mix(in srgb, var(--accent) 4%, var(--schedule-fill)); }
+  :where([data-slot="gantt-row"][data-selected="true"]) [data-slot="gantt-track"] { background-color: var(--navigation-hover-fill); }
+  :where([data-slot="gantt-bar"]) { border-radius: var(--schedule-bar-radius); border-width: var(--border-width); border-style: var(--control-border-style); box-shadow: var(--control-decoration); }
+  :where([data-slot="gantt-progress"]) { background-image: var(--bar-image), var(--control-image); box-shadow: inset 0 1px 0 var(--material-highlight); }
+  :where([data-ui="calendar-scheduler"]) { padding: 0; overflow: hidden; }
+  :where([data-slot="schedule-header"]) { margin: 0; }
+  :where([data-slot="schedule-header"]) span { color: inherit; }
+  :where([data-slot="schedule-layout"]) { padding: var(--editor-inset); gap: var(--editor-gap); }
+  :where([data-slot="schedule-agenda"]) { padding: 16px; border-style: var(--panel-border-style); border-radius: var(--field-radius); background: var(--schedule-fill); box-shadow: var(--field-decoration); }
+  :where([data-slot="schedule-event"]) { margin-block: 8px; padding: 12px; gap: 6px; border-radius: var(--navigation-radius); background: var(--schedule-cell-fill); box-shadow: var(--schedule-cell-shadow); }
+  :where(button[data-slot="schedule-event"]:hover) { background-color: var(--navigation-hover-fill); }
+  :where([data-ui="calendar"], [data-ui="calendar-scheduler"]) { background-color: var(--schedule-fill); }
+  :where([data-ui="calendar"]) { min-width: 0; max-width: 100%; padding: 14px; }
+  :where([data-ui="calendar"]) .rdp-months { position: relative; align-items: start; flex-wrap: wrap; max-width: 100%; }
+  :where([data-ui="calendar"]) .rdp-month { width: 280px; max-width: 100%; min-width: 0; flex-shrink: 1; }
+  :where([data-ui="calendar"]) .rdp-nav { position: absolute; inset: 0 0 auto; z-index: 1; height: 40px; pointer-events: none; }
+  :where([data-ui="calendar"]) :is(.rdp-button_previous, .rdp-button_next) { pointer-events: auto; width: 32px; height: 32px; align-self: center; border: 0; border-radius: var(--compact-radius); background: transparent; box-shadow: none; color: var(--schedule-heading-ink); }
+  :where([data-ui="calendar"]) :is(.rdp-button_previous, .rdp-button_next):hover:not(:disabled) { background-color: var(--embedded-hover-fill); }
+  :where([data-ui="calendar"]) :is(.rdp-button_previous, .rdp-button_next):focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+  :where([data-ui="calendar"]) .rdp-month_caption { min-height: 40px; height: auto; padding: 8px 36px; border-radius: var(--field-radius); background-color: var(--title-fill); background-image: var(--control-image); color: var(--schedule-heading-ink); font-family: var(--font-heading); }
+  :where([data-ui="calendar"]) .rdp-month_grid { background: transparent; margin-top: 12px; }
+  :where([data-ui="calendar"]) .rdp-month_grid thead { background: transparent; }
+  :where([data-ui="calendar"]) :is(.rdp-week, .rdp-weekdays) { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: var(--calendar-gap); }
+  :where([data-ui="calendar"]) .rdp-week { margin-block: var(--calendar-gap); }
+  :where([data-ui="calendar"]) .rdp-weekday { width: auto; padding-block: 6px; color: var(--muted); font-family: var(--font-data); }
+  :where([data-ui="calendar"]) .rdp-day { width: auto; height: auto; min-width: 0; padding: 0; font-family: var(--font-data); }
+  :where([data-ui="calendar"]) .rdp-day_button { width: 100%; height: 36px; border-radius: var(--navigation-radius); background-color: var(--schedule-cell-fill); box-shadow: var(--schedule-cell-shadow); color: var(--foreground); }
+  :where([data-ui="calendar"]) .rdp-outside .rdp-day_button { color: var(--muted); background: transparent; box-shadow: none; }
+  :where([data-ui="calendar"]) .rdp-day_button:hover:not(:disabled) { background-color: var(--navigation-hover-fill); }
+  :where([data-ui="calendar"]) .rdp-selected .rdp-day_button { background-color: var(--accent); background-image: var(--control-image); color: var(--accent-foreground); box-shadow: var(--navigation-selected-shadow); font-weight: 700; }
+  :where([data-ui="calendar"]) .rdp-range_middle .rdp-day_button { border-radius: 0; background-color: var(--navigation-selected-fill); color: var(--navigation-selected-ink); box-shadow: none; }
+  :where([data-ui="calendar"]) .rdp-today:not(.rdp-selected) .rdp-day_button { outline: 1px solid var(--accent); outline-offset: -3px; font-weight: 700; }
+  :where([data-ui="calendar"]) .rdp-day_button:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+  :where([data-ui="calendar"]) .rdp-disabled .rdp-day_button { opacity: .45; box-shadow: none; }
+  :where([data-ui="calendar-heatmap"][data-appearance="panel"]) { background-color: var(--schedule-fill); }
+}
+
+/* Content, tools and charts expose actual painted faces, not decorative wrappers. */
+[data-design="glass"], [data-design="spatial"] { --reading-fill: color-mix(in srgb, var(--surface) 84%, transparent); }
+[data-design="clay"] { --reading-fill: color-mix(in srgb, var(--accent) 8%, var(--surface)); }
+[data-design="neumorphic"] { --reading-fill: var(--background); }
+[data-design="retro"] { --reading-fill: var(--surface-subtle); }
+[data-design="terminal"], [data-design="editorial"], [data-design="swiss"] { --reading-fill: var(--background); }
+@scope ([data-design]:not([data-design="basic"])) to ([data-design]) {
+  :where([data-surface="panel"], [data-slot="surface-panel"]) {
+    --data-fill: var(--reading-fill);
+    min-width: 0;
+    border-width: var(--border-width);
+    border-style: var(--panel-border-style);
+    border-radius: var(--panel-radius-material);
+    background-color: var(--surface-fill);
+    background-image: var(--surface-image);
+    backdrop-filter: var(--surface-filter);
+    box-shadow: var(--card-decoration);
+  }
+  :where([data-surface="well"], [data-slot="reading-plane"], [data-slot="plot-plane"]) {
+    --data-fill: var(--reading-fill);
+    min-width: 0;
+    border-radius: var(--field-radius);
+    background-color: var(--reading-fill);
+    box-shadow: var(--field-decoration);
+  }
+  :where([data-slot="reading-plane"]) { overflow: auto; }
+  :where([data-surface="well"]) { border-style: var(--panel-border-style); }
+  :where([data-surface="row"]) {
+    min-width: 0;
+    border-radius: var(--field-radius);
+    border-style: var(--panel-border-style);
+    background-color: var(--reading-fill);
+    background-image: var(--field-image);
+    box-shadow: var(--secondary-decoration);
+  }
+  :where([data-slot="surface-header"]) {
+    min-height: 44px;
+    padding: 12px 16px;
+    gap: 12px;
+    border-color: var(--border);
+    border-bottom-style: var(--panel-border-style);
+    border-start-start-radius: inherit;
+    border-start-end-radius: inherit;
+    background-color: var(--title-fill);
+    background-image: var(--control-image);
+    color: var(--schedule-heading-ink);
+  }
+  :where([data-slot="surface-title"], [data-slot="surface-heading"]) { font-family: var(--font-heading); font-style: var(--heading-font-style); font-weight: var(--component-heading-weight); }
+  :where([data-slot="surface-title"], [data-slot="surface-heading"]) { min-width: 0; overflow-wrap: anywhere; }
+  code[data-slot="surface-title"] { font-family: var(--font-data); }
+  :where([data-slot="surface-header"]) :where([data-slot="surface-title"], [data-slot="surface-meta"]) { color: inherit; }
+  :where([data-slot="surface-header"]) :where([data-ui="button"][data-variant="ghost"], [data-ui="icon-button"][data-variant="ghost"]) { color: inherit; }
+  :where([data-slot="surface-action"]) {
+    border: 0;
+    border-radius: var(--compact-radius);
+    background: transparent;
+    box-shadow: none;
+    clip-path: none;
+    padding: 4px 8px;
+    min-height: 32px;
+  }
+  :where([data-slot="surface-action"]:hover:not(:disabled), [data-slot="gantt-action"]:hover:not(:disabled)) { background-color: var(--embedded-hover-fill); }
+  :where([data-slot="surface-action"][aria-pressed="true"]) { background-color: var(--embedded-selected-fill); box-shadow: none; font-weight: var(--component-heading-weight); }
+  :where([data-slot="surface-action"]:active, [data-slot="gantt-action"]:active) { translate: none; }
+  :where([data-slot="surface-action"]:focus-visible, [data-slot="gantt-action"]:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; }
+  /* Joined rows fill their owner; only the panel clips outside corners. */
+  :where([data-slot="surface-row"]) { border-radius: 0; }
+  :where([data-slot="surface-row"]:hover, [data-slot="notification-row"]:hover) { background-color: var(--navigation-hover-fill); }
+  :where([data-slot="surface-row"][data-selected="true"], [data-slot="surface-row"][aria-selected="true"], [data-slot="surface-row"][aria-pressed="true"]) {
+    background-color: var(--navigation-hover-fill);
+    color: var(--foreground);
+    box-shadow: var(--navigation-selected-shadow);
+    font-weight: var(--component-heading-weight);
+  }
+  :where([data-slot="surface-row"][data-selected="true"], [data-slot="surface-row"][aria-selected="true"], [data-slot="surface-row"][aria-pressed="true"]) :where([data-slot="surface-meta"], p.text-muted, span.text-muted) { color: inherit; }
+  /* MetricCard supplies featured/compact variants through Card's data hook. */
+  :where([data-ui="card"]) { border-radius: var(--panel-radius-material); }
+  :where([data-ui="card"][data-variant="subtle"]) { border-radius: var(--panel-radius-material); border-style: var(--panel-border-style); background-color: var(--navigation-fill); background-image: var(--surface-image); box-shadow: var(--field-decoration); }
+  :where([data-ui="conversation"]) [role="log"] { background-color: var(--reading-fill); box-shadow: none; border-radius: inherit; }
+  :where([data-surface="message"]) { border-radius: var(--field-radius); border-width: var(--border-width); border-style: var(--panel-border-style); background-color: var(--surface-fill); background-image: var(--surface-image); box-shadow: var(--secondary-decoration); padding: 14px 16px; }
+  :where([data-from="user"]) > :where([data-surface="message"]) { background-color: var(--message-user-background); background-image: none; color: var(--message-user-foreground); }
+  :where([data-surface="media"], [data-slot="lightbox"] [data-ui="image"]) { border-radius: var(--panel-radius-material); border-width: var(--border-width); border-style: var(--panel-border-style); box-shadow: var(--secondary-decoration); }
+  :where([data-surface="media-placeholder"]) { background-color: var(--navigation-fill); background-image: var(--surface-image); box-shadow: var(--field-decoration); border-radius: inherit; }
+  :where([data-ui="dropzone"], [data-surface="drop-target"]) { border-radius: var(--field-radius); background-color: var(--navigation-fill); background-image: var(--surface-image); box-shadow: var(--field-decoration); }
+  :where([data-ui="dropzone"][data-dragging="true"]) { background-color: var(--navigation-selected-fill); border-color: var(--accent); outline: 2px solid var(--focus); outline-offset: -3px; }
+  :where([data-surface="status"]) { border-radius: var(--field-radius); background-image: var(--surface-image); box-shadow: var(--secondary-decoration); }
+  :where([data-ui="alert"][data-appearance="outline"], [data-ui="toast"]) { background-color: var(--surface-fill); backdrop-filter: var(--surface-filter); }
+  :where([data-ui="toast"]) [data-slot="surface-header"] { background: transparent; color: inherit; padding: 0; min-height: 0; border-radius: 0; }
+  :where([data-ui="toast"]) [data-slot="surface-meta"] { color: var(--muted); }
+  :where([data-ui="tool-call"], [data-ui="reasoning"], [data-ui="agent-status"]) > [data-slot="surface-header"] { background-color: var(--reading-fill); background-image: none; color: var(--foreground); }
+  :where([data-ui="log-console"][data-variant="flat"], [data-ui="log-viewer"][data-variant="flat"], [data-ui="terminal"][data-variant="flat"]) { --data-fill: transparent; background: transparent; box-shadow: none; }
+  :where([data-slot="inline-code"]) { border-radius: var(--inline-code-radius); background-color: var(--reading-fill); }
+  :where([data-slot="period-trigger"]) { border-radius: var(--field-radius); border-width: var(--control-border-width); border-style: var(--field-border-style); background-color: var(--field-fill); background-image: var(--field-image); box-shadow: var(--field-decoration); min-height: var(--field-height); padding-inline: var(--field-inline-padding); }
+  :where([data-slot="period-panel"], [data-slot="data-tooltip"], [data-slot="app-help-panel"]) { border-radius: var(--panel-radius-material); border-width: var(--border-width); border-style: var(--panel-border-style); background-color: var(--overlay-fill); background-image: var(--overlay-image); backdrop-filter: var(--overlay-filter); box-shadow: var(--card-decoration); }
+  :where([data-slot="period-option"], [data-slot="command-option"], [data-slot="transfer-option"]) { border-radius: var(--navigation-radius); background-image: var(--control-image); }
+  :where([data-slot="period-option"][aria-pressed="true"], [data-slot="command-option"][aria-selected="true"]) { background-color: var(--navigation-selected-fill); color: var(--navigation-selected-ink); box-shadow: var(--navigation-selected-shadow); }
+  :where([data-slot="period-option"]:hover:not(:disabled), [data-slot="transfer-option"]:hover) { background-color: var(--navigation-hover-fill); }
+  :where([data-ui="accordion-item"]) { border-color: var(--border); border-bottom-style: var(--panel-border-style); }
+  :where([data-ui="accordion-trigger"]) { border-radius: var(--field-radius); padding: 14px 12px; }
+  :where([data-ui="accordion-trigger"]:hover, [data-ui="accordion-trigger"][data-state="open"]) { background-color: var(--embedded-hover-fill); box-shadow: none; }
+  :where([data-ui="accordion-content"]) { padding-inline: 12px; }
+  :where([data-slot="app-help-trigger"]) { background-image: var(--control-image); box-shadow: var(--control-decoration); border-style: var(--control-border-style); }
+  :where([data-ui="stepper"]:not([data-embedded])) [data-slot="step-marker"] { border-radius: var(--navigation-radius); background-image: var(--control-image); box-shadow: var(--control-decoration); }
+  :where([data-slot="carousel-indicator"]) { border-radius: var(--control-radius); box-shadow: var(--field-decoration); }
+  :where([data-slot="resize-handle"]) { background-color: var(--navigation-fill); }
+  :where([data-ui="avatar-uploader"]) { width: 100%; }
+  :where([data-slot="avatar-details"]) { flex-basis: min(100%, 220px); }
+  :where([data-ui="avatar-uploader"]) input[type="file"] { width: 100%; min-width: 0; }
+  :where([data-ui="avatar-uploader"]) input::file-selector-button { border-radius: var(--control-radius); border-style: var(--control-border-style); background-color: var(--field-fill); background-image: var(--control-image); box-shadow: var(--secondary-decoration); color: var(--foreground); }
+  :where([data-ui="scroll-area"]) { min-width: 0; max-width: 100%; }
+  :where([data-slot="scroll-thumb"]) { border-radius: var(--control-radius); box-shadow: var(--secondary-decoration); }
+  :where([data-ui="snippet"]) > [data-slot="surface-header"] { flex-wrap: wrap; }
+  :where([data-ui="kanban-column"]) > [data-slot="surface-header"] { margin: calc(-1 * var(--space-3)); margin-bottom: var(--space-3); }
+}
+
+/* A scope boundary is essential: nested Basic and independent portal scopes stay intact. */
+@scope ([data-design]:not([data-design="basic"])) to ([data-design]) {
+  :where([data-ui="input"], [data-ui="color-control"], [data-ui="textarea"], [data-ui="select-trigger"], [data-ui="native-select"]) {
+    min-height: var(--field-height);
+    padding-inline: var(--field-inline-padding);
+    line-height: 1.5;
+  }
+  :where([data-ui="input"], [data-ui="color-control"], [data-ui="select-trigger"], [data-ui="native-select"]) {
+    height: var(--field-height);
+  }
+  :where([data-ui="native-select"]) { padding-inline-end: calc(var(--field-inline-padding) + 24px); }
+  :where([data-ui="textarea"]) {
+    min-height: max(120px, var(--field-height));
+    padding-block: var(--field-block-padding);
+    resize: vertical;
+  }
+  :where([data-ui="input"], [data-ui="textarea"], [data-ui="select-trigger"], [data-ui="native-select"]):not([data-appearance="underline"]) {
+    border-style: var(--field-border-style);
+  }
+  :where([data-appearance="filled"]):is([data-ui="input"], [data-ui="textarea"], [data-ui="native-select"], [data-ui="select-trigger"]) {
+    background-color: var(--field-filled-fill);
+  }
+  :where([data-appearance="underline"]):is([data-ui="input"], [data-ui="textarea"], [data-ui="native-select"], [data-ui="select-trigger"]) {
+    background-color: transparent;
+    background-image: none;
+    box-shadow: none;
+    padding-inline-start: 0;
+  }
+  :where([data-ui="password-input"]) > [data-ui="input"] {
+    padding-inline-end: calc(var(--field-inline-padding) + var(--control-height));
+  }
+  :where([data-ui="password-input"]) > button { top: 50%; transform: translateY(-50%); }
+  :where([data-ui="button"][data-variant="ghost"][aria-pressed]) { box-shadow: none; }
+  :where([data-ui="field"], [data-ui="search-input"], [data-ui="thread-composer"]) {
+    gap: var(--field-gap);
+  }
+  :where([data-ui="field"] > p, [data-ui="thread-composer"] > p) { line-height: 1.6; }
+  :where([data-ui="field-frame"], [data-slot="pin-cell"]) {
+    border-width: var(--control-border-width);
+    border-style: var(--field-border-style);
+    border-radius: var(--field-radius);
+    background-color: var(--field-fill);
+    background-image: var(--field-image);
+    box-shadow: var(--field-decoration);
+  }
+  :where([data-ui="field-frame"]) {
+    height: auto;
+    min-height: var(--field-height);
+    align-items: stretch;
+  }
+  :where([data-ui="field-frame"][data-variant="soft"]) { background-color: var(--field-filled-fill); }
+  :where([data-ui="field-frame"]:focus-within) {
+    outline: 2px solid var(--focus);
+    outline-offset: 3px;
+  }
+  :where([data-ui="field-frame"]:has([aria-invalid="true"])) { border-color: var(--danger); }
+  :where([data-ui="field-frame"]:has(input:disabled, textarea:disabled)) { opacity: .5; }
+  :where([data-ui="field-frame"]:has(input:disabled, textarea:disabled)) :disabled { opacity: 1; }
+  :where([data-ui="field-frame"]) :is([data-slot="field-control"], [data-slot="input-group-control"]) {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    outline: none;
+    min-height: var(--field-height);
+    height: auto;
+    padding-inline: var(--field-inline-padding);
+  }
+  :where([data-ui="field-frame"]) textarea[data-slot="input-group-control"] {
+    min-height: 136px;
+    padding-block: var(--field-block-padding);
+    border-start-start-radius: inherit;
+    border-start-end-radius: inherit;
+  }
+  :where([data-ui="field-frame"]) input[data-slot="field-control"],
+  :where([data-ui="field-frame"]) input[data-slot="input-group-control"] {
+    border-radius: inherit;
+    min-width: 0;
+  }
+  :where([data-slot="field-addon"], [data-slot="input-group-addon"]) {
+    padding-inline: var(--field-inline-padding);
+    gap: 10px;
+    background-color: color-mix(in srgb, var(--surface-subtle) 60%, transparent);
+  }
+  :where([data-slot="input-group-addon"][data-align^="block"]) { padding-block: 10px; }
+  :where([data-slot="field-addon"]:first-child, [data-slot="input-group-addon"][data-align="inline-start"]) { border-start-start-radius: inherit; border-end-start-radius: inherit; }
+  :where([data-slot="field-addon"]:last-child, [data-slot="input-group-addon"][data-align="inline-end"]) { border-start-end-radius: inherit; border-end-end-radius: inherit; }
+  :where([data-slot="input-group-addon"][data-align="block-start"]) { border-start-start-radius: inherit; border-start-end-radius: inherit; }
+  :where([data-slot="input-group-addon"][data-align="block-end"]) { border-end-start-radius: inherit; border-end-end-radius: inherit; }
+  :where([data-slot="field-action"]) { width: var(--field-height); flex-shrink: 0; }
+  :where([data-ui="field-frame"][data-field="tags"]) {
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+  }
+  :where([data-ui="field-frame"][data-field="tags"]) input[data-slot="field-control"] { min-height: 32px; padding: 4px; min-width: 96px; }
+  :where([data-slot="field-chip"]) {
+    padding: 5px 10px;
+    border-radius: var(--compact-radius);
+    border: 1px solid var(--border);
+    gap: 6px;
+    background-color: var(--surface-subtle);
+  }
+  :where([data-slot="pin-cell"]) {
+    width: var(--field-height);
+    height: var(--field-height);
+    border-radius: var(--pin-radius);
+  }
+  :where([data-ui="color-input"]) { grid-template-columns: var(--field-height) minmax(0, 1fr); gap: 10px 12px; background: transparent; }
+  :where([data-ui="color-input"][data-variant="card"]) { background-color: var(--surface-fill); border-radius: var(--panel-radius-material); padding: var(--editor-inset); }
+  :where([data-slot="color-swatch"]) { width: var(--field-height); height: var(--field-height); border-radius: var(--compact-radius); }
+  :where([data-ui="color-control"]) { border-radius: var(--field-radius); border-width: var(--control-border-width); border-style: var(--field-border-style); background-color: var(--field-fill); background-image: var(--field-image); box-shadow: var(--field-decoration); }
+  :where([data-slot="search-controls"]) { gap: 12px; flex-wrap: wrap; }
+  :where([data-slot="search-controls"]) > [data-ui="input"] { flex-basis: 140px; }
+
+  /* Composers and editors: one shell, a quiet writing area, separated tools. */
+  :where([data-ui="prompt-input"], [data-ui="markdown-editor"], [data-ui="code-editor"]:not([data-variant="flat"]), [data-ui="block-editor"][data-appearance="panel"], [data-ui="form-wizard"], [data-ui="approval-card"], [data-ui="node-canvas"], [data-ui="filter-bar"][data-variant="panel"], [data-ui="query-builder"][data-variant="panel"]) {
+    border-width: var(--border-width);
+    border-style: var(--panel-border-style);
+    border-radius: var(--panel-radius-material);
+    background-color: var(--surface-fill);
+    background-image: var(--surface-image);
+    box-shadow: var(--card-decoration);
+    backdrop-filter: var(--surface-filter);
+  }
+  :where([data-ui="prompt-input"], [data-ui="form-wizard"], [data-ui="approval-card"], [data-ui="filter-bar"][data-variant="panel"], [data-ui="query-builder"][data-variant="panel"]) {
+    padding: var(--editor-inset);
+    gap: var(--editor-gap);
+  }
+  [data-slot="composer-control"] {
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
+    min-height: 120px;
+    padding: 8px 4px;
+  }
+  :where([data-slot="composer-actions"]) { border-top: 1px solid var(--border); padding-top: 14px; gap: 12px; }
+  :where([data-slot="editor-header"]) {
+    padding: 16px var(--editor-inset);
+    gap: 12px;
+    background-color: var(--title-fill);
+  }
+  :where([data-slot="editor-header"] > label, [data-slot="editor-header"] h3) { font-family: var(--font-heading); color: var(--title-ink); }
+  :where([data-slot="editor-header"] > button:not([data-ui])) { color: var(--foreground); }
+  :where([data-slot="editor-pane"], [data-slot="editor-preview"]) { padding: var(--editor-inset); }
+  :where([data-slot="editor-preview"]) { background-color: var(--surface); }
+  :where([data-slot="editor-footer"]) { padding: 14px var(--editor-inset); line-height: 1.6; gap: 8px; }
+  :where([data-ui="code-editor"][data-variant="flat"]) > [data-slot="editor-header"] { background: transparent; padding-inline: 0; }
+  :where([data-ui="code-editor"][data-variant="flat"]) > [data-slot="editor-footer"] { padding-inline: 0; }
+  :where([data-slot="code-surface"]) { --code-surface-inset: calc(2 * var(--field-block-padding)); background-color: var(--surface); }
+  :where([data-slot="code-gutter"]) { padding-block: var(--field-block-padding); padding-inline: 10px; width: 52px; }
+  [data-slot="code-control"] {
+    min-height: 0;
+    height: 100%;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    outline: none;
+    resize: none;
+    padding-block: var(--field-block-padding);
+    line-height: 1.5rem;
+  }
+  :where([data-slot="editor-blocks"]) { padding: var(--editor-inset); gap: var(--editor-gap); }
+  :where([data-slot="editor-block"]) { padding: 16px; border-radius: var(--field-radius); background-color: var(--surface); }
+  :where([data-slot="block-toolbar"]) { gap: 10px; margin-bottom: 14px; }
+  :where([data-slot="query-condition"]) { gap: 12px; padding-block: 12px; }
+  :where([data-slot="query-group"]) { gap: 14px; border-radius: var(--field-radius); }
+  :where([data-ui="table-frame"]) { border-radius: var(--panel-radius-material); border-width: var(--border-width); background-color: var(--surface); }
+
+  /* Selected controls inherit the mode's relief, while their native state colors remain. */
+  :where([data-ui="tabs-list"][data-variant="contained"], [data-ui="toggle-group"], [data-ui="segmented-control"]) {
+    border-radius: var(--field-radius);
+    padding: 6px;
+    gap: 6px;
+    background-color: var(--surface-subtle);
+    box-shadow: var(--field-decoration);
+  }
+  :where([data-ui="tab"]:not([data-variant="line"]), [data-ui="toggle"], [data-ui="toggle-item"], [data-slot="segment"]) {
+    border-radius: var(--selection-radius);
+    min-height: var(--control-height);
+    padding-inline: 14px;
+  }
+  :where([data-ui="toggle"]) { border-width: var(--control-border-width); border-style: var(--control-border-style); background-image: var(--control-image); }
+  :where([data-ui="tab"][data-state="active"]:not([data-variant="line"]), [data-ui="toggle"][data-state="on"], [data-ui="toggle-item"][data-state="on"], input:checked + [data-slot="segment"]) {
+    box-shadow: var(--selection-decoration);
+    background-image: var(--control-image);
+  }
+  :where([data-ui="radio-control"][data-variant="card"]) { border-radius: var(--field-radius); padding: 16px; }
+  :where([data-ui="radio-control"][data-variant="card"][data-state="checked"]) { box-shadow: var(--field-decoration); }
+  :where([data-ui="checkbox-control"][data-variant="card"]) { border-radius: var(--field-radius); padding: 16px; box-shadow: var(--field-decoration); }
+  :where([data-ui="checkbox-control"][data-variant="default"]) { border-radius: var(--check-radius); }
+  :where([data-slot="slider-track"]) { box-shadow: var(--field-decoration); }
+  :where([data-slot="slider-thumb"], [data-slot="switch-thumb"]) { background-image: var(--control-image); box-shadow: var(--control-decoration); }
+  :where([data-ui="button-group"]) { border-radius: var(--control-radius); box-shadow: var(--control-decoration); }
+  :where([data-ui="button-group"][data-orientation="vertical"]) { border-radius: var(--navigation-radius); }
+  :where([data-ui="button-group"]) > [data-ui="button"] {
+    border-radius: 0;
+    box-shadow: none;
+    clip-path: none;
+    translate: none;
+    outline-offset: -4px;
+  }
+  :where([data-ui="button-group"][data-orientation="horizontal"]) > [data-ui="button"]:first-child { border-start-start-radius: inherit; border-end-start-radius: inherit; }
+  :where([data-ui="button-group"][data-orientation="horizontal"]) > [data-ui="button"]:last-child { border-start-end-radius: inherit; border-end-end-radius: inherit; }
+  :where([data-ui="button-group"][data-orientation="horizontal"]) > [data-ui="button"]:not(:first-child) { border-inline-start-width: 0; }
+  :where([data-ui="button-group"][data-orientation="vertical"]) > [data-ui="button"]:first-child { border-start-start-radius: inherit; border-start-end-radius: inherit; }
+  :where([data-ui="button-group"][data-orientation="vertical"]) > [data-ui="button"]:last-child { border-end-start-radius: inherit; border-end-end-radius: inherit; }
+  :where([data-ui="button-group"][data-orientation="vertical"]) > [data-ui="button"]:not(:first-child) { border-block-start-width: 0; }
+  @media (max-width: 560px) {
+    :scope {
+      --field-inline-padding: 12px;
+      --field-block-padding: 12px;
+      --field-gap: 12px;
+      --editor-inset: 16px;
+      --editor-gap: 14px;
+    }
+  }
+}
+
+/* Embedded controls share their owner's surface; their hit areas stay intact. */
+@scope ([data-design]:not([data-design="basic"])) to ([data-design]) {
+  :where([data-ui="native-select"][data-presentation="inline"])[data-appearance="outline"] {
+    appearance: auto;
+    width: auto;
+    min-width: 0;
+    min-height: 32px;
+    height: 32px;
+    padding: 4px 8px;
+    border: 0;
+    border-radius: var(--compact-radius);
+    background: transparent;
+    box-shadow: none;
+    clip-path: none;
+  }
+  :where([data-ui="native-select"][data-presentation="inline"]):hover:not(:disabled) { background-color: var(--embedded-hover-fill); }
+  :where([data-ui="native-select"][data-presentation="inline"]):focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  :where([data-ui="native-select"][data-presentation="inline"]):disabled { opacity: .5; cursor: not-allowed; }
+  :where([data-slot="row-disclosure"], [data-slot="table-sort"]) {
+    border: 0;
+    border-radius: var(--compact-radius);
+    background: transparent;
+    box-shadow: none;
+    min-height: 32px;
+  }
+  :where([data-slot="row-disclosure"]) { width: 32px; padding: 0; }
+  :where([data-slot="table-sort"]) { padding: 4px; }
+  :where([data-slot="row-disclosure"]:hover, [data-slot="table-sort"]:hover) { background-color: var(--embedded-hover-fill); }
+  :where([data-slot="row-disclosure"]:focus-visible, [data-slot="table-sort"]:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; }
+  :where([data-slot="nav-trigger"][data-active]) { background-color: var(--embedded-selected-fill); font-weight: var(--component-heading-weight); }
+}
+@scope ([data-design="glass"], [data-design="aurora"], [data-design="spatial"]) to ([data-design]) {
+  :where([role="treeitem"][aria-selected="true"]) > :where([data-slot="tree-row"]),
+  :where([data-ui="tree-nav"][data-variant="rail"]) :where([data-slot="tree-nav-link"][aria-current]) {
+    background-color: var(--embedded-selected-fill);
+    background-image: none;
+    color: var(--foreground);
+    box-shadow: none;
+  }
+}
+
+@supports not (backdrop-filter: blur(1px)) {
+  [data-design="glass"], [data-design="fluent"], [data-design="spatial"] {
+    --surface-filter: none;
+    --overlay-filter: none;
+    --overlay-fill: var(--surface);
+    --recipe-panel-lift: 0px;
+    --recipe-panel-rest: 0px;
+    --surface-fill: var(--surface);
+    --chrome-fill: var(--surface);
+    --rail-fill: var(--surface-subtle);
+    --field-fill: var(--surface);
+    --field-filled-fill: var(--surface-subtle);
+    --schedule-fill: var(--surface);
+    --schedule-cell-fill: var(--surface-subtle);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  /* Accessibility preferences override the adapter's inline theme tokens. */
+  [data-design] { --motion-fast: 0ms !important; }
+}
+@media (forced-colors: active) {
+  [data-design] {
+    --control-decoration: none;
+    --field-decoration: none;
+    --card-decoration: none;
+    --panel-shadow: none !important;
+    --surface-image: none;
+    --canvas-image: none;
+    --control-image: none;
+    --field-image: none;
+    --control-clip: none;
+    --panel-clip: none;
+    --scene-shadow: none;
+    --surface-filter: none;
+    --overlay-filter: none;
+    --overlay-image: none;
+    --overlay-fill: var(--surface);
+    --control-press-translate: none;
+    --secondary-decoration: none;
+    --featured-decoration: none;
+    --pressed-decoration: none;
+    --selection-decoration: none;
+    --navigation-selected-shadow: none;
+    --schedule-cell-shadow: none;
+  }
+}

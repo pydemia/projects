@@ -3,25 +3,41 @@ import type { ReactElement, ReactNode } from "react";
 import { statusLabels } from "./models";
 import { navigate, routeUrl } from "./hooks";
 import type { Route } from "./hooks";
+import { Alert, AlertDescription, AlertTitle } from "./pydemia-ui/alert";
+import { Badge as PydBadge } from "./pydemia-ui/badge";
+import { Button } from "./pydemia-ui/button";
+import type { ButtonProps } from "./pydemia-ui/button";
+import { Empty as PydEmpty } from "./pydemia-ui/empty";
+import { Label } from "./pydemia-ui/label";
+import { PageHeader } from "./pydemia-ui/page-header";
 
 const MarkdownContent = lazy(() => import("./MarkdownContent"));
 
+/** Preserve native form-submit defaults while using the shared pydemia button. */
+export function ActionButton({ className = "", variant, type = "submit", ...props }: ButtonProps) {
+    const classes = className.split(/\s+/);
+    const resolved = variant ?? (classes.includes("primary") ? "primary"
+        : classes.includes("linkbtn") || classes.includes("plain") ? "ghost" : "outline");
+    return <Button className={className} variant={resolved} type={type} {...props} />;
+}
+
 export function ErrorNotice({ error, retry }: { error: string; retry?: () => void }) {
-    return <div className="notice error" role="alert">
-        <strong>작업을 완료하지 못했습니다.</strong><p>{error}</p>
-        {retry && <button onClick={retry}>다시 시도</button>}
-    </div>;
+    return <Alert variant="destructive" appearance="soft" className="notice error">
+        <AlertTitle>작업을 완료하지 못했습니다.</AlertTitle>
+        <AlertDescription>{error}</AlertDescription>
+        {retry && <Button variant="outline" onClick={retry}>다시 시도</Button>}
+    </Alert>;
 }
 export function Loading({ label = "서버에서 불러오는 중…" }: { label?: string }) {
     return <p className="loading" role="status">{label}</p>;
 }
 export function Empty({ title, children }: { title: string; children?: ReactNode }) {
-    return <div className="empty"><h2>{title}</h2>{children}</div>;
+    return <PydEmpty appearance="plain" className="empty"><h2>{title}</h2>{children}</PydEmpty>;
 }
 export function Badge({ value, label }: { value: string; label?: string }) {
-    return <span className={`badge status-${value}`}>
+    return <PydBadge variant={value === "failed" || value === "conflict" ? "danger" : "default"} className={`badge status-${value}`}>
         {label ?? statusLabels[value] ?? value}
-    </span>;
+    </PydBadge>;
 }
 export function Field({ label, hint, children }: {
     label: string; hint?: string;
@@ -29,7 +45,7 @@ export function Field({ label, hint, children }: {
 }) {
     const generatedId = useId();
     const inputId = children.props.id ?? generatedId;
-    return <div className="field"><label htmlFor={inputId}>{label}</label>
+    return <div className="field"><Label htmlFor={inputId}>{label}</Label>
         {cloneElement(children, {
             id: inputId,
             "aria-describedby": hint ? `${inputId}-hint` : children.props["aria-describedby"],
@@ -40,10 +56,8 @@ export function Field({ label, hint, children }: {
 export function PageHead({ title, description, children, eyebrow }: {
     title: string; description?: string; children?: ReactNode; eyebrow?: string;
 }) {
-    return <div className="pagehead"><div>
-        <div className="eyebrow">{eyebrow ?? "PROJECT WORKSPACE"}</div>
-        <h1>{title}</h1>{description && <p>{description}</p>}
-    </div><div className="actions">{children}</div></div>;
+    return <PageHeader className="pagehead" title={title} subtitle={description}
+        eyebrow={eyebrow ?? "PROJECT WORKSPACE"} actions={<div className="actions">{children}</div>} />;
 }
 export function RouteLink({ patch, children, className = "", current }: {
     patch: Partial<Route>; children: ReactNode; className?: string; current?: boolean;
@@ -78,7 +92,7 @@ export function Modal({ title, children, onClose, wide = false }: {
         aria-labelledby={titleId}
         onCancel={event => { event.preventDefault(); closeRef.current(); }}>
         <div className="modal-head"><h2 id={titleId}>{title}</h2>
-            <button className="plain" aria-label="대화상자 닫기" onClick={onClose}>닫기 ×</button>
+            <Button variant="ghost" className="plain" aria-label="대화상자 닫기" onClick={onClose}>닫기 ×</Button>
         </div><div className="modal-body">{children}</div>
     </dialog>;
 }

@@ -9,8 +9,9 @@ import {
 import type { Bundle, Catalog, Item, Operation, Runtime, SkillRun } from "./models";
 import { ArtifactFields } from "./ItemFields";
 import { itemRoute } from "./Relations";
+import { Textarea } from "./pydemia-ui/textarea";
 import {
-    Badge, Empty, ErrorNotice, Field, Loading, Markdown, PageHead,
+    ActionButton, Badge, Empty, ErrorNotice, Field, Loading, Markdown, PageHead,
     RouteLink, StringList,
 } from "./ui";
 
@@ -35,7 +36,7 @@ export function RunsPage({ projectId, userId, route, items, catalog, runtime, on
     return <>
         <PageHead title="스킬 작업" description="원문 bundle과 근거를 고정해 실행하고, 결과를 검토한 뒤 선택 적용합니다.">
             <RouteLink className="button primary" patch={{ run: "", item: "" }}>+ 새 실행</RouteLink>
-            <button onClick={runs.reload}>이력 새로고침</button>
+            <ActionButton onClick={runs.reload}>이력 새로고침</ActionButton>
         </PageHead>
         <div className="document-layout run-layout">
             <aside className="doclist" aria-label="스킬 실행 이력"><h2>실행 이력</h2>
@@ -120,7 +121,7 @@ function RunComposer({ projectId, userId, targetId, items, catalog, runtime, onR
         {runtime.status === "error" && <ErrorNotice error={runtime.error} retry={onRuntimeReload} />}
         {runtime.status === "ready" && <div className={`notice ${runtime.data.configured ? "runtime-ready" : ""}`}>
             <strong>{runtime.data.configured ? `실행 공급자 · ${runtime.data.provider === "codex_login" ? "현재 Codex 로그인" : runtime.data.provider === "openai_compatible" ? "OpenAI 호환 API" : runtime.data.provider} / ${runtime.data.model || "Codex 기본 모델"}` : "LLM 실행 공급자가 설정되지 않았습니다."}</strong>
-            <p>{runtime.data.configured ? `지원 기능: ${runtime.data.capabilities.join(", ") || "공급자가 별도로 제공하지 않음"}` : "서버의 projects.local.yaml에서 Codex 로그인 또는 OpenAI 호환 API를 설정한 뒤 실행할 수 있습니다. 메모와 수동 편집·저장은 계속 사용할 수 있습니다."}</p><button className="small" onClick={onRuntimeReload}>설정 다시 확인</button>
+            <p>{runtime.data.configured ? `지원 기능: ${runtime.data.capabilities.join(", ") || "공급자가 별도로 제공하지 않음"}` : "서버의 projects.local.yaml에서 Codex 로그인 또는 OpenAI 호환 API를 설정한 뒤 실행할 수 있습니다. 메모와 수동 편집·저장은 계속 사용할 수 있습니다."}</p><ActionButton className="small" onClick={onRuntimeReload}>설정 다시 확인</ActionButton>
         </div>}
         <form onSubmit={event => { void start(event); }}>
             <div className="form-grid">
@@ -144,10 +145,10 @@ function RunComposer({ projectId, userId, targetId, items, catalog, runtime, onR
                 </select></Field>
             </div>
             {selectedTarget && <p className="hint">대상 기준: {selectedTarget.title} · r{selectedTarget.revision}. 결과 적용 시 서버가 이 revision을 다시 검사합니다.</p>}
-            <Field label="작업 요청" hint="목적·보존할 내용·수정 범위·검수할 항목을 구체적으로 적어 주세요."><textarea required rows={6} value={instruction} onChange={event => setInstruction(event.target.value)} placeholder="선택한 근거의 의미를 보존해 초안을 작성하고, 미확인 가정과 질문을 구분해 주세요." /></Field>
-            <Field label="스킬 ID" hint="쉼표 또는 공백으로 구분합니다. 실행 시 원문 bundle과 revision을 고정합니다."><textarea required rows={2} value={skillText} onChange={event => setSkillText(event.target.value)} /></Field>
-            {kind && <div className="actions small"><span className="muted">문서 종류 추천:</span>{[kind.suggested_primary_skill, kind.review_skill, kind.verification_skill].map(skill => <button type="button" className="small" key={skill} onClick={() => setSkillText([...new Set([...skills, skill])].join("\n"))}>+ {skill}</button>)}</div>}
-            <div className="section-space"><button type="button" disabled={busy || !skills.length} onClick={() => { void resolve(); }}>{busy ? "처리 중…" : "스킬 원문 bundle 확인"}</button>
+            <Field label="작업 요청" hint="목적·보존할 내용·수정 범위·검수할 항목을 구체적으로 적어 주세요."><Textarea required rows={6} value={instruction} onChange={event => setInstruction(event.target.value)} placeholder="선택한 근거의 의미를 보존해 초안을 작성하고, 미확인 가정과 질문을 구분해 주세요." /></Field>
+            <Field label="스킬 ID" hint="쉼표 또는 공백으로 구분합니다. 실행 시 원문 bundle과 revision을 고정합니다."><Textarea required rows={2} value={skillText} onChange={event => setSkillText(event.target.value)} /></Field>
+            {kind && <div className="actions small"><span className="muted">문서 종류 추천:</span>{[kind.suggested_primary_skill, kind.review_skill, kind.verification_skill].map(skill => <ActionButton type="button" className="small" key={skill} onClick={() => setSkillText([...new Set([...skills, skill])].join("\n"))}>+ {skill}</ActionButton>)}</div>}
+            <div className="section-space"><ActionButton type="button" disabled={busy || !skills.length} onClick={() => { void resolve(); }}>{busy ? "처리 중…" : "스킬 원문 bundle 확인"}</ActionButton>
                 {bundles.length > 0 && resolvedKey === skillKey && <details className="reference-details" open><summary>확인한 고정 bundle · {bundles.length}개</summary>{bundles.map(bundle => <div className="bundle-row" key={bundle.id}><strong>{bundle.id}</strong><small>source revision: {bundle.source_revision}</small><small>cache: {bundle.cache_key}</small><ul>{bundle.files.map(file => <li key={file.path}><span>{file.path}</span><code>{file.sha256}</code></li>)}</ul></div>)}</details>}
             </div>
             <fieldset className="section-space"><legend>실행에 사용할 프로젝트 근거</legend><p className="hint">대상과 선택 근거를 현재 revision으로 고정합니다. 아이디어 요건화에서는 프로젝트의 기존 기능·요건도 함께 대조합니다.</p><div className="check-list source-list">
@@ -159,7 +160,7 @@ function RunComposer({ projectId, userId, targetId, items, catalog, runtime, onR
             </div></fieldset>
             {selectedTarget?.kind === "artifact" ? <details className="reference-details"><summary>대상 문서의 양식·참조 manifest</summary><pre>{JSON.stringify(selectedTarget.data, null, 2)}</pre><p className="hint">대상 문서의 편집 화면에서 참조를 변경할 수 있습니다.</p></details> : <details className="reference-details"><summary>문서 종류와 양식·예시 참조 선택</summary><ArtifactFields data={manifest} onChange={setManifest} catalog={catalog} items={items} /></details>}
             {error && <ErrorNotice error={error} />}
-            <div className="form-actions"><span className="muted small">결과를 검토하기 전에는 기존 본문을 변경하지 않습니다.</span><button className="primary" type="submit" disabled={busy || !instruction.trim() || !skills.length || (targetRequired && !target) || runtime.status !== "ready" || !runtime.data.configured}>{busy ? "실행 등록 중…" : "스킬 실행"}</button></div>
+            <div className="form-actions"><span className="muted small">결과를 검토하기 전에는 기존 본문을 변경하지 않습니다.</span><ActionButton className="primary" type="submit" disabled={busy || !instruction.trim() || !skills.length || (targetRequired && !target) || runtime.status !== "ready" || !runtime.data.configured}>{busy ? "실행 등록 중…" : "스킬 실행"}</ActionButton></div>
         </form>
     </section>;
 }
@@ -211,10 +212,10 @@ function RunDetail({ runId, projectId, userId, items, onChanged, onStatusChanged
     const target = items.find(item => item.id === data.target_id);
     const hasLocalDraft = data.target_id ? !!loadDraft(`projects:draft:${userId}:${projectId}:${data.target_id}`) : false;
     return <section>
-        <div className="doc-heading"><div><div className="eyebrow">SKILL RUN · {shortId(data.id)}</div><h2>{operationLabels[data.operation]}</h2><div className="doc-meta"><Badge value={data.status} /><time>{dateLabel(data.updated_at)}</time></div></div><div className="actions"><button className="small" onClick={run.reload}>최신 상태 확인</button>
-            {(data.status === "queued" || data.status === "running") && <button disabled={busy} onClick={() => { void action("cancel"); }}>실행 취소</button>}
-            {data.status === "review_ready" && <button disabled={busy} onClick={() => { void action("cancel"); }}>결과 취소</button>}
-            {(data.status === "failed" || data.status === "cancelled") && <button disabled={busy} onClick={() => { void action("retry"); }}>다시 실행</button>}
+        <div className="doc-heading"><div><div className="eyebrow">SKILL RUN · {shortId(data.id)}</div><h2>{operationLabels[data.operation]}</h2><div className="doc-meta"><Badge value={data.status} /><time>{dateLabel(data.updated_at)}</time></div></div><div className="actions"><ActionButton className="small" onClick={run.reload}>최신 상태 확인</ActionButton>
+            {(data.status === "queued" || data.status === "running") && <ActionButton disabled={busy} onClick={() => { void action("cancel"); }}>실행 취소</ActionButton>}
+            {data.status === "review_ready" && <ActionButton disabled={busy} onClick={() => { void action("cancel"); }}>결과 취소</ActionButton>}
+            {(data.status === "failed" || data.status === "cancelled") && <ActionButton disabled={busy} onClick={() => { void action("retry"); }}>다시 실행</ActionButton>}
         </div></div>
         {error && <ErrorNotice error={error} />}
         {notice && <p className="success-message" role="status">{notice}</p>}
@@ -245,7 +246,7 @@ function RunDetail({ runId, projectId, userId, items, onChanged, onStatusChanged
             {data.status === "review_ready" && (result.document !== null || result.requirements.length > 0 || (data.operation === "review_document" && !!result.review.trim())) && <div className="apply-area">
                 {hasLocalDraft && <p className="notice">대상 문서의 미저장 초안이 이 브라우저에 있습니다. 적용 후에도 내 초안을 보존하며, 이후 저장 시 revision 충돌을 확인해야 합니다.</p>}
                 <p className="hint">적용 결과는 새 초안으로 저장합니다.</p>
-                <button className="primary" disabled={busy || (!applyDocument && indices.length === 0 && data.operation !== "review_document")} onClick={() => { void apply(); }}>{busy ? "적용 중…" : data.operation === "review_document" ? "검수 결과 기록" : applyDocument ? "선택한 결과를 초안으로 저장" : `선택 후보 ${indices.length}건 적용`}</button>
+                <ActionButton className="primary" disabled={busy || (!applyDocument && indices.length === 0 && data.operation !== "review_document")} onClick={() => { void apply(); }}>{busy ? "적용 중…" : data.operation === "review_document" ? "검수 결과 기록" : applyDocument ? "선택한 결과를 초안으로 저장" : `선택 후보 ${indices.length}건 적용`}</ActionButton>
             </div>}
         </> : data.status !== "running" && data.status !== "queued" && <Empty title="확인할 생성 결과가 없습니다."><p>실패·취소되었거나 아직 결과가 저장되지 않은 실행입니다.</p></Empty>}
         {data.applied_ids.length > 0 && <section className="section-space"><h3>적용으로 생성·수정한 항목</h3><ul className="text-list">{data.applied_ids.map(id => { const item = items.find(item => item.id === id); return <li key={id}>{item ? <RouteLink patch={itemRoute(item)}>{item.title}</RouteLink> : shortId(id)}</li>; })}</ul></section>}

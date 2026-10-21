@@ -20,6 +20,8 @@
 | APP-REQ-010 | 문서는 Note 연계 전까지 간단히 임시 구현 | 임시 Markdown 편집·저장·충돌/초안 보존·SkillRun 연결·파일 반출. [NOTE-01~08](../implementation/note-document-handoff.md) 명세 | Note 실제 저장소/API 확인 및 이관은 후속 |
 | APP-REQ-011 | DB는 PostgreSQL | Compose 17.11·SQLAlchemy·Alembic, 실제 DB 통합 테스트와 전용 schema dump/복구 | SQLite 대체 없음. 운영 환경 복구 훈련은 별도 |
 | APP-REQ-012 | Codex 로그인 기본, auth 경로/inline YAML 및 OpenAI API YAML | 안전한 YAML·경로 해석·provider 선택·비노출, Codex 실제 호출 및 API HTTP 계약 검증 | OpenAI 원격 API는 키 미설정으로 미검증. Codex 인증 refresh 복사본의 한계는 설정 문서 참고 |
+| APP-REQ-013 | `ui.pydemia.ai` 컴포넌트와 UI 모드·light/dark 테마 | 선택한 registry 소스·토큰을 고정해 공통 화면 요소와 전체 테마에 적용. 모드·테마 저장 및 브라우저 전환 확인 | 일부 업무별 고유 레이아웃과 native 컨트롤은 Projects CSS를 유지. 전체 모드별 접근성 수동 검수는 후속 |
+| APP-REQ-014 | 프런트엔드 배포에 favicon 포함 | 승인 pydemia 엠블럼 파생 SVG, 문서 head와 Vite 빌드 자산 연결 | 운영 배포의 실제 응답 bytes·브라우저 탭 확인 후 최종 판정 |
 
 APP-REQ-009는 상시 웹 수집이나 공개 양식 전체의 재배포를 요구하지 않습니다.
 양식·예시는 입력 자료이며 스킬 원문 규칙과 구분합니다. 원본 접근 실패를

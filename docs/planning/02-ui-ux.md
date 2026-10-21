@@ -82,6 +82,20 @@
 
 같은 수준의 문서와 작업에는 같은 행 표현을 반복한다. 오류·선택·재검토처럼 의미가 달라지는 경우에만 표현을 바꾼다. 새 버튼과 입력은 `corner-shape: squircle` 지원 시 적용하고 미지원 브라우저에서는 작은 rounded corner로 대체한다. CSS radius만으로 실제 squircle을 구현했다고 간주하지 않는다.
 
+## 공통 UI 시스템과 테마 적용 결정
+
+구현 화면의 기본 컴포넌트·디자인 토큰은 [pydemia UI](https://ui.pydemia.ai/)의 공개 registry 소스를 사용한다. `@pydemia/ui`는 공개 npm 설치 대상으로 가정하지 않으며, 선택한 원본을 Projects 소스에 고정하고 revision·의존성·고지를 기록한다. A-02 HTML 시안은 당시 검토 자료이고 현재 제품의 컴포넌트 출처를 나타내지 않는다.
+
+| 화면 역할 | 공통 소스 | Projects 적용 |
+|---|---|---|
+| 주요 행동·입력 | `pyd-button`, `pyd-input`, `pyd-textarea`, `pyd-label` | 로그인·프로젝트 생성·공통 필드와 대화상자 행동 |
+| 정보·상태 | `pyd-page-header`, `pyd-badge`, `pyd-alert`, `pyd-empty` | 목록 제목, 업무 상태, 오류와 빈 상태 |
+| 외형 설정 | `pyd-tokens`, `pyd-design-modes`, `ThemeScope` | 화면 전체 색·타이포·표면과 portal 범위 |
+
+UI 모드는 registry가 `released`로 표시한 21개만 선택한다. Basic을 초기값으로 하고 light/dark는 독립된 설정으로 제공한다. Dark UI·Cyberpunk UI·Terminal UI처럼 dark 전용인 모드에서는 light를 선택할 수 없게 한다. 선택은 브라우저에 보존하되 프로젝트 업무 데이터·문서 내용·공유 URL을 바꾸지 않는다. 기존 레이아웃 CSS는 업무 구조에 한정하고 색·표면·경계는 공통 semantic token에 연결한다. 긴 한국어와 좁은 화면, 키보드 포커스, 상태의 텍스트 식별을 각 테마에서 확인한다.
+
+웹 배포에는 favicon을 수용 조건으로 포함한다. 기존 승인 pydemia 엠블럼의 기하를 유지한 작은 SVG 파생형을 사용하고, light/dark 브라우저 탭에서도 식별되는지 확인한다. 기획 단계는 자산·`rel=icon` 경로·빌드·실제 HTTPS 응답·탭 표시 검사를 인계한다. 로고·엠블럼 자체의 새 설계는 이 화면 개편 범위가 아니다.
+
 ## A-02 시안 범위
 
 [HTML 시안](prototype/index.html)은 개요·아이디어 요건화·산출물/문서·구현 작업·테스트·추적 화면을 연결한다. 스킬 실행 UI는 사용 스킬·근거·산출물 제안을 함께 표시한다. 문서 선택·검색, 편집 저장·취소, 예시 AI 제안의 선택 채택·취소, 테스트 결과 기록, 요구사항 변경 영향 확인을 시연할 수 있다. 새로고침하면 예시 데이터로 돌아간다. 실제 서비스의 저장·권한·AI·동기화 품질을 검증하는 구현은 아니다.

@@ -11,6 +11,13 @@
   background: var(--background);
   font-family: var(--font-ui);
 }
+.projects-theme[data-design="glass"],
+[data-theme-portal][data-design="glass"][data-colormap="pydemia"] {
+  --canvas-image: radial-gradient(ellipse at 8% 0%, rgb(56 99 175 / 14%), transparent 58%), radial-gradient(ellipse at 100% 70%, rgb(117 151 210 / 10%), transparent 60%);
+  --surface-filter: blur(18px) saturate(115%);
+  --control-decoration: inset 0 1px 0 rgb(255 255 255 / 35%), 0 2px 6px color-mix(in srgb, var(--accent) 12%, transparent);
+  --card-decoration: 0 12px 32px rgb(0 23 96 / 10%), inset 0 1px 0 rgb(255 255 255 / 22%);
+}
 .projects-theme button:not([data-ui]),
 .projects-theme .button,
 .projects-theme select,
@@ -23,23 +30,23 @@
 .projects-theme input[type="checkbox"] { accent-color: var(--accent); }
 .projects-theme button:not([data-ui]):hover:not(:disabled),
 .projects-theme .button:hover { background-color: var(--surface-subtle); }
-.projects-theme button[data-ui="button"][data-variant="primary"] {
+:is(.projects-theme, [data-theme-portal]) button[data-ui="button"][data-variant="primary"] {
   color: var(--accent-foreground);
   background-color: var(--accent);
   border-color: var(--accent);
 }
-.projects-theme button[data-ui="button"][data-variant="outline"] {
+:is(.projects-theme, [data-theme-portal]) button[data-ui="button"][data-variant="outline"] {
   color: var(--foreground);
   background-color: var(--surface);
   border-color: var(--border);
 }
-.projects-theme button[data-ui="button"][data-variant="ghost"] {
+:is(.projects-theme, [data-theme-portal]) button[data-ui="button"][data-variant="ghost"] {
   color: var(--foreground);
   background-color: transparent;
   border-color: transparent;
 }
-.projects-theme button[data-ui="button"][data-variant="outline"]:hover:not(:disabled),
-.projects-theme button[data-ui="button"][data-variant="ghost"]:hover:not(:disabled) {
+:is(.projects-theme, [data-theme-portal]) button[data-ui="button"][data-variant="outline"]:hover:not(:disabled),
+:is(.projects-theme, [data-theme-portal]) button[data-ui="button"][data-variant="ghost"]:hover:not(:disabled) {
   background-color: var(--surface-subtle);
 }
 .projects-theme .primary,
@@ -58,7 +65,8 @@
 .projects-theme .sidebar { background: var(--surface-subtle); }
 .projects-theme .topbar,
 .projects-theme .apply-area,
-.projects-theme .modal-head { background: var(--surface); }
+:is(.projects-theme, [data-theme-portal]) .modal-head { background: var(--surface); }
+:is(.projects-theme, [data-theme-portal]) .modal-head button[data-ui="button"] { color: var(--foreground); }
 .projects-theme .sidebar .brand { color: var(--foreground); }
 .projects-theme .brandmark { background: var(--surface); padding: 2px; border: 1px solid var(--border); }
 .projects-theme .stage.current .stage-circle { color: var(--accent-foreground); background: var(--accent); border-color: var(--accent); }

@@ -3,6 +3,7 @@
 import json
 import math
 import os
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -37,10 +38,15 @@ class Settings:
     registration_enabled: bool = True
     proxy_auth_email: str = ""
     proxy_auth_username: str = "pydemia"
+    proxy_auth_domain: str = ""
     web_dir: Path | None = None
     worker_enabled: bool = True
     session_seconds: int = 60 * 60 * 24 * 7
     max_request_bytes: int = 12 * 1024 * 1024
+
+    @property
+    def proxy_auth_enabled(self) -> bool:
+        return bool(self.proxy_auth_email or self.proxy_auth_domain)
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -50,19 +56,31 @@ class Settings:
             os.getenv("PROJECTS_PROXY_AUTH_EMAIL", "").strip().lower()
         )
         proxy_username = os.getenv("PROJECTS_PROXY_AUTH_USERNAME", "pydemia")
+        proxy_domain = (
+            os.getenv("PROJECTS_PROXY_AUTH_DOMAIN", "").strip().lower()
+        )
         secure_cookies = os.getenv("PROJECTS_SECURE_COOKIES") == "true"
         registration_enabled = (
             os.getenv("PROJECTS_REGISTRATION_ENABLED", "true") == "true"
         )
         if proxy_email and (
-            proxy_email.count("@") != 1
-            or not proxy_username
-            or registration_enabled
-            or not secure_cookies
+            not valid_proxy_email(proxy_email) or not proxy_username
+        ):
+            raise ConfigurationError("Invalid proxy account mapping.")
+        if proxy_domain and (
+            not re.fullmatch(
+                r"(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}",
+                proxy_domain,
+            )
+            or (proxy_email and proxy_email.rsplit("@", 1)[1] != proxy_domain)
+        ):
+            raise ConfigurationError("Invalid proxy authentication domain.")
+        if (proxy_email or proxy_domain) and (
+            registration_enabled or not secure_cookies
         ):
             raise ConfigurationError(
-                "Proxy authentication requires one email, a username, "
-                "closed registration, and secure cookies."
+                "Proxy authentication requires closed registration "
+                "and secure cookies."
             )
         return cls(
             data_dir=data_dir,
@@ -81,6 +99,7 @@ class Settings:
             registration_enabled=registration_enabled,
             proxy_auth_email=proxy_email,
             proxy_auth_username=proxy_username,
+            proxy_auth_domain=proxy_domain,
             web_dir=Path(os.environ["PROJECTS_WEB_DIR"])
             if os.getenv("PROJECTS_WEB_DIR")
             else None,
@@ -90,6 +109,14 @@ class Settings:
 
 class ConfigurationError(ValueError):
     """Configuration error containing no source values."""
+
+
+def valid_proxy_email(value: str) -> bool:
+    return (
+        len(value) <= 254
+        and re.fullmatch(r"[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-z0-9.-]+", value)
+        is not None
+    )
 
 
 class UniqueSafeLoader(yaml.SafeLoader):

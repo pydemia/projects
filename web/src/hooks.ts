@@ -39,7 +39,7 @@ export function useResource<T>(
 export type Route = {
     project: string; view: string; item: string; kind: string;
     q: string; run: string; baseline: string;
-    taskMode?: string; taskView?: string;
+    taskMode?: string; taskView?: string; savedView?: string;
 };
 function readRoute(): Route {
     const query = new URLSearchParams(window.location.search);
@@ -49,6 +49,7 @@ function readRoute(): Route {
         q: query.get("q") ?? "", run: query.get("run") ?? "",
         baseline: query.get("baseline") ?? "",
         taskMode: query.get("taskMode") ?? "", taskView: query.get("taskView") ?? "",
+        savedView: query.get("savedView") ?? "",
     };
 }
 export function routeUrl(patch: Partial<Route>): string {
@@ -71,6 +72,20 @@ export function useRoute(): Route {
         return () => window.removeEventListener("popstate", update);
     }, []);
     return route;
+}
+
+export function useMobileViewport(): boolean {
+    const [mobile, setMobile] = useState(() => typeof window.matchMedia === "function" &&
+        window.matchMedia("(max-width: 760px)").matches);
+    useEffect(() => {
+        if (typeof window.matchMedia !== "function") return;
+        const query = window.matchMedia("(max-width: 760px)");
+        const update = () => setMobile(query.matches);
+        update();
+        query.addEventListener("change", update);
+        return () => query.removeEventListener("change", update);
+    }, []);
+    return mobile;
 }
 
 export const draftSchema = z.object({

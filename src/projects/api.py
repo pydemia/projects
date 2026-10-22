@@ -20,6 +20,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from projects.auth import (
     LoginLimiter,
     authenticate,
+    authenticate_proxy,
     create_session,
     password_hash,
     resolve_session,
@@ -33,6 +34,7 @@ from projects.database import (
     Project,
     Revision,
     SkillRun,
+    TaskView,
     TestRun,
     make_engine,
     utcnow,
@@ -67,7 +69,18 @@ from projects.schemas import (
     RestoreInput,
     ReviewInput,
     RunInput,
+    TaskBulkChange,
+    TaskMove,
+    TaskQuickCreate,
+    TaskViewInput,
+    TaskViewUpdate,
     TestRunInput,
+)
+from projects.task_board import (
+    board_orders,
+    bulk_change_tasks,
+    move_task,
+    quick_create_task,
 )
 
 
@@ -88,7 +101,7 @@ def signed_in(request: Request, db: DB) -> Account:
     user = db.get(Account, session.user_id)
     if user is None:
         raise Problem(401, "로그인이 필요합니다.")
-    if request.app.state.settings.proxy_auth_email:
+    if request.app.state.settings.proxy_auth_enabled:
         proxy_user = proxy_account(request, db)
         if proxy_user.id != user.id:
             raise Problem(401, "로그인이 필요합니다.")
@@ -100,17 +113,12 @@ User = Annotated[Account, Depends(signed_in)]
 
 def proxy_account(request: Request, db: Session) -> Account:
     settings: Settings = request.app.state.settings
-    supplied = request.headers.get("X-Forwarded-Email", "").strip().lower()
-    if not settings.proxy_auth_email or not hmac.compare_digest(
-        supplied, settings.proxy_auth_email
-    ):
-        raise Problem(401, "Microsoft 로그인이 필요합니다.")
-    user = db.scalar(
-        select(Account).where(Account.username == settings.proxy_auth_username)
+    return authenticate_proxy(
+        db,
+        settings,
+        request.headers.get("X-Forwarded-Email", ""),
+        request.headers.get("X-Forwarded-User", ""),
     )
-    if user is None:
-        raise Problem(401, "허용된 Projects 계정이 없습니다.")
-    return user
 
 
 class BrowserBoundary(BaseHTTPMiddleware):
@@ -242,13 +250,13 @@ def create_app(
         return {
             "registration_enabled": settings.registration_enabled,
             "auth_mode": "microsoft"
-            if settings.proxy_auth_email
+            if settings.proxy_auth_enabled
             else "password",
         }
 
     @app.post("/api/auth/register", status_code=201)
     def register(payload: Credentials, response: Response, db: DB) -> dict:
-        if not settings.registration_enabled or settings.proxy_auth_email:
+        if not settings.registration_enabled or settings.proxy_auth_enabled:
             raise Problem(
                 403,
                 "신규 계정 생성이 닫혀 있습니다. 발급된 계정으로 로그인해 주세요.",
@@ -263,14 +271,14 @@ def create_app(
 
     @app.post("/api/auth/login")
     def login(payload: Credentials, response: Response, db: DB) -> dict:
-        if settings.proxy_auth_email:
+        if settings.proxy_auth_enabled:
             raise Problem(403, "Microsoft 계정으로 로그인해 주세요.")
         user = authenticate(db, payload.username, payload.password)
         return session_response(db, user, response)
 
     @app.get("/api/session")
     def session_info(request: Request, response: Response, db: DB) -> dict:
-        if settings.proxy_auth_email:
+        if settings.proxy_auth_enabled:
             user = proxy_account(request, db)
             token = request.cookies.get("projects_session")
             if token:
@@ -278,9 +286,7 @@ def create_app(
                     session = resolve_session(db, token)
                 except Problem:
                     session = None
-                if session is not None:
-                    if session.user_id != user.id:
-                        raise Problem(401, "로그인이 필요합니다.")
+                if session is not None and session.user_id == user.id:
                     return {
                         "user": {"id": user.id, "username": user.username},
                         "csrf_token": session.csrf_token,
@@ -302,7 +308,7 @@ def create_app(
         return {
             "ok": True,
             "auth_mode": "microsoft"
-            if settings.proxy_auth_email
+            if settings.proxy_auth_enabled
             else "password",
         }
 
@@ -349,9 +355,23 @@ def create_app(
         q: str = "",
     ) -> list[dict]:
         project_for_user(db, project_id, user.id)
-        return [
-            serialize(x) for x in search_items(db, project_id, kind, q[:1000])
-        ]
+        positions = board_orders(
+            db,
+            list(
+                db.scalars(
+                    select(Item).where(
+                        Item.project_id == project_id, Item.kind == "task"
+                    )
+                )
+            ),
+        )
+        rows = []
+        for item in search_items(db, project_id, kind, q[:1000]):
+            row = serialize(item)
+            if item.kind == "task":
+                row["board_order"] = positions[item.id]
+            rows.append(row)
+        return rows
 
     def validate_references(
         db: Session, project_id: str, kind: str, data: dict
@@ -386,6 +406,127 @@ def create_app(
             )
         return serialize(create_item(db, project_id, **payload.model_dump()))
 
+    @app.post("/api/projects/{project_id}/tasks/quick", status_code=201)
+    def quick_task(
+        project_id: str, payload: TaskQuickCreate, db: DB, user: User
+    ) -> dict:
+        project_for_user(db, project_id, user.id)
+        task = quick_create_task(db, project_id, payload)
+        return {
+            **serialize(task),
+            "board_order": board_orders(db, _tasks(db, project_id))[task.id],
+        }
+
+    @app.post("/api/projects/{project_id}/tasks/bulk")
+    def bulk_tasks(
+        project_id: str, payload: TaskBulkChange, db: DB, user: User
+    ) -> list[dict]:
+        project_for_user(db, project_id, user.id)
+        changed = bulk_change_tasks(db, project_id, payload)
+        positions = board_orders(db, _tasks(db, project_id))
+        return [
+            {**serialize(task), "board_order": positions[task.id]}
+            for task in changed
+        ]
+
+    def _tasks(db: Session, project_id: str) -> list[Item]:
+        return list(
+            db.scalars(
+                select(Item).where(
+                    Item.project_id == project_id, Item.kind == "task"
+                )
+            )
+        )
+
+    @app.get("/api/projects/{project_id}/task-views")
+    def task_views(project_id: str, db: DB, user: User) -> list[dict]:
+        project_for_user(db, project_id, user.id)
+        return [
+            serialize(row)
+            for row in db.scalars(
+                select(TaskView)
+                .where(
+                    TaskView.project_id == project_id,
+                    TaskView.owner_id == user.id,
+                    TaskView.scope == "personal",
+                )
+                .order_by(TaskView.name, TaskView.id)
+            )
+        ]
+
+    @app.post("/api/projects/{project_id}/task-views", status_code=201)
+    def create_task_view(
+        project_id: str, payload: TaskViewInput, db: DB, user: User
+    ) -> dict:
+        project_for_user(db, project_id, user.id)
+        db.scalar(
+            select(Project).where(Project.id == project_id).with_for_update()
+        )
+        if payload.is_default:
+            for row in db.scalars(
+                select(TaskView).where(
+                    TaskView.project_id == project_id,
+                    TaskView.owner_id == user.id,
+                    TaskView.is_default.is_(True),
+                )
+            ):
+                row.is_default = False
+            db.flush()
+        row = TaskView(
+            project_id=project_id,
+            owner_id=user.id,
+            name=payload.name.strip(),
+            scope="personal",
+            settings=payload.settings.model_dump(),
+            is_default=payload.is_default,
+        )
+        db.add(row)
+        db.flush()
+        return serialize(row)
+
+    @app.put("/api/task-views/{view_id}")
+    def update_task_view(
+        view_id: str, payload: TaskViewUpdate, db: DB, user: User
+    ) -> dict:
+        row = db.get(TaskView, view_id)
+        if row is None or row.owner_id != user.id:
+            raise Problem(404, "저장된 보기를 찾을 수 없습니다.")
+        project_for_user(db, row.project_id, user.id)
+        db.scalar(
+            select(Project)
+            .where(Project.id == row.project_id)
+            .with_for_update()
+        )
+        db.refresh(row, with_for_update=True)
+        if row.revision != payload.expected_revision:
+            raise Problem(409, "보기가 변경되었습니다. 다시 불러와 주세요.")
+        if payload.is_default:
+            for other in db.scalars(
+                select(TaskView).where(
+                    TaskView.project_id == row.project_id,
+                    TaskView.owner_id == user.id,
+                    TaskView.is_default.is_(True),
+                    TaskView.id != row.id,
+                )
+            ):
+                other.is_default = False
+            db.flush()
+        row.name = payload.name.strip()
+        row.settings = payload.settings.model_dump()
+        row.is_default = payload.is_default
+        row.revision += 1
+        db.flush()
+        return serialize(row)
+
+    @app.delete("/api/task-views/{view_id}")
+    def delete_task_view(view_id: str, db: DB, user: User) -> dict:
+        row = db.get(TaskView, view_id)
+        if row is None or row.owner_id != user.id:
+            raise Problem(404, "저장된 보기를 찾을 수 없습니다.")
+        project_for_user(db, row.project_id, user.id)
+        db.delete(row)
+        return {"ok": True}
+
     @app.get("/api/items/{item_id}")
     def item_detail(item_id: str, db: DB, user: User) -> dict:
         return serialize(item_for_user(db, item_id, user.id))
@@ -406,6 +547,23 @@ def create_app(
                 payload.data,
             )
         )
+
+    @app.post("/api/items/{item_id}/move")
+    def move_board_task(
+        item_id: str, payload: TaskMove, db: DB, user: User
+    ) -> dict:
+        item = item_for_user(db, item_id, user.id, lock=True)
+        position, undo_before, undo_after = move_task(db, item, payload)
+        return {
+            **serialize(item),
+            "board_order": position,
+            "undo_move": {
+                "source_state": payload.target_state,
+                "target_state": payload.source_state,
+                "before_id": undo_before,
+                "after_id": undo_after,
+            },
+        }
 
     @app.post("/api/items/{item_id}/confirm")
     def confirm_item(

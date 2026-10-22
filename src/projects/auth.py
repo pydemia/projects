@@ -2,6 +2,7 @@
 
 import hashlib
 import hmac
+import re
 import secrets
 import threading
 import time
@@ -10,8 +11,10 @@ from collections.abc import Callable
 from datetime import timedelta
 
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
+from projects.config import Settings, valid_proxy_email
 from projects.database import Account, LoginSession, utcnow
 from projects.domain import Problem
 
@@ -84,6 +87,69 @@ def authenticate(db: Session, username: str, password: str) -> Account:
     if not password_matches(password, user.password_hash):
         raise Problem(401, "계정 또는 비밀번호를 확인해 주세요.")
     return user
+
+
+def authenticate_proxy(
+    db: Session, settings: Settings, email: str, subject: str
+) -> Account:
+    email = email.strip().lower()
+    if not settings.proxy_auth_enabled or not valid_proxy_email(email):
+        raise Problem(401, "Microsoft 로그인이 필요합니다.")
+    if not settings.proxy_auth_domain:
+        if not hmac.compare_digest(email, settings.proxy_auth_email):
+            raise Problem(401, "Microsoft 로그인이 필요합니다.")
+        user = db.scalar(
+            select(Account).where(
+                Account.username == settings.proxy_auth_username
+            )
+        )
+        if user is None:
+            raise Problem(401, "허용된 Projects 계정이 없습니다.")
+        return user
+
+    # The single-tenant proxy validates the issuer and supplies the OIDC sub.
+    # Email selects eligibility only; it never merges organization accounts.
+    if email.rsplit("@", 1)[
+        1
+    ] != settings.proxy_auth_domain or not re.fullmatch(
+        r"[A-Za-z0-9_-]{1,255}", subject
+    ):
+        raise Problem(401, "Microsoft 로그인이 필요합니다.")
+    user = db.scalar(select(Account).where(Account.entra_subject == subject))
+    if user is not None:
+        return user
+    if email == settings.proxy_auth_email:
+        user = db.scalar(
+            select(Account)
+            .where(Account.username == settings.proxy_auth_username)
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+        if user is None or user.entra_subject not in (None, subject):
+            raise Problem(401, "허용된 Projects 계정이 없습니다.")
+        user.entra_subject = subject
+        db.flush()
+        return user
+
+    # ON CONFLICT makes concurrent first logins converge on one account.
+    # A reused email or a local username never takes over another account.
+    fallback = "entra-" + hashlib.sha256(subject.encode()).hexdigest()
+    encoded = password_hash(secrets.token_urlsafe(32))
+    usernames = [email, fallback] if len(email) <= 80 else [fallback]
+    for username in usernames:
+        db.execute(
+            insert(Account)
+            .values(
+                username=username, password_hash=encoded, entra_subject=subject
+            )
+            .on_conflict_do_nothing()
+        )
+        user = db.scalar(
+            select(Account).where(Account.entra_subject == subject)
+        )
+        if user is not None:
+            return user
+    raise Problem(401, "Projects 계정을 연결할 수 없습니다.")
 
 
 def create_session(

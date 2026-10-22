@@ -9,10 +9,22 @@
 기존 시스템 Caddy가 `projects.pydemia.ai` 요청을 서버의
 `127.0.0.1:14323`으로 전달합니다. 이 포트는 OAuth2 Proxy의 loopback
 바인딩이며, 앱과 PostgreSQL은 호스트 포트를 열지 않습니다. 프록시가
-Microsoft Entra ID의 OIDC 로그인을 마치면 허용 이메일
-`pydemia@pydemia.ai`를 앱에 전달합니다. 앱은 그 이메일을 확인한 후 기존
-`pydemia` 계정으로 Projects 세션을 만듭니다. 운영 모드의 자체 가입·암호
-로그인은 비활성화됩니다.
+Microsoft Entra ID의 OIDC 로그인을 마치면 검증한 이메일과 사용자
+subject를 앱에 전달합니다. 허용 범위는 단일 `pydemia` 테넌트의
+`@pydemia.ai` 계정입니다. 기존 `pydemia@pydemia.ai`는 `pydemia`
+계정과 자료를 유지하고, 다른 계정은 첫 로그인 때 개인 계정을 만듭니다.
+프로젝트 소유권과 자료는 사용자마다 분리됩니다. 운영 모드의 자체 가입·
+암호 로그인은 비활성화됩니다.
+
+앱의 `PROJECTS_PROXY_AUTH_DOMAIN=pydemia.ai`와 프록시의
+`--email-domain=pydemia.ai`를 함께 설정합니다. 하위 도메인·유사 도메인은
+허용하지 않습니다. 앱은 `X-Forwarded-User`의 OIDC `sub`를
+`accounts.entra_subject`에 유일하게 연결하므로 이메일 변경·재사용으로
+다른 계정의 자료가 합쳐지지 않습니다. 기존 계정 연결은
+`PROJECTS_PROXY_AUTH_EMAIL`·`PROJECTS_PROXY_AUTH_USERNAME` 설정만
+사용하며, 운영 전환 시 실제 인증된 기존 사용자의 subject를 먼저 고정합니다.
+브라우저에서 Microsoft 계정을 바꾸면 `/api/session`이 새 사용자의 세션을
+발급하고, 기존 쿠키만으로 다른 사용자의 API에 접근할 수 없습니다.
 
 DB는 PostgreSQL 17.11의 전용 Docker volume입니다. 앱의 임시 Markdown,
 스킬 cache, 실행 자료는 `state/`에 있습니다. Codex 로그인 `auth.json`,
@@ -44,14 +56,20 @@ UID 0으로 실행하고 권한 상승·Linux capability를 제거했습니다.
 5. **추가 운영 검사:** 허용 목록 밖 계정 차단과 운영 LLM 문서 생성은 이번
    실제 브라우저 검사에서 수행하지 않았습니다.
 
-`deploy/authenticated-emails.txt`가 허용 이메일을 관리합니다. 운영
-배포의 엔트라 issuer는 실제 단일 테넌트 ID로 지정됐습니다. 앱
+기존 `deploy/authenticated-emails.txt`의 단일 이메일 제한은 도메인 정책으로
+대체했습니다. 운영 배포의 엔트라 issuer는 실제 단일 테넌트 ID로 지정됐고,
+`--entra-id-allowed-tenant`도 동일 테넌트로 제한합니다. 앱
 등록의 redirect URI와 프록시의 URI가 정확히 일치해야 합니다.
 OAuth2 Proxy의 로그인 버튼은 `/oauth2/start` 폼을 제출한 뒤
 `login.microsoftonline.com`으로 이동합니다. Caddy의 CSP `form-action`은
 두 주소를 허용해야 합니다. 처음에는 `'self'`만 허용해 버튼을 눌러도
 브라우저가 Microsoft 리디렉션을 차단했습니다. Microsoft 로그인 주소만
 추가한 뒤 실제 버튼 클릭으로 계정 선택과 작업공간 진입을 확인했습니다.
+
+정책 근거는 [OAuth2 Proxy의 Entra 설정](https://oauth2-proxy.github.io/oauth2-proxy/configuration/providers/ms_entra_id/),
+[프록시 도메인·헤더 설정](https://oauth2-proxy.github.io/oauth2-proxy/configuration/overview/),
+[Microsoft ID token claim](https://learn.microsoft.com/en-us/entra/identity-platform/id-token-claims-reference)입니다.
+테넌트·토큰 검증은 프록시가 담당하며 앱은 외부에 직접 포트를 열지 않습니다.
 
 ## 재배포와 운영 확인
 
@@ -87,3 +105,26 @@ PostgreSQL volume, `state/`, `.secrets/`는 배포 패키지와 별도로 백업
 만료 상태도 점검해야 합니다. Note 문서 관리가 구현되면
 `note-document-handoff.md`의 소유권·이관 계약으로 임시 Markdown을
 대체합니다.
+
+## 2026-10-22 운영 배포
+
+모바일 작업공간과 작업 보드·개인 저장 보기를 포함한 소스
+`19b8bf2ac49a8463cb19a891e4158bae975e6634df7a868f8184312ea362eafb`를
+allowlist archive로 묶어 해시를 확인한 뒤 운영 서버의 별도 release 디렉터리에서
+`pydemia-projects:19b8bf2ac49a8463` 이미지를 빌드했다. 기존 이미지를
+유지한 채 새 이미지로 전환했고 앱 시작 시 Alembic `0003`→`0005`가 적용됐다.
+
+전환 전에 전체 PostgreSQL custom dump와 `state/`·`.secrets/`·기존 Compose
+설정을 mode 0700/0600의 서버 전용 백업 디렉터리
+`/home/pydemia/.local/share/projects-backups/20261022T041240Z`에 저장했다.
+`pg_restore --list`로 덤프를 읽을 수 있음을 확인했다. 전환 스크립트는 앱
+상태 확인에 실패하면 이전 Compose 설정과 이미지로 돌아가도록 준비했다.
+
+전환 후 앱과 DB health가 정상이고 DB 버전·`task_positions`·`task_views`를
+확인했다. 앱 내부 HTTP에서 `/health`, HTML, 새 CSS·JS와 favicon SVG의
+응답 및 favicon 원본 SHA-256 일치를 확인했다. 공개 HTTPS에서 미인증
+`/api/session`은 401, 로그인 페이지는 200, 로그인 시작은 Microsoft
+단일 테넌트로 302를 반환했다. 실제 Edge에서 기존 `pydemia@pydemia.ai`
+계정으로 다시 로그인해 개인 작업공간과 새 `개인 저장 보기` UI를 확인했다.
+물리 기기의 터치·safe area·OS 키보드 검증은 사용자가 수행하고 피드백을
+전달하기로 했다. 운영 Hub/LLM 실행은 이번 배포 검사에 포함하지 않았다.

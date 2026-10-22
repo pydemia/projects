@@ -1,6 +1,12 @@
-from typing import Literal
+from typing import Literal, Self
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_validator,
+    model_validator,
+)
 
 from projects.domain import ItemKind, Relation
 
@@ -35,6 +41,97 @@ class ItemUpdate(RequestModel):
 
 
 class ExpectedRevision(RequestModel):
+    expected_revision: int = Field(ge=1)
+
+
+class TaskMove(RequestModel):
+    expected_revision: int = Field(ge=1)
+    source_state: Literal[
+        "todo", "in_progress", "in_review", "done", "cancelled"
+    ]
+    target_state: Literal[
+        "todo", "in_progress", "in_review", "done", "cancelled"
+    ]
+    before_id: str | None = None
+    after_id: str | None = None
+
+
+class TaskQuickCreate(RequestModel):
+    title: str = Field(min_length=1, max_length=300)
+    state: Literal["todo", "in_progress", "in_review", "done", "cancelled"]
+    cancellation_reason: str = Field(default="", max_length=2000)
+
+
+class TaskRevision(RequestModel):
+    id: str
+    expected_revision: int = Field(ge=1)
+
+
+class TaskBulkChange(RequestModel):
+    tasks: list[TaskRevision] = Field(min_length=1, max_length=100)
+    state: (
+        Literal["todo", "in_progress", "in_review", "done", "cancelled"] | None
+    ) = None
+    planned_date: str | None = None
+    list_name: str | None = Field(default=None, max_length=80)
+    cancellation_reason: str | None = Field(default=None, max_length=2000)
+
+
+class TaskViewSettings(RequestModel):
+    mode: Literal["simple", "complex"]
+    view: Literal[
+        "today", "inbox", "upcoming", "list", "board", "calendar", "insights"
+    ]
+    query: str = Field(default="", max_length=1000)
+    status: Literal[
+        "all", "open", "todo", "in_progress", "in_review", "done", "cancelled"
+    ] = "all"
+    lens: Literal["gtd", "abc"] = "gtd"
+    minutes: int = Field(default=0, ge=0, le=100000)
+    context: str = Field(default="", max_length=80)
+    energy: Literal["any", "low", "medium", "high"] = "any"
+    grouping: Literal["state", "list", "none"] = "state"
+    sort: Literal["manual", "gtd", "abc", "due_date"] = "manual"
+    card_fields: list[
+        Literal[
+            "list_name",
+            "planned_date",
+            "due_date",
+            "estimated_minutes",
+            "abc_priority",
+            "context",
+            "goal",
+            "github_issue_url",
+        ]
+    ] = Field(default_factory=list, max_length=8)
+
+    @model_validator(mode="after")
+    def compatible_view(self) -> Self:
+        simple = {"today", "inbox", "upcoming"}
+        if (self.view in simple) != (self.mode == "simple"):
+            raise ValueError("View and mode must match")
+        if len(self.card_fields) != len(set(self.card_fields)):
+            raise ValueError("Card fields must be unique")
+        if self.view == "board" and self.grouping != "state":
+            raise ValueError("Board columns group by state")
+        return self
+
+
+class TaskViewInput(RequestModel):
+    name: str = Field(min_length=1, max_length=100)
+    scope: Literal["personal"] = "personal"
+    is_default: bool = False
+    settings: TaskViewSettings
+
+    @field_validator("name")
+    @classmethod
+    def nonblank_name(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("View name must not be blank")
+        return value.strip()
+
+
+class TaskViewUpdate(TaskViewInput):
     expected_revision: int = Field(ge=1)
 
 

@@ -1,4 +1,4 @@
-import { Component, useEffect, useState } from "react";
+import { Component, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { api, ApiError, downloadArchive, errorMessage, setCsrf } from "./api";
 import { navigate, routeUrl, useResource, useRoute } from "./hooks";
@@ -10,7 +10,7 @@ import { AppBody, AppHeader, AppMain, AppShell, AppSidebar } from "./pydemia-ui/
 import { Input } from "./pydemia-ui/input";
 import { NativeSelect } from "./pydemia-ui/native-select";
 import { SegmentedControl, SegmentedControlItem } from "./pydemia-ui/segmented-control";
-import { SideNav, SideNavLink } from "./pydemia-ui/navigation";
+import { BottomNav, BottomNavLink, SideNav, SideNavLink } from "./pydemia-ui/navigation";
 import { Textarea } from "./pydemia-ui/textarea";
 import { ThemeControls } from "./theme";
 import { ItemsPage } from "./ItemsPage";
@@ -115,8 +115,22 @@ function Workbench({ session, onLogout }: { session: Session; onLogout: () => vo
     const [exportBusy, setExportBusy] = useState(false);
     const [error, setError] = useState("");
     const [logoutBusy, setLogoutBusy] = useState(false);
+    const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
+    const mobileMoreTrigger = useRef<HTMLButtonElement>(null);
+    function closeMobileMore() {
+        setMobileMoreOpen(false);
+        window.requestAnimationFrame(() => mobileMoreTrigger.current?.focus());
+    }
     const selected = projects.status === "ready" ? projects.data.find(project => project.id === route.project) : undefined;
     const title = menu.find(([view]) => view === route.view)?.[2] ?? "개요";
+    const mobileDestination = route.view !== "tasks" ? "more"
+        : route.taskMode !== "complex" && route.taskView === "inbox" ? "inbox"
+            : route.taskMode !== "complex" && (!route.taskView || route.taskView === "today") ? "today" : "work";
+    const mobileRoutes = [
+        { id: "today", label: "오늘", icon: "◷", patch: { view: "tasks", taskMode: "simple", taskView: "today", item: "", run: "", kind: "", q: "", savedView: "" } },
+        { id: "inbox", label: "Inbox", icon: "▤", patch: { view: "tasks", taskMode: "simple", taskView: "inbox", item: "", run: "", kind: "", q: "", savedView: "" } },
+        { id: "work", label: "작업", icon: "☷", patch: { view: "tasks", taskMode: "complex", taskView: "list", item: "", run: "", kind: "", q: "", savedView: "" } },
+    ];
     async function logout() {
         setLogoutBusy(true); setError("");
         try {
@@ -150,7 +164,9 @@ function Workbench({ session, onLogout }: { session: Session; onLogout: () => vo
                 })}</SideNav>
             </div><div className="sidebar-bottom"><span className="avatar" aria-hidden="true">{session.user.username.slice(0, 2).toUpperCase()}</span><strong>{session.user.username}</strong><p className="muted small">개인 모드</p><ActionButton className="small" disabled={logoutBusy} onClick={() => { void logout(); }}>{logoutBusy ? "처리 중…" : "로그아웃"}</ActionButton></div>
         </AppSidebar>
-        <div className="workspace-main"><AppHeader className="topbar"><div className="crumb"><RouteLink patch={{ project: "", item: "", run: "", baseline: "" }}>프로젝트</RouteLink>{selected && <><span>/</span><strong>{selected.name}</strong><span>/</span><span>{title}</span></>}</div><div className="actions">
+        <div className="workspace-main"><AppHeader className="topbar"><div className="crumb"><RouteLink patch={{ project: "", item: "", run: "", baseline: "" }}>프로젝트</RouteLink>{selected && <><span>/</span><strong>{selected.name}</strong><span>/</span><span>{title}</span></>}</div><div className="mobile-topbar"><NativeSelect aria-label="현재 프로젝트" value={route.project} onChange={event => navigate({ project: event.target.value, view: event.target.value ? "tasks" : "overview", taskMode: "simple", taskView: "today", item: "", run: "", baseline: "", q: "", savedView: "" })}>
+            <option value="">프로젝트 선택</option>{projects.status === "ready" && projects.data.map(project => <option value={project.id} key={project.id}>{project.name}</option>)}
+        </NativeSelect><strong>{selected ? title : "프로젝트"}</strong></div><div className="actions desktop-topbar-actions">
             <ThemeControls />
             {runtime.status === "ready" && <span className={`runtime-label ${runtime.data.configured ? "configured" : ""}`}>{runtime.data.configured ? "LLM 연결 설정됨" : "LLM 미설정"}</span>}
             {selected && <ActionButton className="small" disabled={exportBusy} onClick={() => { void exportProject(); }}>{exportBusy ? "ZIP 받는 중…" : "프로젝트 ZIP"}</ActionButton>}
@@ -162,8 +178,25 @@ function Workbench({ session, onLogout }: { session: Session; onLogout: () => vo
                 {projects.status === "error" && <ErrorNotice error={projects.error} retry={projects.reload} />}
                 {projects.status === "ready" && (!route.project ? <ProjectsList projects={projects.data} onCreate={() => setCreateOpen(true)} onImported={project => { projects.reload(); navigate({ project: project.id, view: "overview", item: "", run: "", baseline: "", q: "" }); }} /> : selected ? <ProjectWorkspace project={selected} userId={session.user.id} revision={revision} onChanged={() => setRevision(value => value + 1)} catalog={catalog} runtime={runtime} /> : <Empty title="프로젝트를 찾을 수 없습니다."><p>프로젝트가 존재하지 않거나 이 계정의 접근 범위에 없습니다.</p><RouteLink patch={{ project: "", item: "" }}>프로젝트 목록으로</RouteLink></Empty>)}
             </AppMain>
-        </div>
-        </AppBody>{createOpen && <CreateProject onClose={() => setCreateOpen(false)} onCreated={project => { setCreateOpen(false); projects.reload(); navigate({ project: project.id, view: "overview", item: "", run: "", baseline: "", q: "" }); }} />}
+        </div><BottomNav className="mobile-bottom-nav" aria-label="모바일 주요 탐색">
+            {mobileRoutes.map(({ id, label, icon, patch }) => <BottomNavLink key={id} href={routeUrl(patch)} label={label} icon={icon}
+                aria-current={selected && mobileDestination === id ? "page" : undefined}
+                aria-disabled={!selected || undefined} tabIndex={selected ? undefined : -1}
+                onClick={event => { if (!selected || !event.metaKey && !event.ctrlKey && !event.shiftKey && event.button === 0) { event.preventDefault(); if (selected) navigate(patch); } }} />)}
+            <Button ref={mobileMoreTrigger} variant="ghost" type="button" className="mobile-more-trigger" aria-current={mobileDestination === "more" ? "page" : undefined}
+                aria-haspopup="dialog" aria-expanded={mobileMoreOpen} onClick={() => setMobileMoreOpen(true)}><span aria-hidden="true">☰</span><span>더보기</span></Button>
+        </BottomNav>
+        </AppBody>{mobileMoreOpen && <Modal title="더보기" className="mobile-more-dialog" onClose={closeMobileMore}>
+            <p className="muted small">{selected ? `${selected.name} · 업무 영역` : "프로젝트를 선택하거나 새로 만드세요."}</p>
+            <SideNav aria-label="다른 업무 화면" className="mobile-more-links" onClick={closeMobileMore}>
+                {menu.filter(([view]) => view !== "tasks").map(([view, icon, label]) => <RouteLink key={view} appearance="side" patch={{ view, item: "", run: "", q: "", kind: "" }} className="mobile-more-link"><span aria-hidden="true">{icon}</span>{label}</RouteLink>)}
+            </SideNav>
+            <div className="mobile-more-settings"><ThemeControls idPrefix="mobile-" />
+                {runtime.status === "ready" && <p className="muted small">{runtime.data.configured ? "LLM 연결 설정됨" : "LLM 미설정"}</p>}
+                {selected && <ActionButton className="small" disabled={exportBusy} onClick={() => { void exportProject(); }}>{exportBusy ? "ZIP 받는 중…" : "프로젝트 ZIP"}</ActionButton>}
+                <ActionButton className="small" disabled={logoutBusy} onClick={() => { void logout(); }}>{logoutBusy ? "처리 중…" : "로그아웃"}</ActionButton>
+            </div>
+        </Modal>}{createOpen && <CreateProject onClose={() => setCreateOpen(false)} onCreated={project => { setCreateOpen(false); projects.reload(); navigate({ project: project.id, view: "overview", item: "", run: "", baseline: "", q: "" }); }} />}
     </AppShell>;
 }
 

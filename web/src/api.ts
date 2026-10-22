@@ -2,7 +2,7 @@ import { z } from "zod";
 import {
     baselineSchema, catalogSchema, itemSchema, linkSchema, projectSchema,
     reconnectSchema, resolveSchema, revisionSchema, runSchema, runtimeSchema,
-    sessionSchema, summarySchema, testRunSchema, traceSchema,
+    sessionSchema, summarySchema, taskViewSchema, testRunSchema, traceSchema,
 } from "./models";
 
 let csrfToken = "";
@@ -71,6 +71,11 @@ const projectPath = (projectId: string) => `/api/projects/${encodeURIComponent(p
 const itemPath = (itemId: string) => `/api/items/${encodeURIComponent(itemId)}`;
 const runPath = (runId: string) => `/api/runs/${encodeURIComponent(runId)}`;
 const okSchema = z.object({ ok: z.literal(true) });
+const taskMoveResponseSchema = itemSchema.and(z.object({ undo_move: z.object({
+    source_state: z.enum(["todo", "in_progress", "in_review", "done", "cancelled"]),
+    target_state: z.enum(["todo", "in_progress", "in_review", "done", "cancelled"]),
+    before_id: z.string().nullable(), after_id: z.string().nullable(),
+}) }));
 
 export const api = {
     authOptions: (signal?: AbortSignal) => request("/api/auth/options", z.object({ registration_enabled: z.boolean(), auth_mode: z.enum(["password", "microsoft"]) }), { signal }),
@@ -84,7 +89,14 @@ export const api = {
     items: (pid: string, signal?: AbortSignal) => request(`${projectPath(pid)}/items`, z.array(itemSchema), { signal }),
     item: (iid: string, signal?: AbortSignal) => request(itemPath(iid), itemSchema, { signal }),
     createItem: (pid: string, body: unknown) => request(`${projectPath(pid)}/items`, itemSchema, { method: "POST", body }),
+    quickTask: (pid: string, body: unknown) => request(`${projectPath(pid)}/tasks/quick`, itemSchema, { method: "POST", body }),
+    bulkTasks: (pid: string, body: unknown) => request(`${projectPath(pid)}/tasks/bulk`, z.array(itemSchema), { method: "POST", body }),
+    taskViews: (pid: string, signal?: AbortSignal) => request(`${projectPath(pid)}/task-views`, z.array(taskViewSchema), { signal }),
+    createTaskView: (pid: string, body: unknown) => request(`${projectPath(pid)}/task-views`, taskViewSchema, { method: "POST", body }),
+    updateTaskView: (vid: string, body: unknown) => request(`/api/task-views/${encodeURIComponent(vid)}`, taskViewSchema, { method: "PUT", body }),
+    deleteTaskView: (vid: string) => request(`/api/task-views/${encodeURIComponent(vid)}`, okSchema, { method: "DELETE" }),
     saveItem: (iid: string, body: unknown) => request(itemPath(iid), itemSchema, { method: "PUT", body }),
+    moveTask: (iid: string, body: unknown) => request(`${itemPath(iid)}/move`, taskMoveResponseSchema, { method: "POST", body }),
     confirmItem: (iid: string, revision: number) => request(`${itemPath(iid)}/confirm`, itemSchema, { method: "POST", body: { expected_revision: revision } }),
     revisions: (iid: string, signal?: AbortSignal) => request(`${itemPath(iid)}/revisions`, z.array(revisionSchema), { signal }),
     restoreItem: (iid: string, expected: number, revision: number) => request(`${itemPath(iid)}/restore`, itemSchema, { method: "POST", body: { expected_revision: expected, revision } }),

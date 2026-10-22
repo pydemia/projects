@@ -48,7 +48,7 @@ flowchart LR
 
 작업 화면 확장은 [벤치마크와 기능 기획](12-task-workspace-benchmark.md)에
 따라 `TaskWorkspace`에서 같은 작업 API 결과를 간편/정교 보기로 투영한다.
-`taskMode`, `taskView`, 선택 항목은 URL 상태이며 시각 디자인 모드와
+`taskMode`, `taskView`, `savedView`, 선택 항목은 URL 상태이며 시각 디자인 모드와
 별개다. 검색·GTD 현재 조건·ABC 렌즈는 현재 화면의 조작 상태다.
 작업 데이터는 PostgreSQL `items.data`의 검증된 JSON에 추가하므로
 별도 문서 저장 모델이나 SQLite 경로를 만들지 않는다. 개인 할 일과
@@ -56,6 +56,25 @@ flowchart LR
 완료는 수용 조건/결과 URL을 요구하지 않지만 선행 작업 검사는 유지한다.
 구현 작업에는 기존 완료 gate를 그대로 적용한다. 신규 날짜는 ISO
 `YYYY-MM-DD`의 날짜 값이며 시간대가 필요한 알림·반복은 후속 계약이다.
+
+[상호작용 재분석](13-task-interaction-rea.md)에서 승격한 보드 드래그는
+기존 `items.data.state` 변경만으로는 충족할 수 없다. PostgreSQL에
+GTD/ABC와 독립된 작업 수동 순서를 저장하고 상태·순서 이동을 동일
+트랜잭션과 revision/권한/완료 gate로 처리한다. 보드의 기본 수동 정렬과
+GTD/ABC 자동 정렬은 보기 계약으로 분리한다. 서버 명령의 이웃 작업 ID,
+동시 이동과 실패 복구, 공통 UI의 드롭 상호작용은
+[구현 계획](../implementation/task-interaction-plan.md)에서 구체화한다.
+
+P1에서는 같은 프로젝트 행 잠금 아래 모든 대상의 소유권·기대 revision·변경
+데이터·완료 gate를 먼저 확인한 후 작업 revision과 상태별 수동 순서를 하나의
+PostgreSQL 트랜잭션으로 갱신한다. 열별 빠른 생성도 같은 순서 모델의 끝에
+작업을 추가한다. `planned_date`와 `due_date`는 독립 필드이며 오늘 배치·연기는
+앞의 값만 바꾼다. 개인 저장 보기는 `task_views`에 프로젝트·소유자·설정 JSON·
+기본 여부·revision으로 저장하며 `items.data`에 섞지 않는다. 기본 보기는
+소유자/프로젝트마다 하나로 제한한다. 프로젝트 ZIP은 개인 보기를 포함하고
+복구 계정으로 소유자를 다시 연결한다. 현재 팀 역할과 공유 권한 계약이 없어
+공유 보기는 저장·노출하지 않는다. P0·P1은 로컬 구현이며 P2 이력/달력
+직접 조작과 운영 릴리즈 판정은 별도다.
 
 집계 그래프는 현재 접근 가능한 프로젝트 작업에서 즉시 계산하는
 스냅샷이다. 이력/속도 그래프는 작업 전이 시각과 변경 사건의 서버 집계가

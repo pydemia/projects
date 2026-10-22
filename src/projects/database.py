@@ -39,6 +39,7 @@ class Account(Base):
     )
     username: Mapped[str] = mapped_column(String(80), unique=True)
     password_hash: Mapped[str] = mapped_column(Text)
+    entra_subject: Mapped[str | None] = mapped_column(String(255), unique=True)
 
 
 class LoginSession(Base):
@@ -114,6 +115,32 @@ class Revision(Base):
         DateTime(timezone=True),
         default=utcnow,
     )
+
+
+class TaskPosition(Base):
+    __tablename__ = "task_positions"
+    item_id: Mapped[str] = mapped_column(
+        ForeignKey("items.id", ondelete="CASCADE"), primary_key=True
+    )
+    position: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
+class TaskView(Base):
+    __tablename__ = "task_views"
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=new_id
+    )
+    project_id: Mapped[str] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"), index=True
+    )
+    owner_id: Mapped[str] = mapped_column(
+        ForeignKey("accounts.id"), index=True
+    )
+    name: Mapped[str] = mapped_column(String(100))
+    scope: Mapped[str] = mapped_column(String(20), default="personal")
+    settings: Mapped[dict] = mapped_column(JSON)
+    is_default: Mapped[bool] = mapped_column(default=False)
+    revision: Mapped[int] = mapped_column(Integer, default=1)
 
 
 class Link(Base):

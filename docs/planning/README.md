@@ -43,6 +43,8 @@ Note 연계에 앞선 임시 문서 범위로 로컬 앱을 구현했습니다.
 10. [산출물 예시 확인](10-reference-audit.md): 원문 35종과 실제 접근·확인 범위
 11. [공개 양식 라이브러리](11-template-reference-library.md): 대체 참조·다운로드·자체 시작 양식
 12. [작업공간 벤치마크](12-task-workspace-benchmark.md): Jira·Confluence·ClickUp·To Do·TickTick·Todoist 비교, 간편/정교 보기와 GTD/ABC 기획
+13. [작업 상호작용 REA 재분석](13-task-interaction-rea.md): ClickUp 배포 코드·실제 드래그 테스트, TickTick 등 비교, 조작별 개선 범위와 AC-40~51
+14. [모바일 UI·UX 기획](14-mobile-experience.md): 휴대전화 전용 탐색·오늘/Inbox·한 열 보드·주간 agenda·목록→상세와 AC-52~58. [데스크톱/모바일 구조 시안](prototype/mobile-workspace.html)은 앱이 아닌 검토용 mock
 
 ## 먼저 구현할 사용 흐름
 

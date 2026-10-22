@@ -62,6 +62,7 @@ export const dataSchemas = {
 
 const itemShape = {
     id, project_id: id, title: text, body: text,
+    board_order: z.number().int().nonnegative().optional(),
     revision: z.number().int().positive(),
     status: z.enum(["draft", "confirmed", "archived"]),
     created_at: text, updated_at: text,
@@ -76,6 +77,26 @@ export const itemSchema = z.discriminatedUnion("kind", [
     z.object({ ...itemShape, kind: z.literal("decision"), data: dataSchemas.decision }),
 ]);
 export type Item = z.infer<typeof itemSchema>;
+export const taskViewSettingsSchema = z.object({
+    mode: z.enum(["simple", "complex"]),
+    view: z.enum(["today", "inbox", "upcoming", "list", "board", "calendar", "insights"]),
+    query: text, status: text, lens: z.enum(["gtd", "abc"]),
+    minutes: z.number().int().nonnegative(), context: text,
+    energy: z.enum(["any", "low", "medium", "high"]),
+    grouping: z.enum(["state", "list", "none"]),
+    sort: z.enum(["manual", "gtd", "abc", "due_date"]),
+    card_fields: z.array(z.enum([
+        "list_name", "planned_date", "due_date", "estimated_minutes",
+        "abc_priority", "context", "goal", "github_issue_url",
+    ])),
+});
+export type TaskViewSettings = z.infer<typeof taskViewSettingsSchema>;
+export const taskViewSchema = z.object({
+    id, project_id: id, owner_id: id, name: text,
+    scope: z.literal("personal"), settings: taskViewSettingsSchema,
+    is_default: z.boolean(), revision: z.number().int().positive(),
+});
+export type TaskView = z.infer<typeof taskViewSchema>;
 export const revisionSchema = z.object({
     revision: z.number().int().positive(), title: text, body: text,
     data: z.record(text, z.unknown()),

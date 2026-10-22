@@ -72,11 +72,11 @@ export function RouteLink({ patch, children, className = "", current, appearance
         } };
     return appearance === "side" ? <SideNavLink {...props}>{children}</SideNavLink> : <a {...props}>{children}</a>;
 }
-export function Modal({ title, children, onClose, wide = false }: {
-    title: string; children: ReactNode; onClose: () => void; wide?: boolean;
+export function Modal({ title, children, onClose, wide = false, className = "" }: {
+    title: string; children: ReactNode; onClose: () => void; wide?: boolean; className?: string;
 }) {
     return <Dialog open onOpenChange={open => { if (!open) onClose(); }}>
-        <DialogContent size={wide ? "wide" : "default"} className="projects-dialog">
+        <DialogContent size={wide ? "wide" : "default"} className={`projects-dialog ${className}`}>
             <DialogHeader className="modal-head"><DialogTitle>{title}</DialogTitle>
                 <Button variant="ghost" className="plain" aria-label="대화상자 닫기" onClick={onClose}>닫기 ×</Button>
             </DialogHeader>

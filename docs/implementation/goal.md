@@ -1,5 +1,63 @@
 # Projects 구현 goal
 
+## 최근 완료 goal · 모바일 UI·UX 구현 (로컬 검증 완료)
+
+2026-10-22 작성·등록·실행. [모바일 UI·UX 기획](../planning/14-mobile-experience.md)의
+APP-REQ-028·AC-52~58을 실제 앱에 적용했다. 범위와 실행 기록은
+[모바일 구현 goal](mobile-experience-goal.md), 실제 앱의 증거·한계는
+[검증 기록](verification.md)의 모바일 절에 있다. 아래 작업공간 P0·P1 goal은
+이전 로컬 실행 기록이다.
+
+## 현재 실행 goal · 작업공간 P1 상호작용
+
+2026-10-21. [REA 기반 재분석](../planning/13-task-interaction-rea.md)과
+[상호작용 구현 계획](task-interaction-plan.md)의 P1인 APP-REQ-023·024,
+AC-46~48을 실행한다. 상태 열의 빠른 생성, 다중 선택과 원자적 일괄 변경,
+Inbox→오늘→완료/연기, 작업과 분리된 개인 저장 보기를 PostgreSQL·웹·
+실제 브라우저에서 검증한다. 보기의 팀 공유는 권한 계약이 없으므로 거부한다.
+승인된 엠블럼 favicon은 16~64px light/dark PNG와 ICO fallback을 생성하고
+HTML head·빌드·로컬 HTTP 응답을 검사한다. P2 일정 드래그·이력 집계와
+운영 배포는 이 실행의 완료 분모에 넣지 않는다.
+
+구현된 로컬 동작과 수용 조건별 증거는 [계획의 P1 결과](task-interaction-plan.md)와
+[검증 기록](verification.md)의 P1 절에 남긴다. 아래 P0 goal은 이전 실행의
+기록으로 보존한다.
+
+2026-10-22 로컬 완료 판정: AC-46~48은 전용 PostgreSQL schema의 통합 검사와
+실제 Projects 브라우저의 생성·선택·전체 거부·재방문으로 확인했다.
+백엔드 167개·웹 43개 검사, Ruff·mypy·웹 빌드 및 favicon 자산 검사가
+통과했다. 격리 schema와 서버는 정리했다. 운영 PNG/ICO·Entra 재검증,
+팀 공유 보기, P2 기능, 배포·병합은 수행하지 않았다.
+
+## 현재 실행 goal · 작업 보드의 실제 조작
+
+2026-10-21 착수. [REA 기반 재분석](../planning/13-task-interaction-rea.md)과
+[상호작용 구현 계획](task-interaction-plan.md)의 확정 P0인 APP-REQ-021·022·027,
+AC-40~45·50~51을 실행한다. PostgreSQL에 수동 순서를 보존하고 상태 열 간
+드래그·열 안 정렬, 상태/작업 메뉴의 동일한 이동 명령, 키보드·터치 대체 경로,
+완료 gate·충돌·실패 복구를 실제 브라우저와 DB에서 확인한다. P1/P2는 제안
+상태의 후속 계획이며 이번 goal의 완료 분모에 넣지 않는다. 이 섹션의 착수는
+아래 과거 UI·UX goal의 성공 판정을 새 동작에 소급하지 않는다.
+
+실행 순서: 저장 모델·이관 → revision/권한/완료 gate를 공유하는 이동 API →
+공통 UI 계약을 따른 카드 드래그·메뉴 → PostgreSQL/웹/브라우저 회귀 →
+수용 조건별 기록. 배포는 이번 요청에서 새로 지정하지 않았으므로 운영
+반영을 로컬 구현 완료와 구분한다. 기존 favicon·테마 연결은 유지하고 웹
+빌드 검사를 다시 수행한다.
+
+2026-10-21 로컬 실행 결과: PostgreSQL `task_positions` migration과 원자적
+이동/되돌리기 API, 공통 UI Kanban·Popover·DropdownMenu 기반 실제 조작을
+구현했다. 격리 DB에서 상태·순서·숨은 카드·stale revision·완료 gate·ZIP
+복구를, 실제 Edge에서 핸들 드래그·메뉴/키보드 이동·새로고침 지속성·좁은
+폭 상태 선택·완료 gate 안내를 확인했다. 전체 검사 결과와 실제 기기·운영
+검증의 경계는 [검증 기록](verification.md)의 P0 절에 남겼다. 제안 P1/P2와
+운영 배포는 이번 로컬 완료 판정에 포함하지 않는다.
+
+2026-10-21 테마 기본값: Glassmorphism을 선택하고 Colors의 `pydemia`
+원본 블루/네이비 팔레트를 적용한다. 밝기 선택은 System/Light/Dark이며
+기본은 System이다. 시스템 변경 추적·수동 선택·재방문 유지와 실제 운영
+화면을 검증한다. 기존에 저장한 명시적인 모드·밝기 선택은 유지한다.
+
 2026-10-21 · 상태: 로컬 MVP·CI 통과, 공개 HTTPS 배포·실제 Entra 로그인 확인 · 최신 요구: APP-REQ-001~020
 
 ## 현재 실행 goal · UI·UX 전면 개편

@@ -40,6 +40,7 @@ services:
             PROJECTS_REGISTRATION_ENABLED: "false"
             PROJECTS_PROXY_AUTH_EMAIL: pydemia@pydemia.ai
             PROJECTS_PROXY_AUTH_USERNAME: pydemia
+            PROJECTS_PROXY_AUTH_DOMAIN: pydemia.ai
             PROJECTS_CONFIG: /run/secrets/projects.local.yaml
         volumes:
             - ./state:/app/.projects
@@ -76,7 +77,8 @@ services:
             - --upstream=http://app:8000/
             - --redirect-url=https://projects.pydemia.ai/oauth2/callback
             - --scope=openid profile email
-            - --authenticated-emails-file=/etc/projects/authenticated-emails.txt
+            - --email-domain=pydemia.ai
+            - --entra-id-allowed-tenant=fb44f64f-973f-480d-ab48-f30f3bababb6
             - --code-challenge-method=S256
             - --insecure-oidc-skip-nonce=false
             - --cookie-name=__Host-projects
@@ -99,8 +101,6 @@ services:
             - --auth-logging=false
         ports:
             - "127.0.0.1:14323:4180"
-        volumes:
-            - ./deploy/authenticated-emails.txt:/etc/projects/authenticated-emails.txt:ro
         depends_on:
             app:
                 condition: service_healthy

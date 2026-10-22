@@ -43,10 +43,10 @@ export function RunsPage({ projectId, userId, route, items, catalog, runtime, on
         `${operationLabels[run.operation]} ${run.instruction} ${run.status}`.toLocaleLowerCase().includes(query.toLocaleLowerCase())) : [];
     return <>
         <PageHead title="스킬 작업" description="원문 bundle과 근거를 고정해 실행하고, 결과를 검토한 뒤 선택 적용합니다.">
-            <RouteLink className="button primary" patch={{ run: "", item: "" }}>+ 새 실행</RouteLink>
+            <RouteLink className="button primary" patch={{ run: "new", item: "" }}>+ 새 실행</RouteLink>
             <ActionButton onClick={runs.reload}>이력 새로고침</ActionButton>
         </PageHead>
-        <div className="document-layout run-layout">
+        <div className={`document-layout run-layout ${route.run ? "has-selection" : ""}`}>
             <Card className="doclist workspace-collection" aria-label="스킬 실행 이력"><CardContent><div className="workspace-list-heading"><h2>실행 이력</h2><span>{visibleRuns.length}개</span></div>
                 <SearchInput label="실행 이력 검색" value={query} onValueChange={setQuery} onSearch={() => undefined} variant="toolbar" placeholder="작업 종류·요청·상태 검색" />
                 {runs.status === "loading" && <Loading />}
@@ -58,7 +58,9 @@ export function RunsPage({ projectId, userId, route, items, catalog, runtime, on
                         <strong>{operationLabels[run.operation]}</strong><small className="truncate-two">{run.instruction}</small><Badge value={run.status} /><small>{dateLabel(run.created_at)}</small>
                     </RouteLink>)}
                 </SideNav>}</CardContent></Card>
-            <Card className="document-main workspace-detail"><CardContent>{route.run ? <RunDetail key={route.run} runId={route.run} projectId={projectId} userId={userId} items={items} onStatusChanged={runs.reload} onChanged={() => { runs.reload(); onChanged(); }} /> : <RunComposer key={`${projectId}:${route.item}`} projectId={projectId} userId={userId} targetId={route.item} items={items} catalog={catalog} runtime={runtime} onRuntimeReload={onRuntimeReload} onCreated={run => { runs.reload(); navigate({ run: run.id }); }} />}</CardContent></Card>
+            <Card className="document-main workspace-detail"><CardContent>
+                {route.run && <ActionButton className="mobile-detail-back" type="button" onClick={() => navigate({ run: "", item: "" })}>← 실행 이력</ActionButton>}
+                {route.run && route.run !== "new" ? <RunDetail key={route.run} runId={route.run} projectId={projectId} userId={userId} items={items} onStatusChanged={runs.reload} onChanged={() => { runs.reload(); onChanged(); }} /> : <RunComposer key={`${projectId}:${route.item}`} projectId={projectId} userId={userId} targetId={route.item} items={items} catalog={catalog} runtime={runtime} onRuntimeReload={onRuntimeReload} onCreated={run => { runs.reload(); navigate({ run: run.id }); }} />}</CardContent></Card>
         </div>
     </>;
 }

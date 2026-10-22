@@ -110,6 +110,7 @@ def revise_item(
     data: dict,
     *,
     status: str = "draft",
+    completion_states: dict[str, str] | None = None,
 ) -> Item:
     require_revision(item, expected)
     if not title.strip():
@@ -122,7 +123,7 @@ def revise_item(
     ):
         raise Problem(409, "작업 유형은 생성 후 변경할 수 없습니다.")
     if item.kind == "task" and validated["state"] == "done":
-        check_task_completion(db, item, validated)
+        check_task_completion(db, item, validated, completion_states)
     item.title = title.strip()
     item.body = body
     item.data = validated
@@ -223,12 +224,20 @@ def latest_case_run(db: Session, case: Item) -> TestRun | None:
     )
 
 
-def check_task_completion(db: Session, task: Item, data: dict) -> None:
+def check_task_completion(
+    db: Session,
+    task: Item,
+    data: dict,
+    completion_states: dict[str, str] | None = None,
+) -> None:
     items = {x.id: x for x in project_items(db, task.project_id)}
     links = project_links(db, task.project_id)
     for link in links:
         if link.source_id == task.id and link.relation == "depends_on":
-            if items[link.target_id].data.get("state") != "done":
+            state = (completion_states or {}).get(
+                link.target_id, items[link.target_id].data.get("state")
+            )
+            if state != "done":
                 raise Problem(409, "선행 작업이 완료되지 않았습니다.")
     if data["workflow"] == "personal":
         return

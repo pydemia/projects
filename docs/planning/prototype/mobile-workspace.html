@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Projects 모바일 작업공간 · 구조 검토 시안</title>
+  <style>
+    :root { color-scheme: light; font-family: system-ui, "Malgun Gothic", sans-serif; --bg:#eef2f8; --surface:#fff; --subtle:#f5f7fb; --text:#17284c; --muted:#596781; --line:#dbe2ee; --primary:#3863af; --primaryText:#fff; --danger:#9d0101; --focus:#d6604d; }
+    [data-theme="dark"] { color-scheme: dark; --bg:#101a2c; --surface:#1a2740; --subtle:#22324f; --text:#eef3fa; --muted:#bcc9df; --line:#394a68; --primary:#7597d2; --primaryText:#101a2c; --danger:#ff9c96; --focus:#ffba99; }
+    * { box-sizing: border-box; }
+    body { margin:0; background:var(--bg); color:var(--text); font-size:14px; line-height:1.45; }
+    button, input { font:inherit; }
+    button { cursor:pointer; }
+    button:focus-visible, input:focus-visible { outline:3px solid var(--focus); outline-offset:2px; }
+    .intro { max-width:1450px; margin:auto; padding:26px 26px 12px; }
+    .intro h1 { margin:0 0 6px; font-size:25px; }
+    .intro p { margin:0; color:var(--muted); }
+    .toggle-theme { margin-top:12px; border:1px solid var(--line); background:var(--surface); color:var(--text); border-radius:10px; padding:8px 12px; }
+    .comparison { max-width:1450px; margin:auto; display:grid; grid-template-columns:minmax(0, 1.65fr) minmax(360px, .75fr); align-items:start; gap:24px; padding:12px 26px 50px; }
+    .label { margin:0 0 9px; font-size:13px; font-weight:700; color:var(--muted); }
+    .desktop, .phone { border:1px solid var(--line); background:var(--surface); box-shadow:0 18px 45px rgba(15,35,70,.12); overflow:hidden; }
+    .desktop { min-height:680px; border-radius:18px; display:grid; grid-template-columns:185px 1fr; }
+    .desktop aside { border-right:1px solid var(--line); background:var(--subtle); padding:22px 13px; }
+    .brand { display:flex; align-items:center; gap:8px; font-weight:800; font-size:18px; margin-bottom:26px; }
+    .mark { display:grid; place-items:center; width:26px; height:26px; border-radius:8px; background:var(--primary); color:var(--primaryText); font-size:16px; }
+    .desktop nav { display:grid; gap:4px; }
+    .desktop nav span { display:block; padding:9px 10px; border-radius:9px; }
+    .desktop nav .current { background:color-mix(in srgb, var(--primary) 16%, var(--surface)); color:var(--primary); font-weight:700; }
+    .desktop main { padding:0 26px 32px; min-width:0; }
+    .desktop-header { display:flex; justify-content:space-between; align-items:center; gap:20px; border-bottom:1px solid var(--line); margin:0 -26px 24px; padding:16px 26px; }
+    .desktop-header small, .muted { color:var(--muted); }
+    .desktop h2 { font-size:26px; margin:0 0 4px; }
+    .desktop .metrics { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin:20px 0; }
+    .metric { border:1px solid var(--line); border-radius:13px; padding:13px; }
+    .metric strong { display:block; margin-top:6px; font-size:25px; }
+    .desktop .form-row, .desktop .tool-row { display:flex; gap:9px; margin:18px 0; align-items:center; }
+    .input, .tool { border:1px solid var(--line); border-radius:9px; color:var(--text); background:var(--surface); padding:10px 12px; }
+    .input { min-width:0; flex:1; }
+    .tool { white-space:nowrap; }
+    .primary { border:0; border-radius:10px; color:var(--primaryText); background:var(--primary); padding:11px 16px; font-weight:700; }
+    .desktop .tabs { border-bottom:1px solid var(--line); padding-bottom:11px; }
+    .desktop .tabs b { margin-right:20px; color:var(--primary); }
+    .desktop .tabs span { margin-right:20px; color:var(--muted); }
+    .desktop .task { border-bottom:1px solid var(--line); padding:15px 4px; display:flex; align-items:start; gap:10px; }
+    .desktop .task input { width:18px; height:18px; margin-top:3px; }
+    .desktop .task strong { display:block; }
+    .desktop .task small { color:var(--muted); }
+    .phone { height:780px; max-width:390px; margin:auto; border-radius:32px; position:relative; display:flex; flex-direction:column; }
+    .phone-header { flex:none; display:flex; align-items:center; justify-content:space-between; padding:17px 17px 12px; border-bottom:1px solid var(--line); background:var(--surface); }
+    .phone-header strong { display:block; font-size:17px; }
+    .phone-header small { display:block; font-size:11px; color:var(--muted); }
+    .icon-button { min-width:42px; min-height:42px; border:1px solid var(--line); background:var(--surface); color:var(--text); border-radius:11px; }
+    .phone-scroll { min-height:0; flex:1; overflow-y:auto; padding:16px 16px 98px; }
+    .mobile-page[hidden] { display:none; }
+    .mobile-page h2 { margin:1px 0 4px; font-size:25px; }
+    .mobile-page .subtitle { color:var(--muted); font-size:12px; margin:0 0 18px; }
+    .summary { padding:12px 14px; background:var(--subtle); border-radius:12px; display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:15px; }
+    .summary strong { font-size:18px; }
+    .summary span { color:var(--muted); font-size:12px; }
+    .section-title { margin:23px 0 7px; font-size:12px; color:var(--muted); font-weight:700; }
+    .mobile-task { border-bottom:1px solid var(--line); display:flex; align-items:flex-start; gap:10px; padding:12px 0; }
+    .mobile-task input { width:22px; height:22px; margin:2px 0 0; flex:none; }
+    .mobile-task .detail-open { width:28px; height:28px; flex:none; border:1px solid var(--line); border-radius:8px; background:var(--surface); color:var(--text); }
+    .mobile-task .body { flex:1; min-width:0; }
+    .mobile-task .body strong { display:block; font-size:15px; overflow-wrap:anywhere; }
+    .mobile-task .body small { color:var(--muted); font-size:12px; }
+    .mobile-task .more { min-width:40px; min-height:40px; border:0; background:transparent; color:var(--text); font-size:21px; }
+    .alert { color:var(--danger)!important; }
+    .chips { display:flex; gap:7px; margin:10px 0 14px; }
+    .chip { border:1px solid var(--line); background:var(--surface); color:var(--text); border-radius:999px; padding:8px 12px; font-size:12px; min-height:36px; }
+    .chip.active { background:var(--primary); border-color:var(--primary); color:var(--primaryText); font-weight:700; }
+    .view-tools { display:flex; align-items:center; gap:7px; margin:12px 0 16px; }
+    .view-tools .input { width:100%; }
+    .board-head { display:flex; justify-content:space-between; align-items:center; gap:8px; margin:12px 0; }
+    .board-head strong { font-size:18px; }
+    .board-card { border:1px solid var(--line); background:var(--surface); border-radius:12px; padding:14px; margin:10px 0; }
+    .board-card strong { display:block; margin-bottom:5px; }
+    .board-card small { color:var(--muted); }
+    .board-card .actions { display:flex; gap:7px; margin-top:12px; }
+    .board-card .actions button { border:1px solid var(--line); background:var(--subtle); color:var(--text); padding:7px 10px; border-radius:8px; min-height:38px; }
+    .phone-bottom { position:absolute; bottom:0; left:0; right:0; display:grid; grid-template-columns:repeat(4,1fr); padding:8px 8px 12px; background:var(--surface); border-top:1px solid var(--line); border-radius:0 0 31px 31px; }
+    .phone-bottom button { border:0; background:transparent; color:var(--muted); min-height:48px; border-radius:10px; font-size:12px; }
+    .phone-bottom button[aria-current="page"] { color:var(--primary); background:color-mix(in srgb, var(--primary) 13%, var(--surface)); font-weight:750; }
+    .phone-bottom button span { display:block; font-size:19px; line-height:23px; }
+    .add-fab { position:absolute; bottom:83px; right:17px; width:51px; height:51px; border:0; border-radius:16px; background:var(--primary); color:var(--primaryText); font-size:27px; box-shadow:0 8px 20px rgba(0,0,0,.19); }
+    .doc-row, .more-row { display:block; width:100%; text-align:left; padding:15px 3px; border:0; border-bottom:1px solid var(--line); background:transparent; color:var(--text); min-height:52px; }
+    .doc-row strong { display:block; font-size:14px; }
+    .doc-row small, .more-row small { color:var(--muted); }
+    .sheet-backdrop { display:none; position:absolute; inset:0; z-index:5; background:rgba(4,14,32,.48); border-radius:32px; }
+    .sheet-backdrop.open { display:block; }
+    .sheet { position:absolute; bottom:0; left:0; right:0; max-height:82%; overflow:auto; background:var(--surface); border-radius:22px 22px 31px 31px; padding:17px 19px 26px; }
+    .sheet::before { content:""; display:block; width:35px; height:4px; border-radius:3px; background:var(--line); margin:0 auto 15px; }
+    .sheet h3 { margin:0 0 6px; font-size:19px; }
+    .sheet p { color:var(--muted); margin:0 0 17px; }
+    .sheet .choice { display:block; width:100%; text-align:left; min-height:47px; padding:10px 2px; border:0; border-bottom:1px solid var(--line); background:transparent; color:var(--text); }
+    .sheet .bottom-actions { display:flex; justify-content:space-between; gap:9px; margin-top:18px; }
+    .sheet .bottom-actions button { min-height:44px; flex:1; }
+    @media (max-width:1000px) { .comparison { display:block; } .comparison > div:first-child { margin-bottom:25px; } .desktop { display:none; } .phone { max-width:390px; } }
+    @media (max-width:420px) { .intro, .comparison { padding-left:10px; padding-right:10px; } .phone { width:100%; } }
+  </style>
+</head>
+<body>
+  <header class="intro"><h1>Projects · 모바일 작업공간 구조 검토</h1><p>같은 예시 작업을 넓은 화면과 모바일에서 다르게 배치합니다. 이 페이지는 저장·권한·공통 컴포넌트가 연결되지 않은 검토용 시안입니다.</p><button class="toggle-theme" id="theme" type="button">Light / Dark 보기</button></header>
+  <div class="comparison">
+    <div><p class="label">넓은 화면 · 전체 탐색과 다중 정보</p><div class="desktop">
+      <aside><div class="brand"><span class="mark">P</span>Projects</div><nav aria-label="넓은 화면 탐색"><span>개요</span><span>기획</span><span>임시 문서</span><span class="current">작업</span><span>테스트</span><span>추적·변경</span><span>스킬 작업</span></nav></aside>
+      <main><div class="desktop-header"><strong>개인 작업 ▾ <small> / 작업</small></strong><small>Glassmorphism · Light　　계정</small></div><h2>작업</h2><p class="muted">오늘 할 일과 프로젝트 작업을 같은 데이터로 관리합니다.</p><div class="metrics"><div class="metric">오늘<strong>3</strong></div><div class="metric">진행 중<strong>5</strong></div><div class="metric">완료<strong>12</strong></div></div><div class="form-row"><input class="input" aria-label="넓은 화면 빠른 할 일" placeholder="지금 할 일을 적으세요"><button class="primary" type="button">+ 추가</button></div><div class="tabs"><b>오늘</b><span>Inbox</span><span>목록</span><span>보드</span><span>캘린더</span><span>집계</span></div><div class="tool-row"><input class="input" aria-label="넓은 화면 작업 검색" placeholder="작업 검색"><button class="tool" type="button">상태 · 열림</button><button class="tool" type="button">GTD</button><button class="tool" type="button">저장 보기 ▾</button></div><div class="task"><input type="checkbox" aria-label="요건 검토 완료"><div><strong>모바일 요건 검토</strong><small>실행 오늘 · A1 · 30분</small></div></div><div class="task"><input type="checkbox" aria-label="화면 흐름 정리 완료"><div><strong>화면 흐름 정리</strong><small>실행 오늘 · B1 · 20분</small></div></div><div class="task"><button class="tool" type="button" aria-label="완료 근거 확인 상세 열기">→</button><div><strong>완료 근거 확인</strong><small>마감 지남 · 구현 작업 · 상세 근거 필요</small></div></div></main>
+    </div></div>
+    <div><p class="label">모바일 · 한 번에 한 과업 · 하단 탐색/행동</p><div class="phone" id="phone">
+      <div class="phone-header"><div><small>현재 프로젝트</small><strong>개인 작업 ▾</strong></div><button type="button" class="icon-button" data-sheet="project" aria-label="프로젝트 전환">⌄</button></div>
+      <div class="phone-scroll">
+        <section class="mobile-page" data-page="today"><h2>오늘</h2><p class="subtitle">선택한 프로젝트 · 10월 22일 목요일</p><div class="summary"><strong>3개 할 일</strong><span>마감 지남 1개</span></div><div class="view-tools"><input class="input" placeholder="할 일 검색" aria-label="모바일 할 일 검색"><button class="icon-button" type="button" data-sheet="filter" aria-label="필터 열기">⚙</button></div><div class="chips"><button class="chip active" type="button">GTD · 지금 가능한 일</button><button class="chip" type="button" data-sheet="filter">필터 2</button></div><p class="section-title">오늘 실행</p><div class="mobile-task"><input type="checkbox" aria-label="모바일 요건 검토 완료"><div class="body"><strong>모바일 요건 검토</strong><small>오늘 실행 · A1 · 30분</small></div><button class="more" type="button" data-sheet="task" aria-label="모바일 요건 검토 메뉴">⋯</button></div><div class="mobile-task"><input type="checkbox" aria-label="화면 흐름 정리 완료"><div class="body"><strong>화면 흐름 정리</strong><small>오늘 실행 · B1 · 20분</small></div><button class="more" type="button" data-sheet="task" aria-label="화면 흐름 정리 메뉴">⋯</button></div><p class="section-title">마감 지남</p><div class="mobile-task"><button class="detail-open" type="button" data-sheet="task" aria-label="완료 근거 확인 상세 열기">→</button><div class="body"><strong>완료 근거 확인</strong><small class="alert">마감 지남 · 구현 작업 · 근거 필요</small></div><button class="more" type="button" data-sheet="task" aria-label="완료 근거 확인 메뉴">⋯</button></div></section>
+        <section class="mobile-page" data-page="inbox" hidden><h2>Inbox</h2><p class="subtitle">먼저 수집하고, 할 시간을 나중에 정합니다.</p><div class="mobile-task"><input type="checkbox" aria-label="프로젝트 메모 정리 완료"><div class="body"><strong>프로젝트 메모 정리</strong><small>실행 예정일 없음</small></div><button class="more" type="button" data-sheet="task" aria-label="프로젝트 메모 정리 메뉴">⋯</button></div><button class="chip" type="button" data-sheet="task">오늘로 계획하기</button></section>
+        <section class="mobile-page" data-page="work" hidden><h2>작업</h2><p class="subtitle">정교 보기 · 개인 저장 보기: 내 보드</p><div class="chips"><button class="chip" type="button" data-work="list">목록</button><button class="chip active" type="button" data-work="board">보드</button><button class="chip" type="button" data-sheet="filter">보기·필터</button></div><div class="board-head"><button class="chip" type="button" data-sheet="status">‹　검토 중 · 2개　›</button><button class="chip" type="button" data-sheet="filter">수동 순서</button></div><div class="board-card"><strong>모바일 요건 검토</strong><small>Inbox · A1 · 마감 10월 25일</small><div class="actions"><button type="button" data-sheet="task">상태 이동</button><button type="button" data-sheet="task">위/아래</button></div></div><div class="board-card"><strong>화면 흐름 정리</strong><small>Inbox · B1 · 실행 오늘</small><div class="actions"><button type="button" data-sheet="task">상태 이동</button><button type="button" data-sheet="task">위/아래</button></div></div><button class="chip" type="button" data-sheet="add">+ 검토 중 작업</button><p class="muted">옆 열은 스와이프 또는 상태 선택기로 이동합니다. 메뉴로도 같은 이동을 할 수 있습니다.</p></section>
+        <section class="mobile-page" data-page="more" hidden><h2>더보기</h2><p class="subtitle">현재 프로젝트의 나머지 업무 영역</p><button class="more-row" data-page-target="overview" type="button">개요</button><button class="more-row" data-page-target="planning" type="button">기획·아이디어</button><button class="more-row" data-page-target="documents" type="button">임시 문서 <small>목록 → 상세</small></button><button class="more-row" data-page-target="tests" type="button">테스트</button><button class="more-row" data-page-target="trace" type="button">추적·변경</button><button class="more-row" data-page-target="runs" type="button">스킬 작업</button><button class="more-row" data-sheet="settings" type="button">화면 스타일·계정·반출</button></section>
+        <section class="mobile-page" data-page="documents" hidden><button class="chip" data-page-target="more" type="button">← 더보기</button><h2>임시 문서</h2><p class="subtitle">목록을 선택하면 전체 화면 상세로 이동합니다.</p><button class="doc-row" data-page-target="doc-detail" type="button"><strong>Application 설계 · 임시 문서</strong><small>초안 · revision 4 · Markdown</small></button><button class="doc-row" data-page-target="doc-detail" type="button"><strong>구현 계획 · 임시 문서</strong><small>검토 중 · revision 2</small></button></section>
+        <section class="mobile-page" data-page="doc-detail" hidden><button class="chip" data-page-target="documents" type="button">← 문서 목록</button><h2>Application 설계</h2><p class="subtitle">초안 · revision 4 · Note 이관 전 임시 Markdown</p><div class="chips"><button class="chip active" type="button">본문</button><button class="chip" type="button">편집</button><button class="chip" type="button">관계·근거</button></div><p>시스템 경계와 인터페이스를 검토합니다. 목록과 상세가 한 화면에 쌓이지 않습니다.</p></section>
+        <section class="mobile-page" data-page="other" hidden><button class="chip" data-page-target="more" type="button">← 더보기</button><h2 id="other-title">업무 영역</h2><p class="subtitle">이 영역도 목록 → 전체 화면 상세로 전환합니다.</p></section>
+      </div>
+      <button class="add-fab" type="button" data-sheet="add" aria-label="작업 빠르게 추가">+</button>
+      <nav class="phone-bottom" aria-label="모바일 주요 탐색"><button type="button" data-nav="today" aria-current="page"><span>◷</span>오늘</button><button type="button" data-nav="inbox"><span>▤</span>Inbox</button><button type="button" data-nav="work"><span>☷</span>작업</button><button type="button" data-nav="more"><span>☰</span>더보기</button></nav>
+      <div class="sheet-backdrop" id="backdrop"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title"><h3 id="sheet-title">보기 설정</h3><p id="sheet-description">현재 화면에 적용할 옵션입니다.</p><div id="sheet-body"></div><div class="bottom-actions"><button class="tool" type="button" id="close-sheet">취소</button><button class="primary" type="button" id="apply-sheet">적용</button></div></div></div>
+    </div></div>
+  </div>
+  <script>
+    const phone = document.getElementById('phone');
+    const backdrop = document.getElementById('backdrop');
+    let current = 'today';
+    function show(page) {
+      const known = [...phone.querySelectorAll('[data-page]')].some(node => node.dataset.page === page);
+      document.getElementById('other-title').textContent = ({ overview:'개요', planning:'기획·아이디어', tests:'테스트', trace:'추적·변경', runs:'스킬 작업' })[page] || '업무 영역';
+      phone.querySelectorAll('.mobile-page').forEach(node => { node.hidden = node.dataset.page !== (known ? page : 'other'); });
+      current = page;
+      phone.querySelectorAll('[data-nav]').forEach(node => { if (node.dataset.nav === page) node.setAttribute('aria-current','page'); else node.removeAttribute('aria-current'); });
+      phone.querySelector('.phone-scroll').scrollTop = 0;
+    }
+    function openSheet(type) {
+      const content = {
+        add:['작업 빠르게 추가','현재 보기에 맞는 기본값을 확인하고 저장합니다.','<label>제목 <input class="input" style="width:100%;margin-top:7px" placeholder="할 일을 적으세요"></label><button class="choice" type="button">위치: 현재 프로젝트 · 오늘</button>'],
+        filter:['보기·필터','이 값은 현재 보기의 표시만 변경합니다.','<button class="choice" type="button">현재 보기: 보드</button><button class="choice" type="button">상태: 진행 중 전체</button><button class="choice" type="button">정렬: 수동 순서</button><button class="choice" type="button">개인 저장 보기: 내 보드</button>'],
+        task:['작업 행동','이동·연기는 저장 전 목표를 확인합니다.','<button class="choice" type="button">오늘로 계획 / 내일로 연기</button><button class="choice" type="button">상태로 이동</button><button class="choice" type="button">상세·근거 열기</button>'],
+        status:['보드 상태 선택','한 번에 한 열을 읽습니다.','<button class="choice" type="button">할 일</button><button class="choice" type="button">진행 중</button><button class="choice" type="button">검토 중 · 현재</button><button class="choice" type="button">완료</button><button class="choice" type="button">취소</button>'],
+        project:['프로젝트 전환','오늘과 Inbox는 선택한 프로젝트의 작업입니다.','<button class="choice" type="button">개인 작업 · 현재</button><button class="choice" type="button">다른 프로젝트 찾기</button>'],
+        settings:['설정·계정','업무 내용과 화면 외형은 별개입니다.','<button class="choice" type="button">UI 모드: Glassmorphism</button><button class="choice" type="button">밝기: System / Light / Dark</button><button class="choice" type="button">프로젝트 ZIP · 로그아웃</button>'],
+      }[type] || ['보기','현재 작업을 확인합니다.',''];
+      document.getElementById('sheet-title').textContent = content[0];
+      document.getElementById('sheet-description').textContent = content[1];
+      document.getElementById('sheet-body').innerHTML = content[2];
+      backdrop.classList.add('open');
+      document.getElementById('close-sheet').focus();
+    }
+    phone.addEventListener('click', event => {
+      const nav = event.target.closest('[data-nav]');
+      const target = event.target.closest('[data-page-target]');
+      const sheet = event.target.closest('[data-sheet]');
+      if (nav) show(nav.dataset.nav);
+      if (target) show(target.dataset.pageTarget);
+      if (sheet) openSheet(sheet.dataset.sheet);
+    });
+    function closeSheet() { backdrop.classList.remove('open'); }
+    document.getElementById('close-sheet').addEventListener('click', closeSheet);
+    document.getElementById('apply-sheet').addEventListener('click', closeSheet);
+    backdrop.addEventListener('click', event => { if (event.target === backdrop) closeSheet(); });
+    document.addEventListener('keydown', event => { if (event.key === 'Escape') closeSheet(); });
+    document.getElementById('theme').addEventListener('click', () => {
+      document.documentElement.dataset.theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+    });
+  </script>
+</body>
+</html>

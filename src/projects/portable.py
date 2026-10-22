@@ -21,12 +21,14 @@ from projects.database import (
     Project,
     Revision,
     SkillRun,
+    TaskPosition,
+    TaskView,
     TestRun,
     utcnow,
 )
 from projects.domain import Problem, check_dependency_cycle, validate_item_data
 from projects.records import revise_item, serialize
-from projects.schemas import ReconnectInput
+from projects.schemas import ReconnectInput, TaskViewInput
 
 
 def sha256(content: bytes) -> str:
@@ -179,6 +181,27 @@ def export_project(db: Session, project: Project) -> bytes:
             )
         ]
     item_ids = [x["id"] for x in data["items"]]
+    data["task_positions"] = [
+        serialize(x)
+        for x in db.scalars(
+            select(TaskPosition)
+            .where(TaskPosition.item_id.in_(item_ids))
+            .order_by(TaskPosition.item_id)
+        )
+    ]
+    data["task_views"] = []
+    for view in db.scalars(
+        select(TaskView)
+        .where(
+            TaskView.project_id == project.id,
+            TaskView.owner_id == project.owner_id,
+            TaskView.scope == "personal",
+        )
+        .order_by(TaskView.id)
+    ):
+        row = serialize(view)
+        row.pop("owner_id")
+        data["task_views"].append(row)
     data["revisions"] = [
         serialize(x)
         for x in db.scalars(
@@ -296,6 +319,42 @@ def import_project(db: Session, user_id: str, encoded: str) -> Project:
         }
         if len(revisions) != len(data["revisions"]):
             raise ValueError("duplicate revisions")
+        positions = {x["item_id"]: x for x in data.get("task_positions", [])}
+        if len(positions) != len(data.get("task_positions", [])) or any(
+            item_id not in items
+            or items[item_id]["kind"] != "task"
+            or type(row["position"]) is not int
+            or not 0 <= row["position"] <= 2**31 - 1
+            for item_id, row in positions.items()
+        ):
+            raise ValueError("task positions")
+        task_views = data.get("task_views", [])
+        if (
+            not isinstance(task_views, list)
+            or any(not isinstance(row, dict) for row in task_views)
+            or sum(bool(row.get("is_default")) for row in task_views) > 1
+        ):
+            raise ValueError("task views")
+        view_ids: set[str] = set()
+        for row in task_views:
+            if (
+                not isinstance(row, dict)
+                or row.get("project_id") != project_id
+                or not isinstance(row.get("id"), str)
+                or len(row["id"]) != 36
+                or type(row.get("revision")) is not int
+                or row["revision"] < 1
+                or row.get("id") in view_ids
+                or db.get(TaskView, row.get("id")) is not None
+            ):
+                raise ValueError("task views")
+            view_ids.add(row["id"])
+            TaskViewInput.model_validate(
+                {
+                    field: row[field]
+                    for field in ("name", "scope", "is_default", "settings")
+                }
+            )
         for item in items.values():
             current = revisions.get((item["id"], item["revision"]))
             if current is None or any(
@@ -330,6 +389,23 @@ def import_project(db: Session, user_id: str, encoded: str) -> Project:
         db.flush()
         for row in items.values():
             db.add(Item(**parse_dates(row)))
+        db.flush()
+        for row in positions.values():
+            db.add(TaskPosition(**row))
+        db.flush()
+        for row in task_views:
+            db.add(
+                TaskView(
+                    id=row["id"],
+                    project_id=project_id,
+                    owner_id=user_id,
+                    name=row["name"],
+                    scope="personal",
+                    settings=row["settings"],
+                    is_default=row["is_default"],
+                    revision=row["revision"],
+                )
+            )
         db.flush()
         for row in data["revisions"]:
             if row["item_id"] not in items:

@@ -8,6 +8,7 @@ import "./app.css";
 import "./theme-overrides.css";
 import "./task-workspace.css";
 import "./workspace-refresh.css";
+import "./mobile-experience.css";
 
 const root = document.getElementById("root");
 if (!root) throw new Error("앱을 표시할 root 요소가 없습니다.");

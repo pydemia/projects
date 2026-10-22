@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api, ApiError, downloadArchive, errorMessage } from "./api";
 import { loadDraft, navigate, removeDraft, storeDraft, useResource } from "./hooks";
 import type { Draft, Route } from "./hooks";
@@ -46,7 +46,18 @@ export function ItemsPage({ projectId, userId, route, items, catalog, onChanged 
     const validKind = viewKinds.find(kind => kind === route.kind) ?? viewKinds[0] ?? "idea";
     const [newKind, setNewKind] = useState<Kind | null>(null);
     const [query, setQuery] = useState(route.q);
+    const listScroll = useRef(0);
+    const previousItem = useRef(route.item);
     useEffect(() => setQuery(route.q), [route.q]);
+    useEffect(() => {
+        if (route.item && !previousItem.current) {
+            listScroll.current = window.scrollY;
+            window.scrollTo(0, 0);
+        } else if (!route.item && previousItem.current) {
+            window.requestAnimationFrame(() => window.scrollTo(0, listScroll.current));
+        }
+        previousItem.current = route.item;
+    }, [route.item]);
     const selected = items.find(item => item.id === route.item && viewKinds.includes(item.kind));
     const filtered = items.filter(item => viewKinds.includes(item.kind) &&
         (viewKinds.length === 1 || item.kind === validKind) &&
@@ -77,6 +88,7 @@ export function ItemsPage({ projectId, userId, route, items, catalog, onChanged 
                 </SideNav></CardContent>
             </Card>
             <Card className="document-main workspace-detail"><CardContent>
+                {selected && <ActionButton type="button" className="mobile-detail-back" onClick={() => navigate({ item: "" })}>← {kindLabels[validKind]} 목록</ActionButton>}
                 {selected ? <RecordEditor key={selected.id} item={selected} items={items} catalog={catalog} userId={userId} onChanged={onChanged} /> : <Empty title={route.item ? "선택한 항목을 찾을 수 없습니다." : `첫 ${kindLabels[validKind]}부터 시작해 보세요.`}>
                     <p>{route.item ? "다른 종류를 선택했거나 접근할 수 없는 항목일 수 있습니다. 목록에서 다시 선택해 주세요." : "왼쪽 목록에서 항목을 열거나 새로 작성할 수 있습니다."}</p>
                     <ActionButton onClick={() => setNewKind(validKind)}>+ {kindLabels[validKind]} 만들기</ActionButton>

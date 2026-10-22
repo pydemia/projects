@@ -2,6 +2,78 @@
 
 2026-10-21 · Windows / Python 3.12.14 / Node 24.21.0 / PostgreSQL 17.11
 
+## 2026-10-21 pydemia Glassmorphism·시스템 밝기 기본값
+
+이번 수용 조건은 ① Glassmorphism·pydemia 원본 블루/네이비 기본값,
+② System/Light/Dark 선택과 기본 System·시스템 변경 추적,
+③ 설정 저장·재방문과 운영 화면 확인이다. 구현·자동 검사·운영 관찰 기준
+세 항목을 충족했다. 색상 원본·파생 규칙과 Colors 웹 export 동일성의 한계는
+[테마 편입 기록](ui-component-integration.md)에 적었다.
+
+원본 `pydemia.xml` registry의 12개 role과 여섯 swatch가 로컬 palette 파일과
+일치한다. TypeScript와 Vitest **32개**, production build와 favicon 빌드
+검사가 통과했다. 기본값·저장값 복구·v1 선택 유지·System 구독/해제·포털
+테마·수동 밝기 우선·dark 전용 디자인을 검사했다. 시스템 변경은 합성
+MediaQueryList 이벤트이며 실제 OS 설정을 바꾸지는 않았다. 지정한 텍스트와
+배경·primary·오류 색상 쌍은 light/dark 각각 4.5:1 이상이다.
+
+운영에는 `theme.tsx`, `theme-overrides.css`, `pydemia-palette.ts` 세 파일만
+전송했다. 이미지 `pydemia-projects:theme-975e0fa1f46d07d3`, 파일 집합
+SHA-256
+`975e0fa1f46d07d386c3788426293911b8285092a10a9a8379c67b09aec10650`다.
+인증 소스·production Compose의 hash가 전후 동일하며 앱·DB health와
+프록시 running을 확인했다. 운영 favicon은 기존 서버 소스와 빌드 자산이
+같은 SHA-256 `c23569224b1640ac5667776a6997c8e8bbafc9facce2364c0d7641c5807a4c82`
+이고 이번 전송에 포함하지 않았다.
+
+실제 Edge 로그인 세션에서 Glassmorphism과 System/Light/Dark 선택을
+확인했다. Light의 primary `#3863AF`, Dark의 primary `#7597D2`를 렌더링
+스타일로 대조했다. 현재 OS가 dark인 상태에서 System은 dark를 표시하고,
+수동 Light와 Dark가 각각 전환됐다. System으로 되돌린 뒤 새로고침해 선택과
+기존 프로젝트가 유지됨을 확인했다. 화면 증거는 비공개 로컬
+`.projects/deployment/pydemia-glass-light.jpg`와 `pydemia-glass-dark.jpg`에 있다.
+전체 디자인 모드·모바일·모든 반투명 합성의 접근성을 검수한 결과는 아니다.
+백엔드 동작 변경이 없어 이전 인증 작업의 156개 PG 검사 결과를 재사용했으며,
+이번 테마 변경에서 Git commit·push·CI는 수행하지 않았다.
+
+## 2026-10-21 Entra 조직 도메인 인증 확대
+
+APP-REQ-003의 최신 인증 범위는 단일 `pydemia` 테넌트의
+`@pydemia.ai` 계정이다. 프록시와 앱에서 같은 도메인을 확인하며,
+새 사용자는 유일한 OIDC `sub`에 연결된 개인 계정을 만든다.
+기존 `pydemia@pydemia.ai`의 실제 로그인 세션에서 확인한 subject를
+운영 전환 전에 기존 `pydemia` 계정에 고정했다. 그 식별자·쿠키·토큰은
+저장소와 검증 기록에 넣지 않는다.
+
+| 수용 조건 | 결과와 증거 | 범위·한계 |
+|---|---|---|
+| 도메인 계정 허용·그 밖 차단 | 프록시 `--email-domain=pydemia.ai`·테넌트 제한, 앱의 exact domain 확인. 누락·잘못된 subject, 하위·유사·다른 도메인 거부 PG 테스트 통과 | 프록시 헤더는 합성 입력. 실제 Entra의 토큰 검증은 운영 프록시 담당 |
+| 개인 자료 격리·기존 자료 유지 | 첫 로그인·동시 첫 로그인·이메일 변경/재사용·기존 local username 충돌·세션 사용자 교체 PG 검사 통과. 운영 기존 프로젝트 ID 집합 해시가 전환 전후 일치 | 팀 공유·공동 편집은 추가하지 않음 |
+| 운영 반영·기존 실제 로그인 | 아래 이미지·migration·실행 설정을 확인. 실제 Edge Microsoft 계정 선택에서 조직 계정으로 재인증 후 Projects 복귀 | 다른 `@pydemia.ai` 사용자의 실제 첫 로그인은 미검증 |
+
+로컬 `docker compose up -d db`, `uv run projects migrate`, `uv run pytest`
+**156개**, `uv run ruff check src tests migrations scripts deploy`,
+`uv run ruff format --check src tests migrations scripts deploy`,
+`uv run mypy src/projects`가 통과했다. 통합 검사는 무작위 전용
+PostgreSQL schema만 생성·정리했다. `npm --prefix web run check`의
+TypeScript·Vitest **22개**, `npm --prefix web run build`도 통과했다.
+웹 검사는 작업 중인 별도 UI 변경을 포함한 로컬 검사이며, 이번 배포에는
+인증 파일 여섯 개만 전송해 운영 웹 소스를 유지했다.
+
+운영 이미지는 `pydemia-projects:entra-b2ab23ab81001a46`이며 인증 파일
+집합 SHA-256은
+`b2ab23ab81001a463c7c7be70b18266df4933b2134c0ed86c97d411a4f03517c`다.
+기존 소스 해시를 먼저 대조하고 인증 관련 Python 4개·migration 1개·
+production Compose만 교체했다. migration `0003`과 앱·DB health,
+프록시 running, 실제 단일 테넌트 issuer·도메인 설정, OAuth2 Proxy의
+`--config-test` 통과를 확인했다. 공개 HTTPS에서 미인증 요청과 임의의
+`X-Forwarded-Email`/`X-Forwarded-User` 헤더 요청은 각각 401이다.
+
+기존 조직 계정의 재인증은 확인했다. 도메인 밖 개인 Microsoft 계정의
+실제 거절 검사는 해당 계정에 새 권한 동의가 요구돼 취소했다. 자동 검사에서
+확인한 도메인 거절을 실제 외부 계정 로그인 검증으로 확대하지 않는다.
+이번 작업에서 Hub·LLM 실호출, Git commit·push·CI는 수행하지 않았다.
+
 ## 2026-10-21 전 화면 UI·UX 개편 · 로컬 검증
 
 [실행 계획](ui-ux-overhaul.md)의 AC-35~39를 기준으로 앱 외곽·프로젝트
@@ -255,3 +327,112 @@ C:\Users\pydemia\AppData\Local\Temp\projects-codex-auth-x22xzizh\auth.json
 `blocked by policy`로 거부했습니다. 구체적인 사유는 반환되지 않았습니다.
 다른 도구로 우회 삭제하지 않았으며 최종 존재 확인에서 **두 파일이 남아
 있습니다**. 이 정리는 완료 처리하지 않았고 사용자 수동 정리가 남습니다.
+
+## 2026-10-21 작업 보드 P0 상호작용 추가 검증
+
+이 절은 [상호작용 구현 계획](task-interaction-plan.md)의 로컬 변경만 판정한다.
+격리된 PostgreSQL 전용 schema에서 migration을 적용하고 합성 프로젝트·작업으로
+브라우저를 확인했다. `projects.pydemia.ai`의 운영 배포·Entra 로그인 재검증은
+이 변경에서 수행하지 않았다.
+
+| 수용 조건 | 이번 증거와 판정 |
+|---|---|
+| AC-40 | 실제 Edge에서 카드 핸들을 빈 상태 열로 드래그하고 새로고침 뒤 위치·건수 유지 확인. `test_board_move_persists_state_and_manual_order`의 PostgreSQL 재조회 통과 |
+| AC-41 | 같은 열 카드 드래그와 작업 메뉴의 위/아래 이동을 실제 브라우저에서 확인. GTD 자동 보기의 열 안 버튼 비활성화와 열 간 이동 후 보기 선택 유지 확인. 수동 순서와 자동 정렬의 서버 입력 분리 웹 검사. 직전 이동의 서버 revision/원위치 anchor 되돌리기는 PostgreSQL·웹 검사 |
+| AC-42 | 빈 열 드롭, 카드 전후 위치와 필터로 숨은 작업을 보존하는 단일 이웃 anchor를 확인. 다섯 카드의 긴 열 자체 세로 스크롤 확인. 드래그 중 자동 스크롤·자기 위치 무효 드롭은 DOM 이벤트 검사 통과; 실제 포인터 수동 검증은 남음 |
+| AC-43 | 실제 Edge에서 근거 없는 구현 작업의 완료 이동이 409로 거부되고 원래 열에 남으며 이유가 표시됨. 개인 작업 완료는 PostgreSQL 통합 검사와 브라우저에서 허용 확인 |
+| AC-44 | 웹 검사에서 409 낙관적 카드 복원과 최신 목록 재요청 확인. 서버는 stale revision 409·무효 이웃 422를 검증. 권한 없는 이동은 기존 `item_for_user`를 공유. 네트워크 단절 실제 브라우저 검증은 남음 |
+| AC-45 | 화살표 버튼·상태 팝오버·작업 메뉴의 키보드 접근 가능한 대체 경로를 구현하고 메뉴 Enter→Down→Enter 상태 이동, Escape/초점 복귀를 브라우저에서 확인. 실제 터치 기기·스크린리더 검수는 남음 |
+| AC-50 | 상태 검색 팝오버와 작업 `…` 메뉴를 분리하고 드래그와 같은 이동 API를 사용. 브라우저에서 검색 선택·메뉴 순서 이동과 서버 완료 gate를 확인 |
+| AC-51 | 카드 본문과 핸들·상태/작업 메뉴를 별도 조작. Edge의 약 464 CSS px 화면에서 가로 보드 스크롤과 상태 검색/선택 확인. 실제 터치 제스처 검증은 남음 |
+
+`docker compose up -d db`, 격리 schema migration, `uv run pytest -q`
+**161 passed**, `uv run ruff check src tests migrations`,
+`uv run ruff format --check src tests migrations`, `uv run mypy src/projects`,
+`npm --prefix web run check` **36 passed**, `npm --prefix web run build`가
+통과했다. 웹 빌드의 500 kB 초과 bundle 경고는 실패가 아니며 성능 분할은
+후속 최적화 대상이다. 브라우저 검증은 mock이 아니라 로컬 앱·실제 격리
+PostgreSQL의 HTTP 저장을 사용했다. 실제 Hub/LLM 호출은 보드 변경 범위가
+아니므로 이번 절에서 수행했다고 주장하지 않는다.
+
+- [보드 이동 화면](screenshots/task-board-local.png) — 격리된 로컬 테스트 화면
+- [완료 gate 거부 화면](screenshots/task-board-completion-gate.png) — 거부 안내와 상태 보존
+
+## 2026-10-22 작업공간 P1·favicon 로컬 검증
+
+이 절은 [P1 구현 계획](task-interaction-plan.md)의 로컬 변경을 판정한다.
+기존 사용자/운영 DB가 아닌 무작위 이름의 전용 PostgreSQL schema를 만들고
+Alembic `0005_task_views`까지 적용했다. 브라우저는 로컬 Vite/API와 이
+격리 schema에 연결한 실제 Edge였다. 외부 ClickUp 벤치마크, UI mock,
+실제 Hub/LLM 호출, 운영 Entra 로그인·배포를 이번 증거와 혼동하지 않는다.
+
+| 조건 | 증거와 판정 |
+|---|---|
+| AC-46 | 열 아래 빠른 입력으로 `in_progress` 작업을 만들고 같은 ID·상태가 서버 목록에 남으며 해당 열 맨 뒤의 수동 순서가 되는 PostgreSQL 검사 통과. 실제 브라우저에서 진행 중 열 생성과 검토 중 열의 다른 작업 표시를 확인. 취소 열의 이유 누락은 422로 거부 |
+| AC-47 | PostgreSQL에서 두 작업의 상태·실행 예정일·목록 일괄 변경, stale revision의 전체 409, 다른 프로젝트 작업/중복 ID/잘못된 날짜의 전체 거부, 구현 작업 완료 gate의 전체 409, 서로 의존하는 개인 작업의 동시 완료를 검사. 실제 브라우저에서 체크박스·그룹 표시 기준 Shift 범위·전체 선택, 두 작업 일괄 이동과 새로고침, 개인+근거 없는 구현 작업의 일괄 완료 전체 거부·오류/선택 재방문 유지를 확인 |
+| AC-48 | 날짜 일괄 변경 전후 `due_date` 불변을 PostgreSQL에서 검사. 브라우저에서 Inbox→오늘 배치→내일 연기를 확인. 저장 보기는 작업과 다른 `task_views` 행이며 소유자·기본 보기 한 개·타 사용자 접근 차단·`shared` 422·ZIP 반출/복구 소유자 재연결을 검사. 실제 브라우저에서 개인 기본 보기를 저장하고 작업 주소로 재방문할 때 보드·설정이 복원되는 것을 확인 |
+
+`docker compose up -d db`, `uv run projects migrate`, `uv run pytest -q`
+**167 passed**, `uv run ruff check src tests migrations`,
+`uv run ruff format --check src tests migrations`, `uv run mypy src/projects`,
+`npm --prefix web run check` **43 passed**, `npm --prefix web run build`가 통과했다.
+백엔드 전체 검사의 Starlette/httpx deprecation warning 1건은 실패가 아니다.
+웹 빌드의 500 kB 초과 bundle 경고는 후속 성능 최적화 대상이다.
+
+favicon SVG 원본 SHA-256은 `210e38b2f2f4dace4d0bf32f76dc54c17c8b335a5a056868aebf4795ae8eae33`으로 유지했다.
+빌드는 HTML head의 `%BASE_URL%` 링크, SVG·light/dark PNG 10개(16·24·32·48·64px),
+다중 크기 ICO와 최종 자산 bytes를 검사했다. 로컬 HTTP에서 SVG·ICO·양 테마
+32px PNG의 응답 200, image Content-Type, 빌드 bytes 일치를 확인하고 실제
+브라우저 head의 테마별 링크를 확인했다. 각 PNG를 시각적으로 열어 작은
+크기에서도 승인 엠블럼의 형상이 남는 것을 확인했다. 신규 자산의 운영
+HTTPS·인증/CSP·브라우저 탭/cache 검사는 배포 시 수행해야 한다.
+
+- [일괄 완료 gate와 선택 유지 화면](screenshots/task-p1-bulk-gate-full.png) — 격리된 로컬 브라우저의 전체 화면
+
+## 2026-10-22 모바일 작업공간 로컬 검증
+
+[모바일 goal](mobile-experience-goal.md)의 APP-REQ-028·AC-52~58을 실제
+Projects React 앱과 무작위 전용 PostgreSQL schema에 연결한 Edge 브라우저에서
+검사했다. `scripts/verify-mobile-browser.py`는 schema를 생성·migrate한 뒤
+로컬 API/Vite를 임의 포트에 띄우고 합성 계정·프로젝트를 사용하며 종료 시
+해당 schema만 정리한다. `scripts/verify-mobile-browser.cjs`는 모바일
+에뮬레이션(`isMobile`, `hasTouch`)과 1440px 데스크톱을 검사한다. 이
+검사는 구조 시안, 운영 서버, 물리 기기 또는 외부 Hub/LLM의 결과가 아니다.
+
+| 조건 | 코드/실제 앱 증거 | 남은 한계 |
+|---|---|---|
+| AC-52 | 공통 `BottomNav`로 오늘·Inbox·작업·더보기, 더보기에서 나머지 6개 업무 화면을 제공한다. 현재 프로젝트 선택과 320·360·390·430px의 7개 업무 화면 전체 가로 넘침 1px 이하, 320×568에서 첫 작업 접근을 브라우저로 확인했다. | 운영 Entra 로그인 뒤 모바일 동선은 별도 검증 |
+| AC-53 | Inbox 작업을 `오늘로` 배치한 뒤 Today에서 완료하고 새로고침 후 동일 ID의 `planned_date`와 `state=done`을 API로 재조회했다. 실행 예정과 마감은 별도 필드이며 마감 지남 안내를 유지한다. | 물리 기기 키보드와 오프라인 재시도는 미검증 |
+| AC-54 | 한 열 보드의 상태 선택기, 카드 상태 메뉴 이동·서버 revision, 되돌리기, 터치한 열 하단 빠른 추가, 작업 메뉴 위로 이동을 브라우저에서 확인했다. 상태 선택은 새로고침 뒤에도 유지된다. | 실제 물리 기기의 터치 드래그·열 스와이프는 미검증; 상태 선택기가 대체 조작 |
+| AC-55 | 모바일 2개 선택 후 필터로 한 개를 숨기면 `숨김 1개`를 표시한다. 필터 해제 뒤 원자적 일괄 상태 변경을 API로 재조회했다. 외부에서 revision을 바꾼 뒤 409가 나면 두 선택과 날짜 입력이 시트 재생성 뒤에도 남고 오류가 표시되는 것을 확인했다. | 실제 네트워크 단절·권한 오류의 모바일 UI는 미검증 |
+| AC-56 | 월간 700px 그리드를 모바일에서 숨기고 주간 날짜 띠/선택일 agenda를 사용한다. 마감일만 있는 작업의 `마감` 표시와 날짜 없는 작업의 목록 경로, 320px 집계 화면 넘침 없음을 확인했다. | 그래프 내용의 스크린리더/물리 기기 가독성은 미검증 |
+| AC-57 | 임시 문서의 목록→상세→Markdown 편집→목록→상세에서 미저장 본문이 복원됨을 확인했다. 기획 요건·테스트 케이스·스킬 새 실행도 상세/뒤로 동선, 추적 화면도 좁은 폭을 검사했다. | 실제 SkillRun 실행·관계 편집·문서 409 비교를 이번 모바일 브라우저 실행에서 새로 검증하지 않음 |
+| AC-58 | 21개 출시 UI 모드 목록 중 3개 대표 설정, dark/light/System 전환, 더보기 닫기 후 포커스 복귀, 실제 앱 SVG favicon의 HTTP 200·image Content-Type, 1440px 5열 보드 유지를 확인했다. | 물리 기기 safe area·OS 키보드·가로 방향·확대·축소 동작과 전 모드 시각 검수는 미검증 |
+
+실제 브라우저 과정에서 두 결함을 발견·수정했다. 공통 Dialog를 모바일
+하단 시트로 배치할 때 원래 CSS `translate`가 남아 화면 밖으로 밀린 문제와,
+보드 입력 중 하단 탐색이 다시 나타나 `추가` 터치를 가로챈 문제다. 또한
+일괄 변경 409 뒤 시트/입력 복원과 portal의 dark 시트 헤더 색·닫기 버튼,
+명시적 포커스 복귀를 보완했다.
+
+`docker compose up -d db`, `uv run projects migrate`, `uv run pytest`
+**167 passed**, `uv run ruff check src tests migrations`,
+`uv run ruff format --check src tests migrations`, `uv run mypy src/projects`,
+`npm --prefix web run check` **43 passed**, `npm --prefix web run build`가
+통과했다. 빌드는 승인 favicon SVG hash, 10개 PNG와 ICO bytes도 검사했다.
+Starlette/httpx deprecation 경고 1건과 500 kB 초과 프런트엔드 bundle
+경고는 남는다. 운영 배포·Entra 로그인·외부 서비스·실제 LLM·물리 기기는
+이번 로컬 검증 결과에 포함하지 않는다.
+
+- [오늘 390px](screenshots/mobile-experience/today-390.png), [보드 390px](screenshots/mobile-experience/board-390.png), [캘린더 390px](screenshots/mobile-experience/calendar-390.png)
+- [더보기 시트](screenshots/mobile-experience/more-390.png), [임시 문서 목록](screenshots/mobile-experience/documents-390.png), [dark 시트](screenshots/mobile-experience/theme-dark-390.png), [데스크톱 보드](screenshots/mobile-experience/desktop-1440.png)
+
+## 2026-10-22 운영 배포 확인
+
+[배포 기록](deployment.md#2026-10-22-운영-배포)의 source hash로 운영 이미지를
+빌드하고 `projects.pydemia.ai`를 전환했다. 앱·PostgreSQL health, 실제 운영
+DB의 Alembic `0005`와 두 작업 테이블, 내부 HTTP의 새 JS/CSS·favicon bytes,
+공개 HTTPS의 미인증 보호와 Microsoft 리디렉션을 확인했다. 실제 Edge의
+기존 Entra 계정으로 로그인하여 개인 작업공간 및 새 저장 보기 화면에
+진입했다. 이 검사는 운영 데스크톱 브라우저와 HTTP 경로의 확인이며,
+사용자가 수행할 물리 기기 조작 검증의 결과로 간주하지 않는다.

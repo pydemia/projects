@@ -17,6 +17,7 @@ from projects.database import (
     Project,
     Revision,
     SkillRun,
+    TaskView,
     utcnow,
 )
 from projects.database import TestRun as StoredTestRun
@@ -740,12 +741,41 @@ def test_archive_restores_revision_links_and_baseline(
     baseline = client.post(
         f"/api/projects/{project['id']}/baselines", json={"name": "복구 기준"}
     ).json()
+    saved_view = client.post(
+        f"/api/projects/{project['id']}/task-views",
+        json={
+            "name": "내 보드",
+            "is_default": True,
+            "settings": {
+                "mode": "complex",
+                "view": "board",
+                "grouping": "state",
+                "sort": "manual",
+                "card_fields": ["due_date"],
+            },
+        },
+    )
+    assert saved_view.status_code == 201, saved_view.text
+    first_task = create_item("task", "첫 작업", data={"workflow": "personal"})
+    second_task = create_item(
+        "task", "앞으로 옮길 작업", data={"workflow": "personal"}
+    )
+    reordered = client.post(
+        f"/api/items/{second_task['id']}/move",
+        json={
+            "expected_revision": second_task["revision"],
+            "source_state": "todo",
+            "target_state": "todo",
+            "before_id": first_task["id"],
+        },
+    )
+    assert reordered.status_code == 200, reordered.text
     original_items = client.get(f"/api/projects/{project['id']}/items").json()
     original_links = client.get(f"/api/projects/{project['id']}/links").json()
     archive = client.get(f"/api/projects/{project['id']}/export").content
     # Only records created by this test in its isolated schema are removed.
     with Session(app.state.engine) as db, db.begin():
-        for model in (SkillRun, StoredTestRun, Baseline, Link):
+        for model in (SkillRun, StoredTestRun, Baseline, Link, TaskView):
             db.execute(delete(model).where(model.project_id == project["id"]))
         db.execute(
             delete(Revision).where(
@@ -761,6 +791,10 @@ def test_archive_restores_revision_links_and_baseline(
     assert response.status_code == 201, response.text
     restored = client.get(f"/api/projects/{project['id']}/items").json()
     assert restored == original_items
+    views = client.get(f"/api/projects/{project['id']}/task-views").json()
+    assert len(views) == 1
+    assert views[0]["id"] == saved_view.json()["id"]
+    assert views[0]["is_default"] is True
     assert (
         client.get(f"/api/projects/{project['id']}/links").json()
         == original_links

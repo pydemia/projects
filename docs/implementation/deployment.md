@@ -109,16 +109,22 @@ PostgreSQL volume, `state/`, `.secrets/`는 배포 패키지와 별도로 백업
 ## 2026-10-22 운영 배포
 
 모바일 작업공간과 작업 보드·개인 저장 보기를 포함한 소스
-`19b8bf2ac49a8463cb19a891e4158bae975e6634df7a868f8184312ea362eafb`를
+`5216fa3f71b0c39cec7e4042c6515f9ab2d102755570d5b39a6256334a2d46e6`를
 allowlist archive로 묶어 해시를 확인한 뒤 운영 서버의 별도 release 디렉터리에서
-`pydemia-projects:19b8bf2ac49a8463` 이미지를 빌드했다. 기존 이미지를
+`pydemia-projects:5216fa3f71b0c39c` 이미지를 빌드했다. 기존 이미지를
 유지한 채 새 이미지로 전환했고 앱 시작 시 Alembic `0003`→`0005`가 적용됐다.
+패키징 과정의 임시 Python bytecode 포함을 제거하고 파일 순서·메타데이터를
+고정했다. Windows 작업 트리에서 줄바꿈이 달라지는 텍스트 파일도 Git blob과
+동일한 바이트로 정규화했다. 최종 archive의 139개 파일이 커밋의 해당 파일과
+모두 일치하고 두 번의 패키징에서 동일 archive SHA-256이 나온 뒤 이미지
+태그를 이 해시로 맞췄다.
 
 전환 전에 전체 PostgreSQL custom dump와 `state/`·`.secrets/`·기존 Compose
 설정을 mode 0700/0600의 서버 전용 백업 디렉터리
 `/home/pydemia/.local/share/projects-backups/20261022T041240Z`에 저장했다.
 `pg_restore --list`로 덤프를 읽을 수 있음을 확인했다. 전환 스크립트는 앱
 상태 확인에 실패하면 이전 Compose 설정과 이미지로 돌아가도록 준비했다.
+최종 이미지 전환 직전의 추가 백업은 같은 경로의 `20261022T042409Z`이다.
 
 전환 후 앱과 DB health가 정상이고 DB 버전·`task_positions`·`task_views`를
 확인했다. 앱 내부 HTTP에서 `/health`, HTML, 새 CSS·JS와 favicon SVG의

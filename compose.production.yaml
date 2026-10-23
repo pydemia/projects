@@ -77,6 +77,7 @@ services:
             - --upstream=http://app:8000/
             - --redirect-url=https://projects.pydemia.ai/oauth2/callback
             - --scope=openid profile email
+            - --prompt=select_account
             - --email-domain=pydemia.ai
             - --entra-id-allowed-tenant=fb44f64f-973f-480d-ab48-f30f3bababb6
             - --code-challenge-method=S256

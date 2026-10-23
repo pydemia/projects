@@ -65,9 +65,15 @@ OAuth2 Proxy의 로그인 버튼은 `/oauth2/start` 폼을 제출한 뒤
 두 주소를 허용해야 합니다. 처음에는 `'self'`만 허용해 버튼을 눌러도
 브라우저가 Microsoft 리디렉션을 차단했습니다. Microsoft 로그인 주소만
 추가한 뒤 실제 버튼 클릭으로 계정 선택과 작업공간 진입을 확인했습니다.
+다른 Microsoft 계정으로 시도한 뒤 접근 거부(403)가 발생해도 다음 로그인에서
+계정을 바꿀 수 있도록 OAuth2 Proxy에 `--prompt=select_account`를 설정합니다.
+이 값은 Microsoft 인증 요청마다 계정 선택을 요구합니다. 단일 테넌트와
+`@pydemia.ai` 허용 정책은 그대로 적용되며, 다른 계정을 고르려면
+`https://projects.pydemia.ai/oauth2/start?rd=%2F`에서 다시 시작합니다.
 
 정책 근거는 [OAuth2 Proxy의 Entra 설정](https://oauth2-proxy.github.io/oauth2-proxy/configuration/providers/ms_entra_id/),
 [프록시 도메인·헤더 설정](https://oauth2-proxy.github.io/oauth2-proxy/configuration/overview/),
+[Microsoft 인증 요청의 prompt 매개변수](https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-auth-code-flow),
 [Microsoft ID token claim](https://learn.microsoft.com/en-us/entra/identity-platform/id-token-claims-reference)입니다.
 테넌트·토큰 검증은 프록시가 담당하며 앱은 외부에 직접 포트를 열지 않습니다.
 
@@ -134,3 +140,21 @@ allowlist archive로 묶어 해시를 확인한 뒤 운영 서버의 별도 rele
 계정으로 다시 로그인해 개인 작업공간과 새 `개인 저장 보기` UI를 확인했다.
 물리 기기의 터치·safe area·OS 키보드 검증은 사용자가 수행하고 피드백을
 전달하기로 했다. 운영 Hub/LLM 실행은 이번 배포 검사에 포함하지 않았다.
+
+## 2026-10-24 Microsoft 계정 전환 수정
+
+허용되지 않은 계정으로 시도한 뒤 403 화면에서 다시 시도해도 Microsoft
+세션이 같은 계정을 선택하는 문제에 대응해 OAuth2 Proxy에
+`--prompt=select_account`를 추가했다. 수정 전 공개 `/oauth2/start`의
+Microsoft 인증 요청에는 `prompt`가 없었고, 수정 후에는
+`prompt=select_account`가 포함되는 것을 확인했다. 단일 테넌트·이메일
+도메인 제한은 유지했다.
+
+소스 `3a5dd77591ea9d4d371329f5945732ca8cea373aec455cc8ea53458e43cf1a61`를
+검증된 archive와 `pydemia-projects:3a5dd77591ea9d4d` 이미지로 배포했다.
+전환 직전 PostgreSQL·`state/`·`.secrets/`·Compose 설정을 서버 전용
+`/home/pydemia/.local/share/projects-backups/20261023T161612Z`에 백업했다.
+전환 후 앱·DB health, Alembic `0005`, 공개 `/api/session` 401,
+로그인 페이지 200, Microsoft 로그인 시작 302와 `prompt=select_account`,
+앱 정적 자산과 favicon 응답을 확인했다. 다른 계정으로 실제 403을 거친
+브라우저 재시도는 이번 검사에 포함하지 않았다.

@@ -357,6 +357,7 @@ def test_production_proxy_is_the_only_host_port():
     )
     command = services["oauth2-proxy"]["command"]
     assert "--email-domain=pydemia.ai" in command
+    assert "--prompt=select_account" in command
     assert (
         "--entra-id-allowed-tenant=fb44f64f-973f-480d-ab48-f30f3bababb6"
         in command

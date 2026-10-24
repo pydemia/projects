@@ -45,7 +45,7 @@ async function verify(viewport) {
     });
     try {
         await page.goto("http://127.0.0.1:5173/");
-        await page.getByRole("button", { name: "GitHub 저장소에서 만들기" }).click();
+        await page.getByRole("button", { name: "원격 GitHub에서 만들기" }).click();
         const modal = page.getByRole("dialog");
         await modal.getByRole("textbox", { name: "GitHub 저장소 URL" }).fill(source);
         await modal.getByRole("button", { name: "저장소 분석" }).click();

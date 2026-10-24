@@ -18,6 +18,7 @@ import { TaskWorkspace } from "./TaskWorkspace";
 import { RunsPage } from "./RunsPage";
 import { Overview, TracePage } from "./ProjectPages";
 import { GitImport } from "./GitImport";
+import { GitZipImport } from "./GitZipImport";
 import {
     ActionButton, Empty, ErrorNotice, Field, Loading, Modal, PageHead, RouteLink,
 } from "./ui";
@@ -244,6 +245,7 @@ function ProjectsList({ projects, onCreate, onImported }: {
 }) {
     const [importOpen, setImportOpen] = useState(false);
     const [gitOpen, setGitOpen] = useState(false);
+    const [gitZipOpen, setGitZipOpen] = useState(false);
     const [file, setFile] = useState<File | null>(null);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState("");
@@ -261,9 +263,10 @@ function ProjectsList({ projects, onCreate, onImported }: {
         finally { setBusy(false); }
     }
     return <>
-        <PageHead title="프로젝트" description="이어갈 일을 고르거나, 새로운 아이디어를 프로젝트로 시작하세요." eyebrow="YOUR WORKSPACE"><ActionButton onClick={() => setImportOpen(true)}>ZIP 가져오기</ActionButton><ActionButton className="git-source-action" onClick={() => setGitOpen(true)}>GitHub 저장소에서 만들기</ActionButton><ActionButton className="primary" onClick={onCreate}>+ 프로젝트 만들기</ActionButton></PageHead>
+        <PageHead title="프로젝트" description="이어갈 일을 고르거나, 새로운 아이디어를 프로젝트로 시작하세요." eyebrow="YOUR WORKSPACE"><ActionButton onClick={() => setImportOpen(true)}>백업 ZIP 복원</ActionButton><ActionButton className="git-source-action" onClick={() => setGitOpen(true)}>원격 GitHub에서 만들기</ActionButton><ActionButton onClick={() => setGitZipOpen(true)}>Git ZIP에서 만들기</ActionButton><ActionButton className="primary" onClick={onCreate}>+ 프로젝트 만들기</ActionButton></PageHead>
         {projects.length ? <div className="project-list">{projects.map(project => <Card key={project.id} className="project-card"><RouteLink patch={{ project: project.id, view: "overview", item: "", run: "", baseline: "", q: "" }} className="project-row"><div><h2>{project.name}</h2><p>{project.goal || "아직 작성한 목표가 없습니다."}</p></div><span>{project.profile === "simple" ? "간편" : "표준"}<small>{dateLabel(project.created_at)}</small></span><span aria-hidden="true">→</span></RouteLink></Card>)}</div> : <Empty title="처음 시작하는 프로젝트"><p>원문 아이디어를 남기고, 스킬로 문서와 실행 계획을 구체화해 보세요.</p><ActionButton className="primary" onClick={onCreate}>프로젝트 만들기</ActionButton></Empty>}
-        {importOpen && <Modal title="프로젝트 ZIP 가져오기" onClose={() => setImportOpen(false)}><form onSubmit={event => { void importFile(event); }}><p>Projects에서 반출한 ZIP을 선택해 주세요. 서버가 hash·경로·참조와 ID 중복을 검사합니다.</p><Field label="프로젝트 ZIP · 최대 8 MB"><Input type="file" required accept=".zip,application/zip" onChange={event => setFile(event.target.files?.[0] ?? null)} /></Field>{error && <ErrorNotice error={error} />}<div className="form-actions"><ActionButton type="button" onClick={() => setImportOpen(false)}>닫기</ActionButton><ActionButton className="primary" type="submit" disabled={busy || !file}>{busy ? "검사·가져오는 중…" : "서버에서 검사 후 가져오기"}</ActionButton></div></form></Modal>}
+        {importOpen && <Modal title="Projects 백업 ZIP 복원" onClose={() => setImportOpen(false)}><form onSubmit={event => { void importFile(event); }}><p>Projects에서 저장한 백업 ZIP을 선택해 주세요. 기존 프로젝트의 항목과 관계를 복원합니다. Git 소스 ZIP은 별도의 만들기 기능을 사용해 주세요.</p><Field label="Projects 백업 ZIP · 최대 8 MB"><Input type="file" required accept=".zip,application/zip" onChange={event => setFile(event.target.files?.[0] ?? null)} /></Field>{error && <ErrorNotice error={error} />}<div className="form-actions"><ActionButton type="button" onClick={() => setImportOpen(false)}>닫기</ActionButton><ActionButton className="primary" type="submit" disabled={busy || !file}>{busy ? "검사·복원 중…" : "백업 검사 후 복원"}</ActionButton></div></form></Modal>}
         {gitOpen && <GitImport onClose={() => setGitOpen(false)} onCreated={project => { setGitOpen(false); onImported(project); }} />}
+        {gitZipOpen && <GitZipImport onClose={() => setGitZipOpen(false)} onCreated={project => { setGitZipOpen(false); onImported(project); }} />}
     </>;
 }

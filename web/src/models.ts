@@ -132,6 +132,13 @@ export const gitPreviewSchema = z.object({
     warnings: z.array(text),
 });
 export type GitPreview = z.infer<typeof gitPreviewSchema>;
+export const gitZipPreviewSchema = z.object({
+    archive_sha256: text, archive_name: text, path: text, kind: text,
+    scopes: z.array(z.object({ path: text, label: text })),
+    manifest_path: text, suggested_name: text, suggested_goal: text,
+    warnings: z.array(text),
+});
+export type GitZipPreview = z.infer<typeof gitZipPreviewSchema>;
 const countPair = z.object({ total: z.number().nonnegative() });
 export const summarySchema = z.object({
     items_by_kind: z.record(text, z.number().nonnegative()),

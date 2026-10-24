@@ -1,6 +1,6 @@
 import { z } from "zod";
 import {
-    baselineSchema, catalogSchema, gitPreviewSchema, itemSchema, linkSchema, projectSchema,
+    baselineSchema, catalogSchema, gitPreviewSchema, gitZipPreviewSchema, itemSchema, linkSchema, projectSchema,
     repositoryActivitySchema,
     reconnectSchema, resolveSchema, revisionSchema, runSchema, runtimeSchema,
     sessionSchema, summarySchema, taskViewSchema, testRunSchema, traceSchema,
@@ -88,6 +88,8 @@ export const api = {
     importProject: (archive: string) => request("/api/projects/import", projectSchema, { method: "POST", body: { archive_base64: archive } }),
     previewGit: (repository_url: string, path = "") => request("/api/projects/from-git/preview", gitPreviewSchema, { method: "POST", body: { repository_url, path } }),
     importGit: (body: unknown) => request("/api/projects/from-git", projectSchema, { method: "POST", body }),
+    previewGitZip: (body: unknown) => request("/api/projects/from-git-zip/preview", gitZipPreviewSchema, { method: "POST", body }),
+    importGitZip: (body: unknown) => request("/api/projects/from-git-zip", projectSchema, { method: "POST", body }),
     repositoryActivity: (pid: string, signal?: AbortSignal) => request(`${projectPath(pid)}/repository-activity`, z.array(repositoryActivitySchema), { signal }),
     summary: (pid: string, signal?: AbortSignal) => request(`${projectPath(pid)}/summary`, summarySchema, { signal }),
     items: (pid: string, signal?: AbortSignal) => request(`${projectPath(pid)}/items`, z.array(itemSchema), { signal }),

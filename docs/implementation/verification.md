@@ -2,6 +2,25 @@
 
 2026-10-21 · Windows / Python 3.12.14 / Node 24.21.0 / PostgreSQL 17.11
 
+## 2026-10-25 Git ZIP 생성·백업 복원 문구
+
+APP-REQ-035~036·AC-65~68의 로컬 변경을 검사했다. 프로젝트 목록은
+`백업 ZIP 복원`·`원격 GitHub에서 만들기`·`Git ZIP에서 만들기`를 구분하고,
+백업 안내는 `Projects에서 저장한 백업 ZIP`이라고 표시한다. Git 소스 ZIP은
+package manifest만 읽어 목표를 제안하며 commit·PR 이력을 생성하지 않는다.
+
+| 검증 층위 | 결과 |
+|---|---|
+| 실제 공개 ZIP 읽기 | GitHub `statusline` main Download ZIP 73,426바이트를 실제로 받아 브라우저 확장·`manifest.json`·`Statusline`을 확인. `vscode-extension-quickstart` main ZIP 393,301바이트에서 하위 폴더 두 개를 찾고 `quickstart-extension`을 VS Code 확장으로 분류. |
+| 실제 로컬 Git archive | 현재 저장소 HEAD의 `git archive --format=zip` 6,655,213바이트를 메모리에서 분석해 `pyproject.toml`·Python 패키지·`projects-app`을 확인. 소스 추출·실행·DB 저장 없음. |
+| PostgreSQL·단위 검사 | GitHub ZIP·루트 없는 archive·하위 scope·위험 경로·백업 ZIP 혼동·해시 충돌·인증/CSRF·이력 없음 검사. `docker compose up -d db`, `uv run projects migrate`, 전체 `uv run pytest -q` 196개 통과. |
+| 웹·브라우저 mock | `npm --prefix web run check` 46개 통과. Playwright/Edge의 1440px·390px에서 백업 문구, Git ZIP 선택→목표 확인→생성과 기존 원격 GitHub 흐름·가로 넘침 없음 확인. Mock이므로 브라우저에서 실제 ZIP 파서와 PostgreSQL을 연결한 결과는 아님. |
+| 정적 검사·빌드 | Ruff check/format, mypy, `npm --prefix web run build` 통과. favicon SVG·10종 PNG·ICO 확인. |
+
+실제 공개 ZIP은 읽기 전용으로 내려받아 메모리에서 분석했다. 비공개 ZIP,
+운영 배포, 물리 기기 검증은 수행하지 않았다. ZIP 파일명·package 설명은
+검토 전 입력이며 commit·PR 이력을 주장하는 근거로 사용하지 않는다.
+
 ## 2026-10-24 GitHub 저장소 이관
 
 APP-REQ-029~034·AC-59~64의 로컬 구현을 검사했다. 미리보기는 manifest의

@@ -31,6 +31,11 @@ export function Overview({ project, items, revision }: {
             <p>요건·문서·작업·테스트는 각각의 근거와 상태로 관리합니다. 기준선은 추적·변경 화면에서 확인할 수 있습니다.</p>
         </CardContent></Card>
         {project.repository_url && <RepositoryHistory project={project} />}
+        {!project.repository_url && project.repository_imported_at && project.repository_kind && <Card className="overview-panel repository-history"><CardContent><section>
+            <h2>Git ZIP에서 시작</h2>
+            <p className="muted small">{project.repository_path || "ZIP 전체"} · {project.repository_kind} · {project.repository_manifest || "package 근거 없음"}</p>
+            <p className="muted small">ZIP에는 commit·PR 이력이 없습니다. 분석한 ZIP의 파일명과 SHA-256은 시작 메모에서 확인할 수 있습니다.</p>
+        </section></CardContent></Card>}
         {summary.status === "loading" && <Loading />}
         {summary.status === "error" && <ErrorNotice error={summary.error} retry={summary.reload} />}
         {summary.status === "ready" && <>

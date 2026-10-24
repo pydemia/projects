@@ -42,6 +42,7 @@ from projects.database import (
     utcnow,
 )
 from projects.domain import Problem, validate_item_data
+from projects.git_zip_import import inspect_git_zip
 from projects.records import (
     add_link,
     create_baseline,
@@ -64,6 +65,8 @@ from projects.schemas import (
     ExpectedRevision,
     GitImportInput,
     GitPreviewInput,
+    GitZipImportInput,
+    GitZipPreviewInput,
     ImportInput,
     ItemInput,
     ItemUpdate,
@@ -418,6 +421,55 @@ def create_app(
                     },
                 )
             )
+        db.flush()
+        return serialize(project)
+
+    @app.post("/api/projects/from-git-zip/preview")
+    def preview_git_zip(
+        payload: GitZipPreviewInput, db: DB, user: User
+    ) -> dict:
+        return inspect_git_zip(
+            payload.archive_base64, payload.archive_name, payload.path
+        )
+
+    @app.post("/api/projects/from-git-zip", status_code=201)
+    def import_git_zip(payload: GitZipImportInput, db: DB, user: User) -> dict:
+        if not payload.name.strip():
+            raise Problem(422, "프로젝트 이름을 입력해 주세요.")
+        preview = inspect_git_zip(
+            payload.archive_base64, payload.archive_name, payload.path
+        )
+        if preview["archive_sha256"] != payload.expected_sha256:
+            raise Problem(
+                409, "ZIP 파일이 변경되었습니다. 다시 분석해 주세요."
+            )
+        project = Project(
+            owner_id=user.id,
+            name=payload.name.strip(),
+            goal=payload.goal.strip() or preview["suggested_goal"],
+            profile=payload.profile,
+            repository_path=preview["path"],
+            repository_kind=preview["kind"],
+            repository_manifest=preview["manifest_path"],
+            repository_imported_at=utcnow(),
+        )
+        db.add(project)
+        db.flush()
+        create_item(
+            db,
+            project.id,
+            kind="idea",
+            title="Git 소스 ZIP 시작 메모",
+            body=(
+                f"ZIP 파일: {preview['archive_name'] or '(이름 없음)'}\n"
+                f"ZIP SHA-256: {preview['archive_sha256']}\n"
+                f"폴더: {preview['path'] or '(전체)'}\n"
+                f"manifest: {preview['manifest_path'] or '(없음)'}\n"
+                "ZIP에는 commit·PR 이력이 없어 작업 이력을 가져오지 않았습니다. "
+                "package의 이름과 설명은 확인 전 입력입니다."
+            ),
+            data={"source_url": "", "notes": "Git 소스 ZIP 분석"},
+        )
         db.flush()
         return serialize(project)
 

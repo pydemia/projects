@@ -277,7 +277,7 @@ def read_archive(encoded: str) -> dict:
         UnicodeError,
     ) as exc:
         raise Problem(
-            422, "반출 묶음의 형식·크기·hash가 올바르지 않습니다."
+            422, "Projects 백업 ZIP의 형식·크기·hash가 올바르지 않습니다."
         ) from exc
 
 

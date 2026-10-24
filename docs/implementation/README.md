@@ -43,7 +43,7 @@ npm --prefix web run dev
 
 ## GitHub 저장소에서 시작
 
-프로젝트 목록의 `GitHub 저장소에서 만들기`에 `https://github.com/owner/repo`
+프로젝트 목록의 `원격 GitHub에서 만들기`에 `https://github.com/owner/repo`
 주소를 입력합니다. 미리보기에서 package/extension manifest에서 제안한 목표,
 기본 branch의 commit, 하위 package 폴더, 최근 commit·PR을 확인하고
 이름·목표·프로필을 수정해 생성합니다. 작업 이력은 이관 시점의 읽기 전용
@@ -55,6 +55,12 @@ snapshot이며 Projects 작업의 완료 판정으로 변환되지 않습니다.
 설정합니다. 허용 목록은 `owner/repo`를 쉼표로 구분합니다. 토큰은 브라우저,
 API 응답, ZIP, Git에 포함하지 않습니다. 익명 GitHub 호출 한도나 읽기 권한
 오류가 생기면 서버 설정을 확인합니다.
+
+GitHub Download ZIP 또는 `git archive --format=zip` 파일은 `Git ZIP에서
+만들기`에서 선택합니다. 분석 후 package 폴더와 목표를 확인해 생성합니다.
+ZIP은 commit·PR 이력을 담지 않으므로 최근 작업 이력이 필요하면 원격
+GitHub URL을 사용합니다. `백업 ZIP 복원`은 Projects에서 저장한 백업을
+복원할 때만 사용합니다.
 
 ## 검사
 

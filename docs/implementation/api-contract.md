@@ -123,6 +123,21 @@ conflict/defer 후보는 결정 기록까지만 남기며 실행 작업을 자�
 - `POST /api/projects/import` 입력 `{archive_base64}` → Project.
   해시·형식·크기·경로·참조를 검증하며 ID 충돌을 거부한다.
 
+## Git 소스에서 프로젝트 생성
+
+- `POST /api/projects/from-git/preview` 입력 `{repository_url, path?}` →
+  URL·기본 branch SHA·package 근거·선택 가능 폴더·최근 commit/PR 미리보기.
+- `POST /api/projects/from-git` 입력 `{repository_url, path?, expected_sha,
+  name, goal?, profile?}` → Project. 변경된 SHA와 동일 출처/폴더 중복은 409.
+- `POST /api/projects/from-git-zip/preview` 입력 `{archive_base64,
+  archive_name?, path?}` → ZIP SHA-256·package 근거·폴더·목표 초안·경고.
+- `POST /api/projects/from-git-zip` 입력 `{archive_base64, archive_name?,
+  path?, expected_sha256, name, goal?, profile?}` → Project. 변경된 ZIP은
+  409. ZIP 원본과 commit/PR 이력은 저장하지 않는다.
+
+네 경로는 로그인·CSRF가 필요하다. `projects/import`는 Projects 백업 복원
+전용이며 Git 소스 ZIP과 다른 형식이다.
+
 ## 스킬 모듈 Python 인터페이스
 
 루트는 DB·worker·API를 소유한다. runtime leaf는 아래 순수 Python/HTTP

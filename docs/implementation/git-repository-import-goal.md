@@ -57,3 +57,27 @@ PostgreSQL에 프로젝트, 이관 메모, commit·PR snapshot을 원자적으�
 공통 UI와 favicon을 보존하고 AGENTS.md의 백엔드·웹 검사를 실행한다.
 실제 공개 GitHub 저장소와 mock/private 경계를 구분해 기록한다.
 ```
+
+## Git ZIP 생성 확장 · 2026-10-25
+
+사용자 결정에 따라 백업 복원의 `반출한 ZIP` 표현을 `Projects에서 저장한
+백업 ZIP`으로 바꾸고, 프로젝트 목록의 세 동작을 `백업 ZIP 복원`·`원격
+GitHub에서 만들기`·`Git ZIP에서 만들기`로 구분한다. 기존 원격 URL 가져오기는
+유지한다. Git ZIP은 [AC-65~68](../planning/15-git-repository-import.md#git-소스-zip과-백업-zip의-구분)에
+따라 구현한다.
+
+1. `git_zip_import.py`가 base64 ZIP의 압축 크기·항목 수·총 해제 크기·경로·
+   암호화·링크를 검사한다. ZIP을 풀거나 `setup.py`를 실행하지 않고 선택한
+   폴더의 작은 manifest만 읽어 종류와 목표를 제안한다.
+2. 인증·CSRF가 적용된 분석·생성 API를 분리한다. 생성 시 ZIP SHA-256을
+   다시 확인하고 PostgreSQL에 프로젝트와 이관 메모를 한 트랜잭션으로
+   저장한다. ZIP 원본과 commit·PR 행은 저장하지 않는다.
+3. 공통 UI 컴포넌트로 파일 선택→분석→폴더·목표 검토→생성을 제공한다.
+   좁은 화면과 백업/소스 ZIP의 혼동 없는 문구를 검사한다.
+4. 실제 ZIP 형식은 GitHub Download ZIP의 루트 폴더와 `git archive`의
+   루트 없는 파일 구성을 단위·PostgreSQL 통합 검사로 재현한다. 웹
+   component·브라우저 mock과 백엔드 실검증을 구분해 기록한다.
+
+이 확장은 기존 GitHub 가져오기 goal의 완료 판정을 변경하지 않는다.
+Git ZIP은 파일 snapshot이므로 commit·PR 이력을 제공하지 않는다는 제약을
+사용자가 분석 단계에서 확인하도록 한다.

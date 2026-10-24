@@ -187,3 +187,25 @@ favicon SHA-256은
 `prompt=select_account`가 유지됐다. Edge에서 로그인 화면과 계정 선택까지
 열었고, 계정 로그인은 Microsoft Authenticator 승인 대기 중이다. 따라서
 인증 후 실제 화면 조작과 물리 기기의 OS 키보드·안전 영역은 아직 검증하지 않았다.
+
+## 2026-10-25 모바일 모달 위치 재수정 배포
+
+물리 기기 사진에서 확인된 프로젝트 생성 모달의 가로 이탈에 대응해
+`2d37f3d`를 배포했다. 운영 source hash는
+`6e96df4f91428268367a8091a99af12ae7cce95999b11844376867c5ff192824`,
+archive SHA-256은
+`39db63f8aa3f69a0be54575d4cbc2f1c5fe0795daffad8d0f36bd613c35918e4`다.
+허용된 149개 파일을 Git HEAD blob과 대조하고 서버에서 archive hash를
+다시 확인했다. 분리된 release 디렉터리에서
+`pydemia-projects:6e96df4f91428268` 이미지를 빌드했다.
+
+전환 전에 PostgreSQL custom dump를 `pg_restore --list`로 검사하고,
+`state/`·`.secrets/`·Compose 설정·기존 배포 소스를 서버 전용
+`/home/pydemia/.local/share/projects-backups/20261024T205533Z`에 저장했다.
+전환 후 앱과 DB가 healthy, OAuth2 Proxy가 실행 중이며 Alembic은 `0006`이다.
+앱 내부 `/health`·HTML·JS·CSS·favicon 응답은 새 이미지의 빌드 파일과
+바이트 단위로 일치했다. 공개 HTTPS의 미인증 API는 401, 로그인 화면은
+200, Microsoft 인증 시작은 302 및 `prompt=select_account`다.
+인증된 운영 모바일 화면과 물리 기기 safe area·OS 키보드는 이 배포에서
+직접 검증하지 못했다. 로컬 모바일 브라우저 검사는
+[별도 기록](verification.md#2026-10-25-모바일-모달-재점검)에 있다.

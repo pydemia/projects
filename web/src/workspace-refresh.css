@@ -163,6 +163,4 @@
   .projects-theme .workspace-collection .doc-item { flex: 0 0 210px; white-space: normal; }
   .projects-theme .workspace-detail { min-height: 240px; }
   .projects-theme .workspace-detail > div { padding: 18px; }
-  :is(.projects-theme, [data-theme-portal]) .projects-dialog .modal-head { padding: 16px; }
-  :is(.projects-theme, [data-theme-portal]) .projects-dialog .modal-body { padding: 16px; }
 }

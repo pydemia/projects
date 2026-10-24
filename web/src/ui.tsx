@@ -1,5 +1,5 @@
-import { cloneElement, lazy, Suspense } from "react";
-import type { ReactElement, ReactNode } from "react";
+import { cloneElement, lazy, Suspense, useEffect, useState } from "react";
+import type { CSSProperties, ReactElement, ReactNode } from "react";
 import { statusLabels } from "./models";
 import { navigate, routeUrl } from "./hooks";
 import type { Route } from "./hooks";
@@ -75,8 +75,30 @@ export function RouteLink({ patch, children, className = "", current, appearance
 export function Modal({ title, children, onClose, wide = false, className = "" }: {
     title: string; children: ReactNode; onClose: () => void; wide?: boolean; className?: string;
 }) {
+    const [viewport, setViewport] = useState(readVisibleViewport);
+    const [returnFocus] = useState<HTMLElement | null>(() => typeof document !== "undefined" && document.activeElement instanceof HTMLElement ? document.activeElement : null);
+    useEffect(() => {
+        const visual = window.visualViewport;
+        const update = () => setViewport(readVisibleViewport());
+        window.addEventListener("resize", update);
+        visual?.addEventListener("resize", update);
+        visual?.addEventListener("scroll", update);
+        return () => {
+            window.removeEventListener("resize", update);
+            visual?.removeEventListener("resize", update);
+            visual?.removeEventListener("scroll", update);
+        };
+    }, []);
+    const viewportStyle = {
+        "--dialog-visible-top": `${viewport.top}px`,
+        "--dialog-visible-left": `${viewport.left}px`,
+        "--dialog-visible-width": `${viewport.width}px`,
+        "--dialog-visible-height": `${viewport.height}px`,
+        "--dialog-visible-bottom": `${viewport.bottom}px`,
+    } as CSSProperties;
     return <Dialog open onOpenChange={open => { if (!open) onClose(); }}>
-        <DialogContent size={wide ? "wide" : "default"} className={`projects-dialog ${className}`}>
+        <DialogContent size={wide ? "wide" : "default"} className={`projects-dialog ${className}`} style={viewportStyle}
+            onCloseAutoFocus={event => { if (returnFocus?.isConnected) { event.preventDefault(); returnFocus.focus(); } }}>
             <DialogHeader className="modal-head"><DialogTitle>{title}</DialogTitle>
                 <Button variant="ghost" className="plain" aria-label="대화상자 닫기" onClick={onClose}>닫기 ×</Button>
             </DialogHeader>
@@ -84,6 +106,15 @@ export function Modal({ title, children, onClose, wide = false, className = "" }
             <div className="modal-body">{children}</div>
         </DialogContent>
     </Dialog>;
+}
+function readVisibleViewport() {
+    if (typeof window === "undefined") return { top: 0, left: 0, width: 0, height: 0, bottom: 0 };
+    const visual = window.visualViewport;
+    const top = visual?.offsetTop ?? 0;
+    const left = visual?.offsetLeft ?? 0;
+    const width = visual?.width ?? window.innerWidth;
+    const height = visual?.height ?? window.innerHeight;
+    return { top, left, width, height, bottom: Math.max(0, window.innerHeight - top - height) };
 }
 export function safeMarkdownUrl(value: string): string {
     if (value.startsWith("#")) return value;

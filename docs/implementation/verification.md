@@ -2,6 +2,30 @@
 
 2026-10-21 · Windows / Python 3.12.14 / Node 24.21.0 / PostgreSQL 17.11
 
+## 2026-10-25 모바일 모달·키보드 사용성 보완
+
+사용자 제보에 따라 공통 Dialog의 모바일 위치와 스크롤 소유권을 다시 검사했다.
+기존 320×568 프로젝트 생성은 528px 높이의 가운데 모달이었고, 작업·더보기
+시트는 레이아웃 viewport 하단에 고정되어 가상 키보드가 보이는 영역을 줄일
+때 버튼이 가려질 수 있었다. 일반 긴 폼은 모바일 전체 화면, 짧은 작업·더보기는
+하단 시트로 표시하도록 조정했다. `visualViewport` resize/scroll에서 가시
+영역의 상단·폭·높이·하단을 반영하고, 폼 저장 행과 짧은 시트의 주요 행동은
+스크롤 중 접근 가능하게 했다. 닫기 후 원래 버튼으로 초점이 돌아오는지
+확인했다. 공통 `pydemia-ui/Dialog`를 계속 사용한다.
+
+| 검증 층위 | 결과 |
+|---|---|
+| 모바일 브라우저 mock | Edge 모바일 에뮬레이션에서 390×844·320×568·667×375의 프로젝트 생성, Git ZIP, 아이디어 긴 폼, 더보기, 작업 추가 모달을 열고 가시 영역 밖으로 벗어나지 않는지 검사. 320×568에서 `visualViewport.height`를 300/200px, `offsetTop`을 30px로 모사해 헤더·확인 버튼 위치와 초점 복귀를 검증. 실제 OS 키보드 조작은 아님. |
+| 실제 앱·PostgreSQL | 무작위 전용 schema를 만드는 `scripts/verify-mobile-browser.py`를 실행해 작업 추가·필터·일괄 변경·더보기 시트의 실제 API 흐름과 위치, Today/Inbox/보드·문서 초안, 320~430px 넘침, 데스크톱·테마·favicon을 확인. 테스트 schema만 정리. |
+| 회귀·정적 검사 | `docker compose up -d db`, `uv run projects migrate`, 전체 `uv run pytest -q` 196개, Ruff check/format, mypy, `npm --prefix web run check` 46개, 웹 빌드·favicon 검사 통과. |
+
+시각 근거: [프로젝트 만들기 320px](screenshots/mobile-dialogs/project-create-320.png),
+[긴 아이디어 폼 하단 320px](screenshots/mobile-dialogs/idea-create-bottom-320.png),
+[작업 추가 시트 320px](screenshots/mobile-dialogs/task-add-320.png),
+[더보기 시트 390px](screenshots/mobile-experience/more-390.png).
+물리 기기의 iOS/Android 키보드, 노치·안전 영역과 확대 동작은 이번 브라우저
+모사로 판정하지 않았다. 운영 배포도 이번 변경에 포함하지 않았다.
+
 ## 2026-10-25 Git ZIP 생성·백업 복원 문구
 
 APP-REQ-035~036·AC-65~68의 로컬 변경을 검사했다. 프로젝트 목록은

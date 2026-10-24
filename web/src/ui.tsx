@@ -76,28 +76,32 @@ export function Modal({ title, children, onClose, wide = false, className = "" }
     title: string; children: ReactNode; onClose: () => void; wide?: boolean; className?: string;
 }) {
     const [viewport, setViewport] = useState(readVisibleViewport);
+    const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" &&
+        (window.matchMedia?.("(max-width: 760px)").matches ?? window.innerWidth <= 760));
     const [returnFocus] = useState<HTMLElement | null>(() => typeof document !== "undefined" && document.activeElement instanceof HTMLElement ? document.activeElement : null);
     useEffect(() => {
         const visual = window.visualViewport;
+        const mobileQuery = window.matchMedia?.("(max-width: 760px)");
         const update = () => setViewport(readVisibleViewport());
+        const updateMobile = () => setIsMobile(mobileQuery?.matches ?? window.innerWidth <= 760);
         window.addEventListener("resize", update);
         visual?.addEventListener("resize", update);
         visual?.addEventListener("scroll", update);
+        mobileQuery?.addEventListener("change", updateMobile);
         return () => {
             window.removeEventListener("resize", update);
             visual?.removeEventListener("resize", update);
             visual?.removeEventListener("scroll", update);
+            mobileQuery?.removeEventListener("change", updateMobile);
         };
     }, []);
     const viewportStyle = {
         "--dialog-visible-top": `${viewport.top}px`,
-        "--dialog-visible-left": `${viewport.left}px`,
-        "--dialog-visible-width": `${viewport.width}px`,
         "--dialog-visible-height": `${viewport.height}px`,
         "--dialog-visible-bottom": `${viewport.bottom}px`,
     } as CSSProperties;
     return <Dialog open onOpenChange={open => { if (!open) onClose(); }}>
-        <DialogContent size={wide ? "wide" : "default"} className={`projects-dialog ${className}`} style={viewportStyle}
+        <DialogContent size={isMobile ? "fullscreen" : wide ? "wide" : "default"} className={`projects-dialog ${className}`} style={viewportStyle}
             onCloseAutoFocus={event => { if (returnFocus?.isConnected) { event.preventDefault(); returnFocus.focus(); } }}>
             <DialogHeader className="modal-head"><DialogTitle>{title}</DialogTitle>
                 <Button variant="ghost" className="plain" aria-label="대화상자 닫기" onClick={onClose}>닫기 ×</Button>
@@ -108,13 +112,11 @@ export function Modal({ title, children, onClose, wide = false, className = "" }
     </Dialog>;
 }
 function readVisibleViewport() {
-    if (typeof window === "undefined") return { top: 0, left: 0, width: 0, height: 0, bottom: 0 };
+    if (typeof window === "undefined") return { top: 0, height: 0, bottom: 0 };
     const visual = window.visualViewport;
     const top = visual?.offsetTop ?? 0;
-    const left = visual?.offsetLeft ?? 0;
-    const width = visual?.width ?? window.innerWidth;
     const height = visual?.height ?? window.innerHeight;
-    return { top, left, width, height, bottom: Math.max(0, window.innerHeight - top - height) };
+    return { top, height, bottom: Math.max(0, window.innerHeight - top - height) };
 }
 export function safeMarkdownUrl(value: string): string {
     if (value.startsWith("#")) return value;

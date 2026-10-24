@@ -48,10 +48,12 @@ async function audit(width, height) {
             return {
                 viewport: { width: innerWidth, height: innerHeight, visualHeight: visualViewport?.height ?? innerHeight, visualWidth: visualViewport?.width ?? innerWidth, visualTop: visualViewport?.offsetTop ?? 0, visualLeft: visualViewport?.offsetLeft ?? 0 },
                 dialog: { x: rect.x, y: rect.y, right: rect.right, width: rect.width, height: rect.height, bottom: rect.bottom },
-                body: bodyRect && { y: bodyRect.y, height: bodyRect.height, scrollHeight: body?.scrollHeight },
+                body: bodyRect && { y: bodyRect.y, height: bodyRect.height, scrollHeight: body?.scrollHeight,
+                    clientWidth: body?.clientWidth, scrollWidth: body?.scrollWidth },
                 actions: actionsRect && { y: actionsRect.y, bottom: actionsRect.bottom },
                 primary: primaryRect && { y: primaryRect.y, bottom: primaryRect.bottom },
                 position: style.position, translate: style.translate, transform: style.transform,
+                size: element.dataset.size, centeredClasses: [...element.classList].filter(name => name.includes("translate-")),
             };
             });
             const visible = geometry.viewport;
@@ -68,6 +70,10 @@ async function audit(width, height) {
                 assert.ok(geometry.primary.bottom <= visible.visualTop + visible.visualHeight + 1, `${label}: primary action hidden`);
             }
             assert.equal(geometry.transform, "none", `${label}: stale transform`);
+            assert.equal(geometry.size, "fullscreen", `${label}: mobile dialog must use shared fullscreen variant`);
+            assert.deepEqual(geometry.centeredClasses, [], `${label}: centered translation must not remain on fullscreen dialog`);
+            if (geometry.body) assert.ok(geometry.body.scrollWidth <= geometry.body.clientWidth + 1,
+                `${label}: dialog content overflows horizontally`);
             process.stdout.write(`${width}x${height} ${label} ${JSON.stringify(geometry)}\n`);
         }
         await page.getByRole("button", { name: "+ 프로젝트 만들기" }).click();
@@ -105,6 +111,11 @@ async function audit(width, height) {
         assert.equal(returnedFocus, "+ 프로젝트 만들기", "project dialog must restore trigger focus");
         await page.getByRole("button", { name: "Git ZIP에서 만들기" }).click();
         await report("Git ZIP");
+        if (width === 320 && height === 568) await page.screenshot({ path: path.resolve(".projects/research/mobile-dialogs/git-zip.png") });
+        await page.getByRole("dialog").getByRole("button", { name: "대화상자 닫기" }).click();
+        await page.getByRole("button", { name: "원격 GitHub에서 만들기" }).click();
+        await report("remote GitHub");
+        if (width === 320 && height === 568) await page.screenshot({ path: path.resolve(".projects/research/mobile-dialogs/remote-github.png") });
         await page.getByRole("dialog").getByRole("button", { name: "대화상자 닫기" }).click();
         await page.getByRole("navigation", { name: "모바일 주요 탐색" }).getByRole("button", { name: "더보기" }).click();
         await report("more");

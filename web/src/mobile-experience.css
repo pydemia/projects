@@ -38,7 +38,7 @@
   .projects-theme .metrics,
   .projects-theme .task-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .projects-theme .footer-note { padding-bottom: 5px; }
-  :is(.projects-theme, [data-theme-portal]) .projects-dialog { display: flex; flex-direction: column; top: var(--dialog-visible-top, 0px); left: var(--dialog-visible-left, 0px); width: var(--dialog-visible-width, 100vw); height: var(--dialog-visible-height, 100dvh); max-width: none; max-height: none; padding: 0; overflow: hidden; border: 0; border-radius: 0; translate: none; transform: none; }
+  :is(.projects-theme, [data-theme-portal]) .projects-dialog { display: flex; flex-direction: column; top: var(--dialog-visible-top, 0px); right: 0; left: 0; width: 100%; height: var(--dialog-visible-height, 100dvh); max-width: none; max-height: none; padding: 0; overflow: hidden; border: 0; border-radius: 0; }
   :is(.projects-theme, [data-theme-portal]) .projects-dialog .modal-head { flex: 0 0 auto; padding: calc(12px + env(safe-area-inset-top)) 16px 12px; }
   :is(.projects-theme, [data-theme-portal]) .projects-dialog .modal-head button { min-width: 44px; min-height: 44px; }
   :is(.projects-theme, [data-theme-portal]) .projects-dialog .modal-body { flex: 1 1 auto; min-height: 0; max-height: none; overflow-y: auto; overscroll-behavior: contain; padding: 16px 16px calc(16px + env(safe-area-inset-bottom)); }

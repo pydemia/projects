@@ -158,3 +158,32 @@ Microsoft 인증 요청에는 `prompt`가 없었고, 수정 후에는
 로그인 페이지 200, Microsoft 로그인 시작 302와 `prompt=select_account`,
 앱 정적 자산과 favicon 응답을 확인했다. 다른 계정으로 실제 403을 거친
 브라우저 재시도는 이번 검사에 포함하지 않았다.
+
+## 2026-10-25 Git 소스 가져오기·모바일 모달 운영 배포
+
+GitHub URL·Git 소스 ZIP 가져오기와 모바일 모달 보완을 포함한
+`d65b4ca1c577745ed60505c12b348806389b419a`의 GitHub Actions
+`checks`가 backend·web 모두 성공했다. 작업 트리는 깨끗했고 allowlist
+배포 archive의 149개 파일을 해당 HEAD의 Git blob과 대조했다. source hash는
+`9041e44edb611919737158ce99a3cf4d850300c666346faeb36e4028a3ff1519`,
+archive SHA-256은
+`56aec70958ca28face2071ab12c6fa0cd02a7fb1a1d3b7ac614f830ff834149b`다.
+
+서버의 분리된 release 디렉터리에서 archive hash를 다시 확인하고
+`pydemia-projects:9041e44edb611919` 이미지를 빌드했다. 전환 전에
+PostgreSQL custom dump를 생성해 `pg_restore --list`로 읽을 수 있음을
+확인하고, `state/`·`.secrets/`·Compose 설정과 기존 배포 소스를
+`/home/pydemia/.local/share/projects-backups/20261024T201857Z`에 백업했다.
+백업 파일은 서버의 비공개 디렉터리에만 둔다.
+
+전환 후 app·DB가 healthy이고 OAuth2 Proxy가 실행 중이며 Alembic은
+`0006`이다. 앱 내부 `/health`와 HTML·JS·CSS·favicon 응답이 이미지의
+빌드 파일과 바이트 단위로 일치한다. 배포 CSS에 모바일 dialog 규칙이,
+앱 OpenAPI에 Git URL·Git ZIP의 미리보기/생성 네 경로가 있는지 확인했다.
+favicon SHA-256은
+`210e38b2f2f4dace4d0bf32f76dc54c17c8b335a5a056868aebf4795ae8eae33`다.
+공개 HTTPS에서 비로그인 `/api/session`은 401, `/oauth2/sign_in`은
+로그인 화면 200, `/oauth2/start`는 Microsoft 단일 테넌트로 302이며
+`prompt=select_account`가 유지됐다. Edge에서 로그인 화면과 계정 선택까지
+열었고, 계정 로그인은 Microsoft Authenticator 승인 대기 중이다. 따라서
+인증 후 실제 화면 조작과 물리 기기의 OS 키보드·안전 영역은 아직 검증하지 않았다.

@@ -18,13 +18,15 @@
 | 모바일 브라우저 mock | Edge 모바일 에뮬레이션에서 390×844·320×568·667×375의 프로젝트 생성, Git ZIP, 아이디어 긴 폼, 더보기, 작업 추가 모달을 열고 가시 영역 밖으로 벗어나지 않는지 검사. 320×568에서 `visualViewport.height`를 300/200px, `offsetTop`을 30px로 모사해 헤더·확인 버튼 위치와 초점 복귀를 검증. 실제 OS 키보드 조작은 아님. |
 | 실제 앱·PostgreSQL | 무작위 전용 schema를 만드는 `scripts/verify-mobile-browser.py`를 실행해 작업 추가·필터·일괄 변경·더보기 시트의 실제 API 흐름과 위치, Today/Inbox/보드·문서 초안, 320~430px 넘침, 데스크톱·테마·favicon을 확인. 테스트 schema만 정리. |
 | 회귀·정적 검사 | `docker compose up -d db`, `uv run projects migrate`, 전체 `uv run pytest -q` 196개, Ruff check/format, mypy, `npm --prefix web run check` 46개, 웹 빌드·favicon 검사 통과. |
+| 운영 반영 | `d65b4ca`의 GitHub Actions backend·web 성공을 확인하고 `pydemia-projects:9041e44edb611919`로 배포. app·DB healthy, Alembic `0006`, 내부 HTML·JS·CSS·favicon 바이트 일치와 공개 HTTPS의 로그인 시작을 확인. 인증 후 실제 화면은 Microsoft Authenticator 승인 대기. [배포 기록](deployment.md#2026-10-25-git-소스-가져오기모바일-모달-운영-배포). |
 
 시각 근거: [프로젝트 만들기 320px](screenshots/mobile-dialogs/project-create-320.png),
 [긴 아이디어 폼 하단 320px](screenshots/mobile-dialogs/idea-create-bottom-320.png),
 [작업 추가 시트 320px](screenshots/mobile-dialogs/task-add-320.png),
 [더보기 시트 390px](screenshots/mobile-experience/more-390.png).
 물리 기기의 iOS/Android 키보드, 노치·안전 영역과 확대 동작은 이번 브라우저
-모사로 판정하지 않았다. 운영 배포도 이번 변경에 포함하지 않았다.
+모사로 판정하지 않았다. 운영 배포는 위와 같이 진행했으며, 인증 후 화면
+조작과 물리 기기 사용성은 별도 확인이 필요하다.
 
 ## 2026-10-25 Git ZIP 생성·백업 복원 문구
 
@@ -42,7 +44,8 @@ package manifest만 읽어 목표를 제안하며 commit·PR 이력을 생성하
 | 정적 검사·빌드 | Ruff check/format, mypy, `npm --prefix web run build` 통과. favicon SVG·10종 PNG·ICO 확인. |
 
 실제 공개 ZIP은 읽기 전용으로 내려받아 메모리에서 분석했다. 비공개 ZIP,
-운영 배포, 물리 기기 검증은 수행하지 않았다. ZIP 파일명·package 설명은
+이 절의 로컬 판정 당시 운영 배포와 물리 기기 검증은 수행하지 않았다. 운영
+배포는 위 기록에서 확인하고 물리 기기 검증은 남았다. ZIP 파일명·package 설명은
 검토 전 입력이며 commit·PR 이력을 주장하는 근거로 사용하지 않는다.
 
 ## 2026-10-24 GitHub 저장소 이관

@@ -41,6 +41,21 @@ npm --prefix web run dev
 채택 후보는 요건·설계 보완 작업·구현 작업·회귀 케이스로 연결하며,
 중복·충돌·보류는 결정 기록으로 남깁니다. 문서 적용과 후보 적용은 별도 선택입니다.
 
+## GitHub 저장소에서 시작
+
+프로젝트 목록의 `GitHub 저장소에서 만들기`에 `https://github.com/owner/repo`
+주소를 입력합니다. 미리보기에서 package/extension manifest에서 제안한 목표,
+기본 branch의 commit, 하위 package 폴더, 최근 commit·PR을 확인하고
+이름·목표·프로필을 수정해 생성합니다. 작업 이력은 이관 시점의 읽기 전용
+snapshot이며 Projects 작업의 완료 판정으로 변환되지 않습니다. GitHub에
+쓰기·clone·코드 실행은 하지 않습니다.
+
+공개 저장소는 별도 인증 없이 읽습니다. 허용한 비공개 저장소에 한해 서버
+환경변수 `PROJECTS_GITHUB_TOKEN`과 `PROJECTS_GITHUB_PRIVATE_REPOS`를
+설정합니다. 허용 목록은 `owner/repo`를 쉼표로 구분합니다. 토큰은 브라우저,
+API 응답, ZIP, Git에 포함하지 않습니다. 익명 GitHub 호출 한도나 읽기 권한
+오류가 생기면 서버 설정을 확인합니다.
+
 ## 검사
 
 ```powershell

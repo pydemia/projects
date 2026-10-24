@@ -19,6 +19,7 @@ from projects.database import (
     Item,
     Link,
     Project,
+    RepositoryActivity,
     Revision,
     SkillRun,
     TaskPosition,
@@ -28,6 +29,7 @@ from projects.database import (
 )
 from projects.domain import Problem, check_dependency_cycle, validate_item_data
 from projects.records import revise_item, serialize
+from projects.repository_import import SHA, repository_name, scoped_path
 from projects.schemas import ReconnectInput, TaskViewInput
 
 
@@ -158,7 +160,12 @@ def reconnect_document(
 
 
 type ArchiveModel = (
-    type[Item] | type[Link] | type[TestRun] | type[Baseline] | type[SkillRun]
+    type[Item]
+    | type[Link]
+    | type[TestRun]
+    | type[Baseline]
+    | type[SkillRun]
+    | type[RepositoryActivity]
 )
 
 ARCHIVE_TABLES: dict[str, ArchiveModel] = {
@@ -167,6 +174,7 @@ ARCHIVE_TABLES: dict[str, ArchiveModel] = {
     "test_runs": TestRun,
     "baselines": Baseline,
     "skill_runs": SkillRun,
+    "repository_activities": RepositoryActivity,
 }
 
 
@@ -278,6 +286,52 @@ def import_project(db: Session, user_id: str, encoded: str) -> Project:
     try:
         project_data = data["project"]
         project_id = project_data["id"]
+        source_url = project_data.get("repository_url")
+        if source_url is not None:
+            if (
+                source_url
+                != f"https://github.com/{repository_name(source_url)}"
+            ):
+                raise ValueError("repository url")
+            scoped_path(project_data.get("repository_path", ""))
+            if not isinstance(
+                project_data.get("repository_sha"), str
+            ) or not SHA.fullmatch(project_data["repository_sha"]):
+                raise ValueError("repository sha")
+        activities = data.get("repository_activities", [])
+        if not isinstance(activities, list) or len(activities) > 30:
+            raise ValueError("repository activities")
+        activity_ids: set[str] = set()
+        activity_keys: set[tuple[str, str]] = set()
+        for activity in activities:
+            if (
+                not isinstance(activity, dict)
+                or activity.get("project_id") != project_id
+            ):
+                raise ValueError("repository activity")
+            kind = activity.get("kind")
+            url = activity.get("url")
+            external_id = activity.get("external_id")
+            if (
+                source_url is None
+                or kind not in ("commit", "pr")
+                or not isinstance(external_id, str)
+                or not isinstance(url, str)
+                or url
+                != f"{source_url}/{'commit/' if kind == 'commit' else 'pull/'}{external_id}"
+                or (kind == "commit" and not SHA.fullmatch(external_id))
+                or (kind == "pr" and not external_id.isdigit())
+                or not isinstance(activity.get("title"), str)
+                or len(activity["title"]) > 300
+                or activity.get("state")
+                not in ("committed", "open", "closed", "merged")
+                or not isinstance(activity.get("id"), str)
+                or activity["id"] in activity_ids
+                or (kind, external_id) in activity_keys
+            ):
+                raise ValueError("repository activity")
+            activity_ids.add(activity["id"])
+            activity_keys.add((kind, external_id))
         if db.get(Project, project_id):
             raise Problem(
                 409,
@@ -422,7 +476,12 @@ def import_project(db: Session, user_id: str, encoded: str) -> Project:
         for key, model in ARCHIVE_TABLES.items():
             if key == "items":
                 continue
-            for row in data[key]:
+            rows = (
+                data.get(key, [])
+                if key == "repository_activities"
+                else data[key]
+            )
+            for row in rows:
                 if row["project_id"] != project_id:
                     raise ValueError("project")
                 if key == "skill_runs" and row["status"] in (
@@ -444,7 +503,13 @@ def import_project(db: Session, user_id: str, encoded: str) -> Project:
 
 def parse_dates(row: dict) -> dict:
     result = dict(row)
-    for key in ("created_at", "updated_at", "lease_until"):
+    for key in (
+        "created_at",
+        "updated_at",
+        "lease_until",
+        "occurred_at",
+        "repository_imported_at",
+    ):
         if result.get(key) is not None:
             result[key] = datetime.fromisoformat(result[key])
     return result

@@ -2,6 +2,26 @@
 
 2026-10-21 · Windows / Python 3.12.14 / Node 24.21.0 / PostgreSQL 17.11
 
+## 2026-10-24 GitHub 저장소 이관
+
+APP-REQ-029~034·AC-59~64의 로컬 구현을 검사했다. 미리보기는 manifest의
+이름·설명·의존성에서 목표를 제안하고, 작업 이력은 최근 commit·PR의
+제목·상태·링크만 가져온다. 소스·README 본문을 기능으로 만들지 않는다.
+
+| 검증 층위 | 결과 |
+|---|---|
+| 실제 공개 GitHub 읽기 | `statusline`: 브라우저 확장·`manifest.json`·이력 15건. `colors`: 웹 앱·`package.json`·16건. `mengto-skills`: 스킬 카탈로그·package 부재 경고·15건. `pydantic-config`: Python 패키지·`setup.py`·2건. `vscode-extension-quickstart`: 루트 일반 저장소 2건, `quickstart-extension` 하위 폴더 VS Code 확장·`package.json`·1건. |
+| API mock·PostgreSQL 통합 | URL·외부 redirect·token 허용 목록·manifest 목표·commit/PR 미리보기, CSRF·소유권·중복·변경된 SHA, 트랜잭션 저장, ZIP 반출·별도 schema 복구·이전 ZIP 호환을 검사. 전체 `uv run pytest -q` 185개 통과. |
+| 웹 컴포넌트·브라우저 | `npm --prefix web run check` 45개 통과. Playwright/Edge에서 mock API로 1440px·390px의 분석→이력 확인→생성 조작과 가로 넘침 없음 확인. |
+| 빌드·정적 검사 | `docker compose up -d db`, `uv run projects migrate`, Ruff check/format, mypy, 웹 빌드 통과. favicon SVG·10종 PNG·ICO 연결 검사 통과. |
+
+실제 GitHub 검사는 공개 저장소의 읽기 전용 요청이었다. 공개 API의 익명
+호출 한도에 도달한 뒤 추가 원격 검사를 중단했다. 비공개 저장소는 서버 token
+미설정으로 실제 접근하지 않았으며 정확한 허용 목록과 비노출 경계는 HTTP
+mock으로 확인했다. 브라우저 검사는 mock API이므로 실제 GitHub 응답과
+PostgreSQL 저장을 한 브라우저 세션에서 동시에 실행한 결과는 아니다.
+운영 배포·운영 Entra 계정·물리 기기 검증도 이번 변경에서는 수행하지 않았다.
+
 ## 2026-10-21 pydemia Glassmorphism·시스템 밝기 기본값
 
 이번 수용 조건은 ① Glassmorphism·pydemia 원본 블루/네이비 기본값,

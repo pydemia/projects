@@ -5,6 +5,7 @@ import os
 import shutil
 from collections.abc import AsyncIterator, Iterator
 from contextlib import asynccontextmanager
+from datetime import datetime
 from pathlib import Path
 from typing import Annotated
 from urllib.parse import urlsplit
@@ -32,6 +33,7 @@ from projects.database import (
     Item,
     Link,
     Project,
+    RepositoryActivity,
     Revision,
     SkillRun,
     TaskView,
@@ -54,11 +56,14 @@ from projects.records import (
     serialize,
     trace,
 )
+from projects.repository_import import GitHubInspector
 from projects.schemas import (
     ApplyInput,
     BaselineInput,
     Credentials,
     ExpectedRevision,
+    GitImportInput,
+    GitPreviewInput,
     ImportInput,
     ItemInput,
     ItemUpdate,
@@ -191,6 +196,9 @@ def create_app(
             close_runner = getattr(app.state.runner, "close", None)
             if callable(close_runner):
                 close_runner()
+            close_github = getattr(app.state.github, "close", None)
+            if callable(close_github):
+                close_github()
             if engine is None:
                 actual_engine.dispose()
 
@@ -203,6 +211,9 @@ def create_app(
     )
     app.state.catalog = ReferenceCatalog(settings.registry_path)
     app.state.runner = runner
+    app.state.github = GitHubInspector(
+        settings.github_token, settings.github_private_repos
+    )
     app.add_middleware(BrowserBoundary)
 
     @app.exception_handler(Problem)
@@ -330,6 +341,86 @@ def create_app(
         db.flush()
         return serialize(project)
 
+    @app.post("/api/projects/from-git/preview")
+    def preview_git(
+        request: Request, payload: GitPreviewInput, db: DB, user: User
+    ) -> dict:
+        return request.app.state.github.inspect(
+            payload.repository_url, payload.path
+        )
+
+    @app.post("/api/projects/from-git", status_code=201)
+    def import_git(
+        request: Request, payload: GitImportInput, db: DB, user: User
+    ) -> dict:
+        if not payload.name.strip():
+            raise Problem(422, "프로젝트 이름을 입력해 주세요.")
+        preview = request.app.state.github.inspect(
+            payload.repository_url, payload.path
+        )
+        if preview["sha"] != payload.expected_sha:
+            raise Problem(
+                409,
+                "기본 branch가 변경되었습니다. 저장소를 다시 분석해 주세요.",
+            )
+        duplicate = db.scalar(
+            select(Project).where(
+                Project.owner_id == user.id,
+                Project.repository_url == preview["repository_url"],
+                Project.repository_path == preview["path"],
+            )
+        )
+        if duplicate is not None:
+            raise Problem(409, "이미 가져온 저장소와 폴더입니다.")
+        project = Project(
+            owner_id=user.id,
+            name=payload.name.strip(),
+            goal=payload.goal.strip() or preview["suggested_goal"],
+            profile=payload.profile,
+            repository_url=preview["repository_url"],
+            repository_path=preview["path"],
+            repository_branch=preview["branch"],
+            repository_sha=preview["sha"],
+            repository_kind=preview["kind"],
+            repository_manifest=preview["manifest_path"],
+            repository_imported_at=utcnow(),
+        )
+        db.add(project)
+        db.flush()
+        create_item(
+            db,
+            project.id,
+            kind="idea",
+            title="GitHub 저장소 이관 메모",
+            body=(
+                f"출처: {preview['repository_url']}\n"
+                f"폴더: {preview['path'] or '(전체)'}\n"
+                f"기본 branch: {preview['branch']}\n"
+                f"commit: {preview['sha']}\n"
+                f"manifest: {preview['manifest_path'] or '(없음)'}\n"
+                f"이관 당시 commit·PR 요약 {len(preview['activities'])}건. "
+                "저장소의 제목과 설명은 확인 전 입력입니다."
+            ),
+            data={
+                "source_url": preview["repository_url"],
+                "notes": "읽기 전용 이관",
+            },
+        )
+        for activity in preview["activities"]:
+            db.add(
+                RepositoryActivity(
+                    project_id=project.id,
+                    **{
+                        **activity,
+                        "occurred_at": datetime.fromisoformat(
+                            activity["occurred_at"]
+                        ),
+                    },
+                )
+            )
+        db.flush()
+        return serialize(project)
+
     # Import is registered before /projects/{project_id}.
     @app.post("/api/projects/import", status_code=201)
     def import_archive(payload: ImportInput, db: DB, user: User) -> dict:
@@ -340,6 +431,18 @@ def create_app(
     @app.get("/api/projects/{project_id}")
     def project_detail(project_id: str, db: DB, user: User) -> dict:
         return serialize(project_for_user(db, project_id, user.id))
+
+    @app.get("/api/projects/{project_id}/repository-activity")
+    def repository_activity(project_id: str, db: DB, user: User) -> list[dict]:
+        project_for_user(db, project_id, user.id)
+        rows = db.scalars(
+            select(RepositoryActivity)
+            .where(RepositoryActivity.project_id == project_id)
+            .order_by(
+                RepositoryActivity.occurred_at.desc(), RepositoryActivity.id
+            )
+        )
+        return [serialize(row) for row in rows]
 
     @app.get("/api/projects/{project_id}/summary")
     def summary(project_id: str, db: DB, user: User) -> dict:

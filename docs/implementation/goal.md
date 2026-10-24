@@ -1,5 +1,9 @@
 # Projects 구현 goal
 
+2026-10-24 로컬 완료 goal: 기존 GitHub 저장소에서 프로젝트를 만드는
+기능은 [요건·기획](../planning/15-git-repository-import.md)과
+[설계·구현 계획](git-repository-import-goal.md)을 따른다.
+
 ## 최근 완료 goal · 모바일 UI·UX 구현 (로컬 검증 완료)
 
 2026-10-22 작성·등록·실행. [모바일 UI·UX 기획](../planning/14-mobile-experience.md)의

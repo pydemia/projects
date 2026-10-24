@@ -83,6 +83,26 @@ PostgreSQL 트랜잭션으로 갱신한다. 열별 빠른 생성도 같은 순�
 자동 반영하지 않는다. 읽기 동기화·webhook은 별도 credential·권한·멱등
 계약을 필요로 한다.
 
+기존 저장소에서 시작하는 흐름은 [이관 기획](15-git-repository-import.md)의
+읽기 전용 GitHub adapter가 담당한다. API는 `github.com/owner/repo` 형식만
+허용하고 고정된 `api.github.com`으로 metadata·기본 branch commit·재귀
+tree·크기 제한이 있는 package/extension manifest blob 및 최근 commit·PR
+요약만 요청한다. URL의 인증 정보,
+임의 호스트·포트·외부 리디렉션과 잘린 tree는 거부한다. 공개 저장소의
+이름 변경은 동일 GitHub API 호스트의 정확한 저장소 metadata 리디렉션만 따른다.
+저장소 코드를 clone하거나
+실행하지 않는다. 비공개 저장소 token은 서버 설정에서만 읽고 정확히 허용한
+저장소에만 보낸다. 미리보기와 생성의 commit을 비교해 기본 branch 변경을
+409로 반환한다.
+
+`projects`의 출처 URL·폴더·branch·commit·유형·manifest는 업무 프로젝트와 소스의
+연결 식별자다. PostgreSQL은 소유자/URL/폴더의 중복을 제한한다. 가져올 때
+이관 메모는 `idea` revision 1로 저장하고 최근 commit·PR은 별도의 읽기 전용
+snapshot에 저장한다. package 정보에서 제안한 목표는 생성 전에 사용자가
+수정할 수 있다. 외부 이력은 Projects 요건·완료 상태의 확정이 아니다.
+임시 Markdown 문서와 SkillRun은
+기존 Note 연계 경계를 유지하며 GitHub Issue 상태 동기화는 시작하지 않는다.
+
 전 화면 UI·UX 개편에서는 `AppShell`/`SideNav`를 전역 외곽으로, `Card`·
 `SearchInput`·`Tabs`를 기획/문서/테스트/SkillRun의 목록→상세 흐름으로
 재사용한다. 필드·체크·선택·대화상자·표·접기 역시 고정한 registry source를

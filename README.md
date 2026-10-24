@@ -10,10 +10,13 @@ skills.pydemia.ai의 원문 스킬로 아이디어를 요건화하고 기획·�
 - [검증 결과와 요구별 근거](docs/implementation/verification.md)
 - [Note 연계 명세](docs/implementation/note-document-handoff.md): 현재 문서는 간단한 임시 Markdown 저장소입니다.
 - [원격 배포·Entra 운영 안내](docs/implementation/deployment.md)
+- [기존 GitHub 저장소 이관](docs/planning/15-git-repository-import.md) · [구현·검증](docs/implementation/git-repository-import-goal.md)
 
 로컬에서 `docker compose up -d db`, `uv sync --locked`, `uv run projects migrate`, `uv run projects serve`를 실행한 뒤, 별도 터미널에서 `npm --prefix web ci`, `npm --prefix web run dev`를 실행합니다. 웹 주소는 `http://127.0.0.1:5173`이며 첫 화면에서 개인 계정을 만듭니다.
 
 아이디어·기존 기능·요구사항, 필수 7종/참고 35종의 임시 문서, 구현 작업·테스트 이력, 관계·변경 영향·기준선, 스킬 실행·선택 적용과 반출을 제공합니다. 실제 Hub와 Codex 실행을 확인했으며 OpenAI 원격 API 호출은 키 미설정으로 미검증입니다. 팀 협업과 Note 실연동은 후속 범위입니다.
+
+GitHub 저장소의 package 정보에서 목표 초안을 만들고 최근 commit·PR을 읽기 전용 이력으로 가져올 수 있습니다. 공개 저장소와 서버에서 허용한 비공개 저장소를 지원합니다.
 
 아래 기획 자료는 초기 제안과 조사 기록입니다. 현재 구현 범위와 최신 사용자 결정은 위 실행 문서를 따릅니다.
 

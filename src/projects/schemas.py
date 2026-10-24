@@ -26,6 +26,18 @@ class ProjectInput(RequestModel):
     profile: Literal["simple", "standard"] = "simple"
 
 
+class GitPreviewInput(RequestModel):
+    repository_url: str = Field(min_length=1, max_length=500)
+    path: str = Field(default="", max_length=200)
+
+
+class GitImportInput(GitPreviewInput):
+    expected_sha: str = Field(pattern=r"^[0-9a-f]{40}$")
+    name: str = Field(min_length=1, max_length=200)
+    goal: str = Field(default="", max_length=20000)
+    profile: Literal["simple", "standard"] = "simple"
+
+
 class ItemInput(RequestModel):
     kind: ItemKind
     title: str = Field(min_length=1, max_length=300)

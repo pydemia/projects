@@ -32,6 +32,8 @@
   .projects-theme .pagehead [data-ui="heading"] { font-size: 25px; }
   .projects-theme .pagehead p { font-size: 12px; }
   .projects-theme .pagehead .actions { flex-shrink: 0; }
+  .projects-theme .pagehead .actions:has(.git-source-action) { width: 100%; min-width: 0; flex-shrink: 1; flex-wrap: wrap; }
+  .projects-theme .pagehead .actions:has(.git-source-action) > button { min-width: 0; flex: 1 1 auto; min-height: 44px; white-space: normal; }
   .projects-theme .pagehead .actions .button:not(.primary) { display: none; }
   .projects-theme .metrics,
   .projects-theme .task-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }

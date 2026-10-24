@@ -30,6 +30,7 @@ export function Overview({ project, items, revision }: {
         <Card variant="subtle" className="scope-note"><CardContent><strong>현재 프로젝트 전체</strong><span className="muted">{project.profile === "simple" ? "간편 프로필" : project.profile === "standard" ? "표준 프로필" : project.profile} · {items.length}개 업무 객체</span>
             <p>요건·문서·작업·테스트는 각각의 근거와 상태로 관리합니다. 기준선은 추적·변경 화면에서 확인할 수 있습니다.</p>
         </CardContent></Card>
+        {project.repository_url && <RepositoryHistory project={project} />}
         {summary.status === "loading" && <Loading />}
         {summary.status === "error" && <ErrorNotice error={summary.error} retry={summary.reload} />}
         {summary.status === "ready" && <>
@@ -46,6 +47,17 @@ export function Overview({ project, items, revision }: {
             </section></CardContent></Card><Card className="overview-panel"><CardContent><section><h2>최근 편집</h2><ul className="activity">{recent.map(item => <li key={item.id}><RouteLink patch={itemRoute(item)}>{item.title}</RouteLink><small>{kindLabels[item.kind]} · r{item.revision} · {dateLabel(item.updated_at)}</small></li>)}</ul>{!recent.length && <p className="muted">아직 작성한 항목이 없습니다.</p>}</section></CardContent></Card></div>
         </>}
     </>;
+}
+function RepositoryHistory({ project }: { project: Project }) {
+    const history = useResource(`repository-activity:${project.id}`, signal => api.repositoryActivity(project.id, signal));
+    return <Card className="overview-panel repository-history"><CardContent><section>
+        <div className="section-head"><h2>GitHub 작업 이력</h2><a href={project.repository_url ?? "#"} target="_blank" rel="noopener noreferrer">저장소 열기 ↗</a></div>
+        <p className="muted small">{project.repository_path || "저장소 전체"} · {project.repository_branch} · {project.repository_sha?.slice(0, 10)} · {project.repository_manifest || "package 근거 없음"}</p>
+        <p className="muted small">이관 당시 최근 commit·PR의 읽기 전용 기록입니다. PR은 저장소 전체 범위입니다.</p>
+        {history.status === "loading" && <Loading />}
+        {history.status === "error" && <ErrorNotice error={history.error} retry={history.reload} />}
+        {history.status === "ready" && <><ul className="activity">{history.data.map(row => <li key={row.id}><a href={row.url} target="_blank" rel="noopener noreferrer">{row.kind === "pr" ? "PR" : "commit"} · {row.title}</a><small>{row.state} · {dateLabel(row.occurred_at)}</small></li>)}</ul>{!history.data.length && <p className="muted">가져온 commit·PR이 없습니다.</p>}</>}
+    </section></CardContent></Card>;
 }
 function Metric({ label, done, total, note }: { label: string; done: number; total: number; note: string }) {
     const percentage = total ? Math.round(done / total * 100) : 0;

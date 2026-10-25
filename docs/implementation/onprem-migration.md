@@ -77,3 +77,23 @@ docker compose --env-file .secrets/server.env -f compose.production.yaml -f comp
 - 로컬 개발 검사는 백엔드 197개, 웹 46개 테스트와 웹 빌드, Ruff·mypy가
   통과했다. 실제 Microsoft 계정 인증 완료와 인증 후 UI 조작, 물리 기기
   검사는 이번 이관에서 수행하지 않았다.
+
+## 2026-10-26 Cloudflare SSL 및 사용자 화면 후속 확인
+
+사용자 기기에서 기존 프로젝트가 보이지 않는다는 피드백에 따라 Cloudflare
+설정을 확인했다. Zone의 SSL 모드는 `Full`, TLS 1.3은 켜져 있었고
+`Always Use HTTPS`는 꺼져 있었다. 다른 호스트에 영향을 주지 않도록
+`projects.pydemia.ai` 전용 Configuration Rule에 `ssl: strict`와
+`disable_rum: true`를 추가하고, 전용 Redirect Rule로 HTTP 요청을 경로·
+쿼리를 유지한 HTTPS 308로 바꿨다. 공개 HTTP 308, HTTPS 로그인 화면 200,
+미인증 API 401, TLS 인증서 검증 성공을 확인했다. 다른 호스트의 기존 규칙은
+유지했다. 호스트별 최소 TLS 1.2 설정은 이 zone에 Advanced Certificate
+Manager 권한이 없어 Cloudflare API가 거절했다. Zone 전체의 최소 TLS
+버전은 다른 서비스에 영향을 줄 수 있어 변경하지 않았다.
+
+[Cloudflare Tunnel의 HTTPS origin 설명](https://developers.cloudflare.com/tunnel/troubleshooting/https-origins/)
+대로 Cloudflare와 `cloudflared` 사이는 암호화된 Tunnel이며, 위 SSL 모드는
+로컬 origin 연결 방식을 바꾸지 않는다. `cloudflared`에서 같은 호스트의
+`127.0.0.1:14324`까지는 HTTP다. 새 DB에는 기존 `pydemia` 계정과 그 계정의
+프로젝트 1개가 있고, 내부 앱 세션에서 `/api/projects`가 1개를 반환했다.
+실제 사용자 브라우저의 로그인·쿠키·화면 흐름은 별도 확인이 필요하다.

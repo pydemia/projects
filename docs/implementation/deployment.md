@@ -1,8 +1,9 @@
 # Projects 원격 배포와 Microsoft Entra 로그인
 
-2026-10-21 현재 기존 Ubuntu 서버 `codex-devbox`에서
-`projects.pydemia.ai`를 제공합니다. DNS, Let's Encrypt HTTPS와
-`pydemia@pydemia.ai`의 실제 Microsoft Entra 로그인을 확인했습니다.
+2026-10-26 현재 `projects.pydemia.ai`는 온프레미스 `pydemia-server`의
+Cloudflare Tunnel로 제공합니다. 이 문서의 2026-10-21~25 기록은 이전
+`codex-devbox` 운영 이력입니다. 새 구성·백업·복구와 검증 범위는
+[온프레미스 이관 기록](onprem-migration.md)에 있습니다.
 
 ## 구성과 데이터 경계
 

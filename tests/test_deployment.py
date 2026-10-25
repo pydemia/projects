@@ -369,3 +369,25 @@ def test_production_proxy_is_the_only_host_port():
     assert "--skip-auth-strip-headers=true" in command
     assert "--pass-user-headers=true" in command
     assert "139.59.246.134" not in Path("deploy/projects.caddy").read_text()
+
+
+def test_onprem_edge_is_loopback_only_and_preserves_proxy_guards():
+    compose = yaml.safe_load(Path("compose.onprem.yaml").read_text())
+    assert compose["services"]["app"]["user"] == "1000:1000"
+    assert "uid=1000,gid=1000" in compose["services"]["app"]["tmpfs"][0]
+    edge = compose["services"]["edge"]
+    assert edge["ports"] == ["127.0.0.1:14324:8080"]
+    assert edge["networks"] == ["backend", "egress"]
+    assert edge["read_only"] is True
+    caddy = Path("deploy/projects-tunnel.caddy").read_text()
+    assert "max_size 12MB" in caddy
+    assert "header_up X-Forwarded-Proto https" in caddy
+    for header in (
+        "Authorization",
+        "X-Forwarded-Email",
+        "X-Forwarded-User",
+        "X-Forwarded-Preferred-Username",
+        "X-Forwarded-Access-Token",
+        "X-Auth-Request-Access-Token",
+    ):
+        assert f"header_up -{header}" in caddy

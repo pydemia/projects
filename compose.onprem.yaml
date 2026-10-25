@@ -1,0 +1,36 @@
+services:
+    app:
+        # The on-prem Docker daemon is rootful. Keep state and private
+        # bind-mounted files owned by the unprivileged deployment account.
+        user: "1000:1000"
+        tmpfs:
+            - /tmp:rw,nosuid,nodev,size=256m,uid=1000,gid=1000,mode=0700
+    edge:
+        image: caddy:2.11.7-alpine
+        restart: unless-stopped
+        depends_on:
+            oauth2-proxy:
+                condition: service_started
+        ports:
+            - "127.0.0.1:14324:8080"
+        volumes:
+            - ./deploy/projects-tunnel.caddy:/etc/caddy/Caddyfile:ro
+        environment:
+            XDG_CONFIG_HOME: /config
+            XDG_DATA_HOME: /data
+        user: "1000:1000"
+        read_only: true
+        tmpfs:
+            - /config:uid=1000,gid=1000,mode=0700
+            - /data:uid=1000,gid=1000,mode=0700
+            - /tmp:uid=1000,gid=1000,mode=0700
+        mem_limit: 128m
+        cpus: 0.25
+        networks:
+            - backend
+            - egress
+        logging:
+            driver: json-file
+            options:
+                max-size: "10m"
+                max-file: "3"

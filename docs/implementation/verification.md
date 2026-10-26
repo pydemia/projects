@@ -14,7 +14,7 @@ APP-REQ-037·AC-69~72. 첫 진입에서 프로젝트 ID가 없으면 현재 사�
 | PostgreSQL/API | 전용 무작위 schema에서 세 프로젝트 순서 저장·새로고침·새 프로젝트 추가, 중복·누락·타 사용자 ID 거부를 검사했다. 전체 `uv run pytest` 198개 통과. |
 | 실제 Edge + 격리 PostgreSQL | `scripts/verify-mobile-browser.py`에서 두 프로젝트로 첫 진입 자동 선택, 모바일 시트의 위로 이동, 데스크톱 실제 핸들 드래그, 재접속 후 목록 순서를 확인했다. 320~430px 기존 업무 화면·모달 검사도 통과했다. 생성한 test schema는 정리했다. |
 | 웹·정적 검사 | `npm --prefix web run check` 48개, `npm --prefix web run build`와 favicon 검사, Ruff check/format, mypy 통과. |
-| 운영 | 배포와 실제 Entra 로그인 뒤 화면 확인 결과는 별도 기록한다. |
+| 운영 | 2026-10-27 `38e1a05` 이미지를 on-prem에 배포하고 Alembic `0007`, 프로젝트 2건 유지, 앱·DB·OAuth2 Proxy·edge health를 확인했다. 기존 Entra 로그인 상태의 Edge에서 프로젝트 ID 없는 개요 URL이 첫 항목으로 이동했다. 실제 드래그로 순서를 바꿔 새로고침 후 지속성을 확인하고 위로 이동 버튼으로 원래 순서를 복원했다. [배포 기록](deployment.md#2026-10-27-프로젝트-순서-변경-운영-배포). 물리 기기 조작은 이 검사에 포함하지 않았다. |
 
 ## 2026-10-25 모바일 모달·키보드 사용성 보완
 

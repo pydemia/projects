@@ -210,3 +210,31 @@ archive SHA-256은
 인증된 운영 모바일 화면과 물리 기기 safe area·OS 키보드는 이 배포에서
 직접 검증하지 못했다. 로컬 모바일 브라우저 검사는
 [별도 기록](verification.md#2026-10-25-모바일-모달-재점검)에 있다.
+
+## 2026-10-27 프로젝트 순서 변경 운영 배포
+
+`38e1a05d4237bc0baf2e5e25d838e051220d2f83`의 backend·web·GitGuardian
+GitHub 검사가 통과했다. 이 커밋의 archive SHA-256은
+`68f6eeee9b2851c7b7a37b4e5f5e2b499cfb36247e8a1ca2ce7e7cfec5df7d11`이다.
+처음 서버에서 이미지를 빌드하던 중 호스트가 네트워크에서 사라졌다. 서비스
+전환 전 단계였고, 복구 후 기존 앱·DB가 healthy이고 Alembic `0006`, 프로젝트
+2건임을 확인했다. 종료 직전 커널 로그에 OOM·panic 근거는 확인되지 않아
+중단 원인은 확정하지 않았다.
+
+서버 재빌드를 반복하지 않고 검증된 소스로 개발 PC에서 만든
+`pydemia-projects:38e1a05d4237bc0b` Linux amd64 이미지를 전송했다.
+이미지 tar의 전송 전후 SHA-256은
+`ef7a6a57db3dd5e1ab6d6ee919aa8307ae9fb32e56a520bfebbaf154dbe2cd3a`로
+일치한다. 전환 직전 PostgreSQL custom dump를 생성해 `pg_restore -l`로
+읽을 수 있음을 확인하고, 기존 소스를 백업했다. 백업 경로는 서버의
+`/home/pydemia/.local/share/projects-releases/38e1a05d4237bc0b/`이며
+`.secrets/`와 `state/`는 원래 위치에 보존했다. 인증 파일·설정 권한 0600과
+사용자 데이터 디렉터리 권한 0700을 유지했다.
+
+Compose를 `--no-build --wait`로 전환한 뒤 앱·DB·OAuth2 Proxy·edge가
+healthy이고 Alembic `0007`, 프로젝트 2건, `sort_order` 컬럼을 확인했다.
+공개 로그인 페이지는 HTTPS 200으로 열렸다. 기존 Entra 로그인 상태인 실제
+Edge에서 새 세로 프로젝트 목록과 첫 프로젝트 자동 선택을 확인했다.
+드래그로 두 프로젝트 순서를 바꾼 뒤 새로고침 후에도 유지됨을 확인하고,
+위로 이동 버튼으로 원래 순서를 복원해 다시 새로고침했다. 물리 기기의
+터치 드래그는 이번 검사에 포함하지 않았다.

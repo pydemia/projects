@@ -111,6 +111,7 @@ export type Session = z.infer<typeof sessionSchema>;
 export const projectSchema = z.object({
     id, name: text, goal: text, profile: text,
     version: z.number().int(), created_at: text,
+    sort_order: z.number().int().nullable().default(null),
     repository_url: text.nullable(), repository_path: text,
     repository_branch: text.nullable(), repository_sha: text.nullable(),
     repository_kind: text.nullable(), repository_manifest: text.nullable(),

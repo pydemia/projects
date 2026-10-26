@@ -44,6 +44,7 @@
 | APP-REQ-034 | [확정·공개 저장소 검증] 서로 다른 실제 저장소로 이관 검사 | 공개 statusline·colors·skills catalog·Python package·VS Code extension 하위 폴더를 읽기 전용 검사 | mock/PostgreSQL/실제 GitHub 결과를 구분하고 비공개 미검증을 명시 |
 | APP-REQ-035 | [확정·로컬 구현] Git 소스 ZIP으로 프로젝트 생성 | GitHub Download ZIP·`git archive` ZIP에서 작은 package/extension manifest와 대상 폴더만 분석하고 이름·목표를 수정해 생성 | AC-65~67. ZIP에는 commit·PR 이력이 없으며 Projects 백업 ZIP 복원과 분리 |
 | APP-REQ-036 | [확정·로컬 구현] 가져오기 용어 구분 | `백업 ZIP 복원`·`원격 GitHub에서 만들기`·`Git ZIP에서 만들기`를 각각 표시하고 백업 설명에 `반출한` 표현을 쓰지 않음 | AC-68. 모바일·데스크톱에서 각 입력의 용도를 식별 가능 |
+| APP-REQ-037 | [2026-10-26 확정] 프로젝트 기본 선택·순서 변경 | 프로젝트가 있고 URL에 프로젝트가 없으면 저장된 목록의 첫 프로젝트를 선택한다. 목록은 한 줄씩 보이고 드래그 또는 위·아래 조작으로 사용자별 순서를 저장한다. 명시적으로 연 목록과 빈 상태는 유지한다. | AC-69: 첫 진입에서 첫 프로젝트 자동 선택. AC-70: 전체 목록의 행 표시와 드래그·버튼 이동. AC-71: 새로고침 후 순서 유지·새 프로젝트 뒤에 추가. AC-72: 타 사용자 프로젝트 포함·목록 변경 시 순서 저장 거부. 물리 터치 조작은 별도 확인. |
 
 APP-REQ-009는 상시 웹 수집이나 공개 양식 전체의 재배포를 요구하지 않습니다.
 양식·예시는 입력 자료이며 스킬 원문 규칙과 구분합니다. 원본 접근 실패를
@@ -65,3 +66,4 @@ APP-REQ-029~034의 과업·저장소별 근거·AC-59~64는
 [GitHub 저장소 이관 기획](15-git-repository-import.md)과
 [구현 goal](../implementation/git-repository-import-goal.md)에 연결합니다.
 APP-REQ-035~036과 AC-65~68은 같은 기획 문서의 Git ZIP 확장 절을 따릅니다.
+APP-REQ-037은 [UI·UX 기획](02-ui-ux.md)의 프로젝트 시작 흐름을 갱신합니다.

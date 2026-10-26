@@ -3,7 +3,6 @@ import type { ReactNode } from "react";
 import { api, ApiError, downloadArchive, errorMessage, setCsrf } from "./api";
 import { navigate, routeUrl, useResource, useRoute } from "./hooks";
 import type { Session, Project } from "./models";
-import { dateLabel } from "./models";
 import { Button } from "./pydemia-ui/button";
 import { Card } from "./pydemia-ui/card";
 import { AppBody, AppHeader, AppMain, AppShell, AppSidebar } from "./pydemia-ui/app-shell";
@@ -19,6 +18,7 @@ import { RunsPage } from "./RunsPage";
 import { Overview, TracePage } from "./ProjectPages";
 import { GitImport } from "./GitImport";
 import { GitZipImport } from "./GitZipImport";
+import { ProjectOrderList } from "./ProjectOrderList";
 import {
     ActionButton, Empty, ErrorNotice, Field, Loading, Modal, PageHead, RouteLink,
 } from "./ui";
@@ -118,13 +118,33 @@ function Workbench({ session, onLogout }: { session: Session; onLogout: () => vo
     const [error, setError] = useState("");
     const [logoutBusy, setLogoutBusy] = useState(false);
     const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
+    const [mobileProjectsOpen, setMobileProjectsOpen] = useState(false);
+    const [orderedProjects, setOrderedProjects] = useState<Project[] | null>(null);
+    const [orderingProjects, setOrderingProjects] = useState(false);
     const mobileMoreTrigger = useRef<HTMLButtonElement>(null);
     function closeMobileMore() {
         setMobileMoreOpen(false);
         window.requestAnimationFrame(() => mobileMoreTrigger.current?.focus());
     }
-    const selected = projects.status === "ready" ? projects.data.find(project => project.id === route.project) : undefined;
-    const title = menu.find(([view]) => view === route.view)?.[2] ?? "개요";
+    const projectRows = projects.status === "ready" ? orderedProjects ?? projects.data : [];
+    const selected = projectRows.find(project => project.id === route.project);
+    useEffect(() => { setOrderedProjects(null); }, [projects.status, projects.data]);
+    useEffect(() => {
+        if (projects.status === "ready" && !route.project && route.view !== "projects" && projects.data.length) {
+            navigate({ project: projects.data[0]!.id, item: "", run: "", baseline: "" }, true);
+        }
+    }, [projects.status, projects.data, route.project, route.view]);
+    async function reorderProjects(ids: string[]) {
+        if (orderingProjects || projects.status !== "ready") return;
+        const byId = new Map(projectRows.map(project => [project.id, project]));
+        if (ids.length !== projectRows.length || ids.some(id => !byId.has(id))) return;
+        setOrderedProjects(ids.map(id => byId.get(id)!));
+        setOrderingProjects(true); setError("");
+        try { setOrderedProjects(await api.reorderProjects(ids)); projects.reload(); }
+        catch (cause) { setOrderedProjects(null); setError(errorMessage(cause)); projects.reload(); }
+        finally { setOrderingProjects(false); }
+    }
+    const title = route.view === "projects" ? "프로젝트 목록" : menu.find(([view]) => view === route.view)?.[2] ?? "개요";
     const mobileDestination = route.view !== "tasks" ? "more"
         : route.taskMode !== "complex" && route.taskView === "inbox" ? "inbox"
             : route.taskMode !== "complex" && (!route.taskView || route.taskView === "today") ? "today" : "work";
@@ -155,8 +175,8 @@ function Workbench({ session, onLogout }: { session: Session; onLogout: () => vo
     }
     return <AppShell appearance="canvas" className="shell"><a href="#main" className="skip-link">본문으로 이동</a>
         <AppBody className="workspace-body"><AppSidebar className="sidebar" aria-label="프로젝트 탐색"><div><Brand /><div className="workspace">개인 작업공간</div></div>
-            <div className="project-nav"><label className="side-label" htmlFor="project-choice">PROJECT</label><NativeSelect id="project-choice" className="project-choice" value={route.project} onChange={event => navigate({ project: event.target.value, item: "", run: "", baseline: "", q: "", view: "overview" })}>
-                <option value="">프로젝트 목록</option>{projects.status === "ready" && projects.data.map(project => <option value={project.id} key={project.id}>{project.name}</option>)}</NativeSelect>
+            <div className="project-nav"><RouteLink className="side-label project-list-link" patch={{ project: "", view: "projects", item: "", run: "", baseline: "", q: "" }}>PROJECTS · 전체 보기</RouteLink>
+                {projectRows.length > 0 && <ProjectOrderList projects={projectRows} currentId={route.project} compact busy={orderingProjects} onReorder={reorderProjects} />}
                 <ActionButton className="linkbtn small new-project" onClick={() => setCreateOpen(true)}>+ 프로젝트 만들기</ActionButton>
                 <SideNav className="nav" aria-label="프로젝트 메뉴">{menu.map(([view, icon, label]) => {
                     const patch = { view, item: "", run: "", q: "", kind: "" };
@@ -166,9 +186,7 @@ function Workbench({ session, onLogout }: { session: Session; onLogout: () => vo
                 })}</SideNav>
             </div><div className="sidebar-bottom"><span className="avatar" aria-hidden="true">{session.user.username.slice(0, 2).toUpperCase()}</span><strong>{session.user.username}</strong><p className="muted small">개인 모드</p><ActionButton className="small" disabled={logoutBusy} onClick={() => { void logout(); }}>{logoutBusy ? "처리 중…" : "로그아웃"}</ActionButton></div>
         </AppSidebar>
-        <div className="workspace-main"><AppHeader className="topbar"><div className="crumb"><RouteLink patch={{ project: "", item: "", run: "", baseline: "" }}>프로젝트</RouteLink>{selected && <><span>/</span><strong>{selected.name}</strong><span>/</span><span>{title}</span></>}</div><div className="mobile-topbar"><NativeSelect aria-label="현재 프로젝트" value={route.project} onChange={event => navigate({ project: event.target.value, view: event.target.value ? "tasks" : "overview", taskMode: "simple", taskView: "today", item: "", run: "", baseline: "", q: "", savedView: "" })}>
-            <option value="">프로젝트 선택</option>{projects.status === "ready" && projects.data.map(project => <option value={project.id} key={project.id}>{project.name}</option>)}
-        </NativeSelect><strong>{selected ? title : "프로젝트"}</strong></div><div className="actions desktop-topbar-actions">
+        <div className="workspace-main"><AppHeader className="topbar"><div className="crumb"><RouteLink patch={{ project: "", view: "projects", item: "", run: "", baseline: "" }}>프로젝트</RouteLink>{selected && route.view !== "projects" && <><span>/</span><strong>{selected.name}</strong><span>/</span><span>{title}</span></>}</div><div className="mobile-topbar"><Button variant="ghost" className="mobile-project-button" aria-label="프로젝트 목록 열기" aria-haspopup="dialog" aria-expanded={mobileProjectsOpen} onClick={() => setMobileProjectsOpen(true)}><span className="mobile-project-name">{selected?.name ?? "프로젝트 목록"}</span><span aria-hidden="true">⌄</span></Button><strong>{title}</strong></div><div className="actions desktop-topbar-actions">
             <ThemeControls />
             {runtime.status === "ready" && <span className={`runtime-label ${runtime.data.configured ? "configured" : ""}`}>{runtime.data.configured ? "LLM 연결 설정됨" : "LLM 미설정"}</span>}
             {selected && <ActionButton className="small" disabled={exportBusy} onClick={() => { void exportProject(); }}>{exportBusy ? "ZIP 받는 중…" : "프로젝트 ZIP"}</ActionButton>}
@@ -178,7 +196,7 @@ function Workbench({ session, onLogout }: { session: Session; onLogout: () => vo
                 {error && <ErrorNotice error={error} />}
                 {projects.status === "loading" && <Loading label="프로젝트 목록 불러오는 중…" />}
                 {projects.status === "error" && <ErrorNotice error={projects.error} retry={projects.reload} />}
-                {projects.status === "ready" && (!route.project ? <ProjectsList projects={projects.data} onCreate={() => setCreateOpen(true)} onImported={project => { projects.reload(); navigate({ project: project.id, view: "overview", item: "", run: "", baseline: "", q: "" }); }} /> : selected ? <ProjectWorkspace project={selected} userId={session.user.id} revision={revision} onChanged={() => setRevision(value => value + 1)} catalog={catalog} runtime={runtime} /> : <Empty title="프로젝트를 찾을 수 없습니다."><p>프로젝트가 존재하지 않거나 이 계정의 접근 범위에 없습니다.</p><RouteLink patch={{ project: "", item: "" }}>프로젝트 목록으로</RouteLink></Empty>)}
+                {projects.status === "ready" && (route.view === "projects" || !route.project ? <ProjectsList projects={projectRows} currentId={route.project} ordering={orderingProjects} onReorder={reorderProjects} onCreate={() => setCreateOpen(true)} onImported={project => { projects.reload(); navigate({ project: project.id, view: "overview", item: "", run: "", baseline: "", q: "" }); }} /> : selected ? <ProjectWorkspace project={selected} userId={session.user.id} revision={revision} onChanged={() => setRevision(value => value + 1)} catalog={catalog} runtime={runtime} /> : <Empty title="프로젝트를 찾을 수 없습니다."><p>프로젝트가 존재하지 않거나 이 계정의 접근 범위에 없습니다.</p><RouteLink patch={{ project: "", view: "projects", item: "" }}>프로젝트 목록으로</RouteLink></Empty>)}
             </AppMain>
         </div><BottomNav className="mobile-bottom-nav" aria-label="모바일 주요 탐색">
             {mobileRoutes.map(({ id, label, icon, patch }) => <BottomNavLink key={id} href={routeUrl(patch)} label={label} icon={icon}
@@ -188,7 +206,12 @@ function Workbench({ session, onLogout }: { session: Session; onLogout: () => vo
             <Button ref={mobileMoreTrigger} variant="ghost" type="button" className="mobile-more-trigger" aria-current={mobileDestination === "more" ? "page" : undefined}
                 aria-haspopup="dialog" aria-expanded={mobileMoreOpen} onClick={() => setMobileMoreOpen(true)}><span aria-hidden="true">☰</span><span>더보기</span></Button>
         </BottomNav>
-        </AppBody>{mobileMoreOpen && <Modal title="더보기" className="mobile-more-dialog" onClose={closeMobileMore}>
+        </AppBody>{mobileProjectsOpen && <Modal title="프로젝트 목록" className="mobile-project-dialog" onClose={() => setMobileProjectsOpen(false)}>
+            <p className="muted small">프로젝트를 고르거나 순서를 바꿀 수 있습니다.</p>
+            {error && <ErrorNotice error={error} />}
+            <ProjectOrderList projects={projectRows} currentId={route.project} compact busy={orderingProjects} onReorder={reorderProjects} onSelect={() => setMobileProjectsOpen(false)} />
+            <div className="mobile-project-actions"><RouteLink patch={{ project: "", view: "projects", item: "", run: "", baseline: "" }} onNavigate={() => setMobileProjectsOpen(false)}>전체 보기·순서 변경</RouteLink><ActionButton onClick={() => { setMobileProjectsOpen(false); setCreateOpen(true); }}>+ 프로젝트 만들기</ActionButton></div>
+        </Modal>}{mobileMoreOpen && <Modal title="더보기" className="mobile-more-dialog" onClose={closeMobileMore}>
             <p className="muted small">{selected ? `${selected.name} · 업무 영역` : "프로젝트를 선택하거나 새로 만드세요."}</p>
             <SideNav aria-label="다른 업무 화면" className="mobile-more-links" onClick={closeMobileMore}>
                 {menu.filter(([view]) => view !== "tasks").map(([view, icon, label]) => <RouteLink key={view} appearance="side" patch={{ view, item: "", run: "", q: "", kind: "" }} className="mobile-more-link"><span aria-hidden="true">{icon}</span>{label}</RouteLink>)}
@@ -240,8 +263,10 @@ function CreateProject({ onClose, onCreated }: { onClose: () => void; onCreated:
     </form></Modal>;
 }
 
-function ProjectsList({ projects, onCreate, onImported }: {
-    projects: Project[]; onCreate: () => void; onImported: (project: Project) => void;
+function ProjectsList({ projects, currentId, ordering, onReorder, onCreate, onImported }: {
+    projects: Project[]; currentId: string; ordering: boolean;
+    onReorder: (ids: string[]) => Promise<void>;
+    onCreate: () => void; onImported: (project: Project) => void;
 }) {
     const [importOpen, setImportOpen] = useState(false);
     const [gitOpen, setGitOpen] = useState(false);
@@ -264,7 +289,7 @@ function ProjectsList({ projects, onCreate, onImported }: {
     }
     return <>
         <PageHead title="프로젝트" description="이어갈 일을 고르거나, 새로운 아이디어를 프로젝트로 시작하세요." eyebrow="YOUR WORKSPACE"><ActionButton onClick={() => setImportOpen(true)}>백업 ZIP 복원</ActionButton><ActionButton className="git-source-action" onClick={() => setGitOpen(true)}>원격 GitHub에서 만들기</ActionButton><ActionButton onClick={() => setGitZipOpen(true)}>Git ZIP에서 만들기</ActionButton><ActionButton className="primary" onClick={onCreate}>+ 프로젝트 만들기</ActionButton></PageHead>
-        {projects.length ? <div className="project-list">{projects.map(project => <Card key={project.id} className="project-card"><RouteLink patch={{ project: project.id, view: "overview", item: "", run: "", baseline: "", q: "" }} className="project-row"><div><h2>{project.name}</h2><p>{project.goal || "아직 작성한 목표가 없습니다."}</p></div><span>{project.profile === "simple" ? "간편" : "표준"}<small>{dateLabel(project.created_at)}</small></span><span aria-hidden="true">→</span></RouteLink></Card>)}</div> : <Empty title="처음 시작하는 프로젝트"><p>원문 아이디어를 남기고, 스킬로 문서와 실행 계획을 구체화해 보세요.</p><ActionButton className="primary" onClick={onCreate}>프로젝트 만들기</ActionButton></Empty>}
+        {projects.length ? <section className="project-list-section"><p className="muted small">위에서 아래 순서로 표시됩니다. 손잡이를 끌거나 위·아래 버튼으로 순서를 바꾸세요.</p><ProjectOrderList projects={projects} currentId={currentId} busy={ordering} onReorder={onReorder} /></section> : <Empty title="처음 시작하는 프로젝트"><p>원문 아이디어를 남기고, 스킬로 문서와 실행 계획을 구체화해 보세요.</p><ActionButton className="primary" onClick={onCreate}>프로젝트 만들기</ActionButton></Empty>}
         {importOpen && <Modal title="Projects 백업 ZIP 복원" onClose={() => setImportOpen(false)}><form onSubmit={event => { void importFile(event); }}><p>Projects에서 저장한 백업 ZIP을 선택해 주세요. 기존 프로젝트의 항목과 관계를 복원합니다. Git 소스 ZIP은 별도의 만들기 기능을 사용해 주세요.</p><Field label="Projects 백업 ZIP · 최대 8 MB"><Input type="file" required accept=".zip,application/zip" onChange={event => setFile(event.target.files?.[0] ?? null)} /></Field>{error && <ErrorNotice error={error} />}<div className="form-actions"><ActionButton type="button" onClick={() => setImportOpen(false)}>닫기</ActionButton><ActionButton className="primary" type="submit" disabled={busy || !file}>{busy ? "검사·복원 중…" : "백업 검사 후 복원"}</ActionButton></div></form></Modal>}
         {gitOpen && <GitImport onClose={() => setGitOpen(false)} onCreated={project => { setGitOpen(false); onImported(project); }} />}
         {gitZipOpen && <GitZipImport onClose={() => setGitZipOpen(false)} onCreated={project => { setGitZipOpen(false); onImported(project); }} />}

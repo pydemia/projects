@@ -136,12 +136,33 @@
 :is(.projects-theme, [data-theme-portal]) .projects-dialog .modal-head { padding: 19px 24px 14px; border-bottom: 1px solid var(--border); }
 :is(.projects-theme, [data-theme-portal]) .projects-dialog .modal-head [data-ui="heading"] { margin: 0; font-size: 18px; }
 :is(.projects-theme, [data-theme-portal]) .projects-dialog .modal-body { max-height: calc(100dvh - 115px); overflow-y: auto; padding: 20px 24px 24px; font-size: 13px; }
-.projects-theme .project-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 14px; }
-.projects-theme .project-card { transition: border-color var(--motion-fast), transform var(--motion-fast); }
-.projects-theme .project-card:hover { border-color: var(--accent); transform: translateY(-2px); }
-.projects-theme .project-row { display: flex; min-height: 168px; align-items: flex-start; flex-direction: column; gap: 14px; padding: 20px; border: 0; color: var(--foreground); }
-.projects-theme .project-row > div { flex: none; width: 100%; }
-.projects-theme .project-row > span:last-child { align-self: flex-end; margin-top: auto; color: var(--accent); font-size: 18px; }
+.projects-theme .project-list-link { display: block; color: var(--muted); text-decoration: none; }
+.projects-theme .project-list-link:hover { color: var(--accent); }
+.projects-theme .project-list-section > p { margin: 0 0 12px; }
+.projects-theme .project-order-list { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--border); }
+.projects-theme .project-order-item { display: flex; min-width: 0; align-items: center; gap: 6px; min-height: 72px; border-bottom: 1px solid var(--border); transition: background var(--motion-fast); }
+.projects-theme .project-order-item:hover, .projects-theme .project-order-item[data-drop-position] { background: var(--surface-subtle); }
+.projects-theme .project-order-item[data-drop-position="before"] { box-shadow: inset 0 2px var(--accent); }
+.projects-theme .project-order-item[data-drop-position="after"] { box-shadow: inset 0 -2px var(--accent); }
+.projects-theme .project-drag-handle { flex: 0 0 42px; min-width: 42px; padding: 0; color: var(--muted); cursor: grab; font-size: 20px; }
+.projects-theme .project-drag-handle:active { cursor: grabbing; }
+.projects-theme .project-order-link { display: flex; flex: 1 1 auto; min-width: 0; align-items: center; gap: 15px; padding: 15px 8px; color: var(--foreground); text-decoration: none; }
+.projects-theme .project-order-link:hover strong, .projects-theme .project-order-link[aria-current="page"] strong { color: var(--accent); }
+.projects-theme .project-order-number { flex: 0 0 28px; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.projects-theme .project-order-copy { flex: 1 1 auto; min-width: 0; }
+.projects-theme .project-order-copy strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; }
+.projects-theme .project-order-copy small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 4px; color: var(--muted); font-size: 12px; }
+.projects-theme .project-order-meta { flex: 0 0 auto; color: var(--muted); font-size: 12px; text-align: right; }
+.projects-theme .project-order-meta small { display: block; margin-top: 4px; font-size: 11px; }
+.projects-theme .project-order-actions { display: flex; flex: 0 0 auto; gap: 2px; padding-right: 6px; }
+.projects-theme .project-order-actions button { min-width: 40px; padding: 0; font-size: 16px; }
+.projects-theme .project-order-list.compact { max-height: min(34dvh, 320px); overflow-y: auto; }
+.projects-theme .project-order-list.compact .project-order-item { min-height: 48px; }
+.projects-theme .project-order-list.compact .project-order-link { padding: 9px 2px; }
+.projects-theme .project-order-list.compact .project-order-copy strong { font-size: 12px; font-weight: 550; }
+.projects-theme .project-order-list.compact .project-drag-handle { flex-basis: 30px; min-width: 30px; }
+.projects-theme .project-nav .project-order-actions { display: none; }
+.projects-theme .project-nav .project-order-link[aria-current="page"] { background: color-mix(in srgb, var(--accent) 10%, var(--surface)); }
 .projects-theme .auth-form { padding: 24px; background: var(--surface); }
 .projects-theme .trace-filters { margin: 8px 0 16px; }
 .projects-theme .trace-panel { overflow: hidden; }

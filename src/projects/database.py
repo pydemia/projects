@@ -73,6 +73,7 @@ class Project(Base):
     name: Mapped[str] = mapped_column(String(200))
     goal: Mapped[str] = mapped_column(Text, default="")
     profile: Mapped[str] = mapped_column(String(20), default="simple")
+    sort_order: Mapped[int | None] = mapped_column(Integer)
     repository_url: Mapped[str | None] = mapped_column(String(500))
     repository_path: Mapped[str] = mapped_column(String(200), default="")
     repository_branch: Mapped[str | None] = mapped_column(String(200))

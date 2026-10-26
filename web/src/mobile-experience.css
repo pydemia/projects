@@ -15,8 +15,10 @@
   .projects-theme .topbar .crumb,
   .projects-theme .desktop-topbar-actions { display: none; }
   .projects-theme .mobile-topbar { display: flex; min-width: 0; width: 100%; align-items: center; gap: 12px; }
-  .projects-theme .mobile-topbar > div { min-width: 0; max-width: 64%; }
-  .projects-theme .mobile-topbar select { width: 100%; min-height: 44px; padding-right: 28px; font-weight: 650; }
+  .projects-theme .mobile-project-button { display: flex; max-width: 68%; min-width: 0; min-height: 44px; align-items: center; gap: 8px; font-weight: 650; }
+  .projects-theme .mobile-project-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .projects-theme .mobile-project-button > span:last-child { flex: 0 0 auto; }
+  .projects-theme .project-list-section .project-order-meta { display: none; }
   .projects-theme .mobile-topbar strong { margin-left: auto; color: var(--muted); font-size: 13px; white-space: nowrap; }
   .projects-theme .page { min-width: 0; padding: 18px 16px calc(100px + env(safe-area-inset-bottom)); }
   .projects-theme .mobile-bottom-nav { position: fixed; inset: auto 0 0; z-index: 25; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); min-width: 0; padding: 4px max(8px, env(safe-area-inset-right)) calc(4px + env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left)); box-shadow: 0 -4px 16px color-mix(in srgb, var(--foreground) 7%, transparent); }
@@ -46,10 +48,16 @@
   :is(.projects-theme, [data-theme-portal]) .projects-dialog .modal-body > form > .form-actions:last-child { position: sticky; bottom: calc(-16px - env(safe-area-inset-bottom)); z-index: 1; margin: 20px -16px calc(-16px - env(safe-area-inset-bottom)); padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid var(--border); background: var(--surface); }
   :is(.projects-theme, [data-theme-portal]) .projects-dialog .modal-body > form:only-child > .form-actions:last-child { margin-top: auto; }
   :is(.projects-theme, [data-theme-portal]) .mobile-more-dialog,
-  :is(.projects-theme, [data-theme-portal]) .mobile-task-dialog { top: auto; bottom: var(--dialog-visible-bottom, 0px); height: auto; border: 1px solid var(--border); border-bottom: 0; border-radius: var(--panel-radius) var(--panel-radius) 0 0; box-shadow: var(--shadow-float); }
+  :is(.projects-theme, [data-theme-portal]) .mobile-task-dialog,
+  :is(.projects-theme, [data-theme-portal]) .mobile-project-dialog { top: auto; bottom: var(--dialog-visible-bottom, 0px); height: auto; border: 1px solid var(--border); border-bottom: 0; border-radius: var(--panel-radius) var(--panel-radius) 0 0; box-shadow: var(--shadow-float); }
   :is(.projects-theme, [data-theme-portal]) .mobile-more-dialog { max-height: min(calc(var(--dialog-visible-height, 100dvh) * .86), 800px); }
   :is(.projects-theme, [data-theme-portal]) .mobile-more-dialog .modal-body,
-  :is(.projects-theme, [data-theme-portal]) .mobile-task-dialog .modal-body { flex: 0 1 auto; }
+  :is(.projects-theme, [data-theme-portal]) .mobile-task-dialog .modal-body,
+  :is(.projects-theme, [data-theme-portal]) .mobile-project-dialog .modal-body { flex: 0 1 auto; }
+  :is(.projects-theme, [data-theme-portal]) .mobile-project-dialog { max-height: min(calc(var(--dialog-visible-height, 100dvh) * .86), 800px); }
+  :is(.projects-theme, [data-theme-portal]) .mobile-project-dialog .project-order-list { max-height: min(50dvh, 460px); }
+  :is(.projects-theme, [data-theme-portal]) .mobile-project-dialog .project-order-actions button { min-width: 44px; min-height: 44px; }
+  :is(.projects-theme, [data-theme-portal]) .mobile-project-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding-top: 16px; }
   :is(.projects-theme, [data-theme-portal]) .mobile-more-links { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin: 12px 0 18px; }
   :is(.projects-theme, [data-theme-portal]) .mobile-more-link { display: flex; min-height: 48px; align-items: center; gap: 9px; padding: 10px; border: 1px solid var(--border); color: var(--foreground); background: var(--surface); }
   :is(.projects-theme, [data-theme-portal]) .mobile-more-link span { color: var(--accent); font-size: 18px; }

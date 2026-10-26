@@ -229,8 +229,35 @@ async function main() {
         expect(icon.headers()["content-type"]).toContain("image/svg+xml");
         await more.getByRole("button", { name: "대화상자 닫기" }).click();
         await expect(page.getByRole("navigation", { name: "모바일 주요 탐색" }).getByRole("button", { name: "더보기" })).toBeFocused();
+        const nextProjectResponse = await context.request.post(`${apiBase}/api/projects`, { headers, data: { name: "순서 QA" } });
+        expect(nextProjectResponse.status()).toBe(201);
+        const nextProject = await nextProjectResponse.json();
+        await page.goto(`${base}/?view=overview`);
+        await expect.poll(() => new URL(page.url()).searchParams.get("project")).toBe(project.id);
+        await page.getByRole("button", { name: "프로젝트 목록 열기" }).click();
+        const projectDialog = page.getByRole("dialog", { name: "프로젝트 목록" });
+        await assertDialogFits(page, "프로젝트 목록");
+        await projectDialog.getByRole("button", { name: "순서 QA 위로 이동" }).click();
+        async function projectIds() {
+            const response = await context.request.get(`${apiBase}/api/projects`);
+            return (await response.json()).map(row => row.id);
+        }
+        await expect.poll(projectIds).toEqual([nextProject.id, project.id]);
+        await projectDialog.getByRole("button", { name: "대화상자 닫기" }).click();
+        await page.goto(`${base}/?view=overview`);
+        await expect.poll(() => new URL(page.url()).searchParams.get("project")).toBe(nextProject.id);
+        await page.setViewportSize({ width: 1440, height: 900 });
+        await page.goto(`${base}/?view=projects`);
+        const rows = page.locator("main.page .project-order-item");
+        await expect(rows).toHaveCount(2);
+        const secondRow = rows.nth(1);
+        const bounds = await secondRow.boundingBox();
+        await rows.first().getByRole("button", { name: "순서 QA 순서 끌어서 이동" }).dragTo(secondRow, {
+            targetPosition: { x: 50, y: bounds.height - 6 },
+        });
+        await expect.poll(projectIds).toEqual([project.id, nextProject.id]);
         expect(errors).toEqual([]);
-        console.log(`Mobile browser: isolated PostgreSQL, Today/Inbox/add/complete, board move/reorder/undo/quick/bulk/409, document draft/back, 320–430px, themes, favicon and desktop passed; items ${due.id}, ${inbox.id}`);
+        console.log(`Mobile browser: isolated PostgreSQL, project auto-selection/row reorder/drag, Today/Inbox/add/complete, board move/reorder/undo/quick/bulk/409, document draft/back, 320–430px, themes, favicon and desktop passed; items ${due.id}, ${inbox.id}`);
     } finally {
         await browser.close();
     }

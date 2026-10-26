@@ -72,6 +72,7 @@ from projects.schemas import (
     ItemUpdate,
     LinkInput,
     ProjectInput,
+    ProjectOrderInput,
     ReconnectInput,
     ResolveInput,
     RestoreInput,
@@ -331,9 +332,38 @@ def create_app(
         rows = db.scalars(
             select(Project)
             .where(Project.owner_id == user.id)
-            .order_by(Project.created_at, Project.id)
+            .order_by(
+                Project.sort_order.asc().nulls_last(),
+                Project.created_at,
+                Project.id,
+            )
         )
         return [serialize(x) for x in rows]
+
+    @app.put("/api/projects/order")
+    def reorder_projects(
+        payload: ProjectOrderInput, db: DB, user: User
+    ) -> list[dict]:
+        if len(payload.project_ids) != len(set(payload.project_ids)):
+            raise Problem(422, "프로젝트 순서에 중복된 항목이 있습니다.")
+        rows = list(
+            db.scalars(
+                select(Project)
+                .where(Project.owner_id == user.id)
+                .order_by(Project.id)
+                .with_for_update()
+            )
+        )
+        by_id = {row.id: row for row in rows}
+        if set(payload.project_ids) != set(by_id):
+            raise Problem(
+                409, "프로젝트 목록이 변경되었습니다. 다시 불러와 주세요."
+            )
+        ordered = [by_id[project_id] for project_id in payload.project_ids]
+        for index, project in enumerate(ordered):
+            project.sort_order = index
+        db.flush()
+        return [serialize(project) for project in ordered]
 
     @app.post("/api/projects", status_code=201)
     def new_project(payload: ProjectInput, db: DB, user: User) -> dict:

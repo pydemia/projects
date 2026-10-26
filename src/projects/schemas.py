@@ -26,6 +26,10 @@ class ProjectInput(RequestModel):
     profile: Literal["simple", "standard"] = "simple"
 
 
+class ProjectOrderInput(RequestModel):
+    project_ids: list[str] = Field(min_length=1)
+
+
 class GitPreviewInput(RequestModel):
     repository_url: str = Field(min_length=1, max_length=500)
     path: str = Field(default="", max_length=200)

@@ -58,9 +58,9 @@ export function PageHead({ title, description, children, eyebrow }: {
     return <PageHeader className="pagehead" title={title} subtitle={description}
         eyebrow={eyebrow ?? "PROJECT WORKSPACE"} actions={<div className="actions">{children}</div>} />;
 }
-export function RouteLink({ patch, children, className = "", current, appearance = "inline" }: {
+export function RouteLink({ patch, children, className = "", current, appearance = "inline", onNavigate }: {
     patch: Partial<Route>; children: ReactNode; className?: string; current?: boolean;
-    appearance?: "inline" | "side";
+    appearance?: "inline" | "side"; onNavigate?: () => void;
 }) {
     const props = { href: routeUrl(patch), className,
         "aria-current": current ? "page" as const : undefined,
@@ -68,6 +68,7 @@ export function RouteLink({ patch, children, className = "", current, appearance
             if (!event.metaKey && !event.ctrlKey && !event.shiftKey && event.button === 0) {
                 event.preventDefault();
                 navigate(patch);
+                onNavigate?.();
             }
         } };
     return appearance === "side" ? <SideNavLink {...props}>{children}</SideNavLink> : <a {...props}>{children}</a>;

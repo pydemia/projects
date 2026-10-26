@@ -71,3 +71,14 @@ source revision/hash도 변경하지 않았다. 포털에 뜨는 Dialog의 dark
 헤더/닫기 색은 Projects 테마 scope와 같은 토큰을 적용한다.
 
 검증은 `npm --prefix web run check`와 `npm --prefix web run build`를 사용한다. 브라우저에서는 로그인 전후의 주요 화면, 모드·테마 전환과 재방문, 모바일 폭 및 키보드 조작을 확인한다. 테스트·로컬 브라우저·운영 브라우저의 수행 여부는 [검증 기록](verification.md)에 각각 남긴다.
+
+2026-10-25 모바일 모달 재점검: 게시된 `ui.pydemia.ai`에서 공통 Dialog,
+Popover, DropdownMenu, Drawer의 기본 예시를 Edge 모바일 320·390 CSS px로
+열어 경계를 확인했다. 검사한 예시의 패널은 화면 안에 있었다. Projects의
+기존 adapter는 모바일에서 Dialog의 `default`/`wide` 중앙 정렬 클래스를
+유지한 채 CSS로 좌표를 전체 화면에 다시 지정했다. 모바일에서는 공통
+`DialogContent size="fullscreen"`을 직접 선택하고, 수평 위치·폭은
+`left: 0; right: 0; width: 100%`로 고정한다. OS 키보드가 바꾸는 세로
+가시 영역만 `visualViewport`로 반영한다. 공통 source 파일과 고정 hash는
+변경하지 않았다. [모바일 회귀 검사](verification.md#2026-10-25-모바일-모달-재점검)를
+별도로 기록한다.

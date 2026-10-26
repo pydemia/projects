@@ -10,11 +10,13 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     ForeignKeyConstraint,
+    Index,
     Integer,
     String,
     Text,
     UniqueConstraint,
     create_engine,
+    text,
 )
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
@@ -52,6 +54,16 @@ class LoginSession(Base):
 
 class Project(Base):
     __tablename__ = "projects"
+    __table_args__ = (
+        Index(
+            "uq_projects_owner_repository_scope",
+            "owner_id",
+            "repository_url",
+            "repository_path",
+            unique=True,
+            postgresql_where=text("repository_url IS NOT NULL"),
+        ),
+    )
     id: Mapped[str] = mapped_column(
         String(36), primary_key=True, default=new_id
     )
@@ -61,11 +73,38 @@ class Project(Base):
     name: Mapped[str] = mapped_column(String(200))
     goal: Mapped[str] = mapped_column(Text, default="")
     profile: Mapped[str] = mapped_column(String(20), default="simple")
+    sort_order: Mapped[int | None] = mapped_column(Integer)
+    repository_url: Mapped[str | None] = mapped_column(String(500))
+    repository_path: Mapped[str] = mapped_column(String(200), default="")
+    repository_branch: Mapped[str | None] = mapped_column(String(200))
+    repository_sha: Mapped[str | None] = mapped_column(String(40))
+    repository_kind: Mapped[str | None] = mapped_column(String(30))
+    repository_manifest: Mapped[str | None] = mapped_column(String(250))
+    repository_imported_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True)
+    )
     version: Mapped[int] = mapped_column(Integer, default=1)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=utcnow,
     )
+
+
+class RepositoryActivity(Base):
+    __tablename__ = "repository_activities"
+    __table_args__ = (UniqueConstraint("project_id", "kind", "external_id"),)
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=new_id
+    )
+    project_id: Mapped[str] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"), index=True
+    )
+    kind: Mapped[str] = mapped_column(String(10))
+    external_id: Mapped[str] = mapped_column(String(60))
+    title: Mapped[str] = mapped_column(String(300))
+    url: Mapped[str] = mapped_column(String(500))
+    state: Mapped[str] = mapped_column(String(20))
+    occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 
 class Item(Base):

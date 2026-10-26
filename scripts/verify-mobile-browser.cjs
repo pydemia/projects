@@ -10,6 +10,20 @@ const shots = path.resolve("docs/implementation/screenshots/mobile-experience");
 const today = new Date();
 const day = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 
+async function assertDialogFits(page, label) {
+    const bounds = await page.getByRole("dialog").evaluate(element => {
+        const rect = element.getBoundingClientRect();
+        const visual = window.visualViewport;
+        return { top: rect.top, bottom: rect.bottom, left: rect.left, right: rect.right,
+            visibleTop: visual?.offsetTop ?? 0, visibleBottom: (visual?.offsetTop ?? 0) + (visual?.height ?? window.innerHeight),
+            visibleLeft: visual?.offsetLeft ?? 0, visibleRight: (visual?.offsetLeft ?? 0) + (visual?.width ?? window.innerWidth) };
+    });
+    expect(bounds.top, `${label}: top`).toBeGreaterThanOrEqual(bounds.visibleTop - 1);
+    expect(bounds.bottom, `${label}: bottom`).toBeLessThanOrEqual(bounds.visibleBottom + 1);
+    expect(bounds.left, `${label}: left`).toBeGreaterThanOrEqual(bounds.visibleLeft - 1);
+    expect(bounds.right, `${label}: right`).toBeLessThanOrEqual(bounds.visibleRight + 1);
+}
+
 async function main() {
     await fs.mkdir(shots, { recursive: true });
     const browser = await chromium.launch({ headless: true, ...(process.platform === "win32" ? { channel: "msedge" } : {}) });
@@ -46,6 +60,7 @@ async function main() {
         await page.screenshot({ path: path.join(shots, "today-390.png"), fullPage: true });
         await page.locator(".mobile-task-header").getByRole("button", { name: "+ 추가" }).click();
         const add = page.getByRole("dialog", { name: "할 일 추가" });
+        await assertDialogFits(page, "할 일 추가");
         await add.getByRole("textbox", { name: "할 일 제목" }).fill("모바일에서 추가");
         await add.getByRole("button", { name: "추가", exact: true }).click();
         await expect(page.getByRole("link", { name: "모바일에서 추가" })).toBeVisible();
@@ -91,6 +106,7 @@ async function main() {
         await expect(page.locator(".mobile-selection-bar")).toContainText("선택 2개");
         await page.locator(".mobile-task-header").getByRole("button", { name: "보기·필터" }).click();
         const filter = page.getByRole("dialog", { name: "보기·필터" });
+        await assertDialogFits(page, "보기·필터");
         await filter.getByRole("searchbox", { name: "작업 검색" }).fill("보드 검토");
         await filter.getByRole("button", { name: /결과 보기/ }).click();
         await expect(page.locator(".mobile-selection-bar")).toContainText("숨김 1개");
@@ -99,6 +115,7 @@ async function main() {
         await filter.getByRole("button", { name: /결과 보기/ }).click();
         await page.locator(".mobile-selection-bar").getByRole("button", { name: "일괄 변경" }).click();
         const bulk = page.getByRole("dialog", { name: "2개 작업 일괄 변경" });
+        await assertDialogFits(page, "일괄 변경");
         await bulk.getByRole("combobox", { name: "상태" }).selectOption("in_progress");
         await bulk.getByRole("button", { name: "상태 적용" }).click();
         await expect(page.locator(".mobile-selection-bar")).toBeHidden();
@@ -123,6 +140,7 @@ async function main() {
         await page.locator(".task-error-block").getByRole("button", { name: "알림 닫기" }).click();
         await page.getByRole("navigation", { name: "모바일 주요 탐색" }).getByRole("button", { name: "더보기" }).click();
         await expect(page.getByRole("dialog", { name: "더보기" })).toBeVisible();
+        await assertDialogFits(page, "더보기");
         await page.screenshot({ path: path.join(shots, "more-390.png"), fullPage: true });
         await page.getByRole("navigation", { name: "다른 업무 화면" }).getByRole("link", { name: /임시 문서/ }).click({ timeout: 5000 });
         await expect(page.getByRole("link", { name: /Application 설계 · 임시 문서/ })).toBeVisible();
@@ -211,8 +229,35 @@ async function main() {
         expect(icon.headers()["content-type"]).toContain("image/svg+xml");
         await more.getByRole("button", { name: "대화상자 닫기" }).click();
         await expect(page.getByRole("navigation", { name: "모바일 주요 탐색" }).getByRole("button", { name: "더보기" })).toBeFocused();
+        const nextProjectResponse = await context.request.post(`${apiBase}/api/projects`, { headers, data: { name: "순서 QA" } });
+        expect(nextProjectResponse.status()).toBe(201);
+        const nextProject = await nextProjectResponse.json();
+        await page.goto(`${base}/?view=overview`);
+        await expect.poll(() => new URL(page.url()).searchParams.get("project")).toBe(project.id);
+        await page.getByRole("button", { name: "프로젝트 목록 열기" }).click();
+        const projectDialog = page.getByRole("dialog", { name: "프로젝트 목록" });
+        await assertDialogFits(page, "프로젝트 목록");
+        await projectDialog.getByRole("button", { name: "순서 QA 위로 이동" }).click();
+        async function projectIds() {
+            const response = await context.request.get(`${apiBase}/api/projects`);
+            return (await response.json()).map(row => row.id);
+        }
+        await expect.poll(projectIds).toEqual([nextProject.id, project.id]);
+        await projectDialog.getByRole("button", { name: "대화상자 닫기" }).click();
+        await page.goto(`${base}/?view=overview`);
+        await expect.poll(() => new URL(page.url()).searchParams.get("project")).toBe(nextProject.id);
+        await page.setViewportSize({ width: 1440, height: 900 });
+        await page.goto(`${base}/?view=projects`);
+        const rows = page.locator("main.page .project-order-item");
+        await expect(rows).toHaveCount(2);
+        const secondRow = rows.nth(1);
+        const bounds = await secondRow.boundingBox();
+        await rows.first().getByRole("button", { name: "순서 QA 순서 끌어서 이동" }).dragTo(secondRow, {
+            targetPosition: { x: 50, y: bounds.height - 6 },
+        });
+        await expect.poll(projectIds).toEqual([project.id, nextProject.id]);
         expect(errors).toEqual([]);
-        console.log(`Mobile browser: isolated PostgreSQL, Today/Inbox/add/complete, board move/reorder/undo/quick/bulk/409, document draft/back, 320–430px, themes, favicon and desktop passed; items ${due.id}, ${inbox.id}`);
+        console.log(`Mobile browser: isolated PostgreSQL, project auto-selection/row reorder/drag, Today/Inbox/add/complete, board move/reorder/undo/quick/bulk/409, document draft/back, 320–430px, themes, favicon and desktop passed; items ${due.id}, ${inbox.id}`);
     } finally {
         await browser.close();
     }

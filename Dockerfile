@@ -25,6 +25,7 @@ COPY pyproject.toml uv.lock alembic.ini ./
 COPY src/ src/
 COPY migrations/ migrations/
 COPY docs/planning/references/artifact-templates.json docs/planning/references/artifact-templates.json
+RUN chmod -R a+rX /app/src /app/migrations /app/docs
 RUN uv sync --locked --no-dev \
     && mkdir -p /app/.projects \
     && chown -R projects:projects /app/.projects

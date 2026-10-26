@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
-    baselineSchema, catalogSchema, itemSchema, linkSchema, projectSchema,
+    baselineSchema, catalogSchema, gitPreviewSchema, gitZipPreviewSchema, itemSchema, linkSchema, projectSchema,
+    repositoryActivitySchema,
     reconnectSchema, resolveSchema, revisionSchema, runSchema, runtimeSchema,
     sessionSchema, summarySchema, taskViewSchema, testRunSchema, traceSchema,
 } from "./models";
@@ -83,8 +84,14 @@ export const api = {
     auth: (mode: "login" | "register", body: unknown) => request(`/api/auth/${mode}`, sessionSchema, { method: "POST", body }),
     logout: () => request("/api/auth/logout", okSchema.extend({ auth_mode: z.enum(["password", "microsoft"]) }), { method: "POST" }),
     projects: (signal?: AbortSignal) => request("/api/projects", z.array(projectSchema), { signal }),
+    reorderProjects: (project_ids: string[]) => request("/api/projects/order", z.array(projectSchema), { method: "PUT", body: { project_ids } }),
     createProject: (body: unknown) => request("/api/projects", projectSchema, { method: "POST", body }),
     importProject: (archive: string) => request("/api/projects/import", projectSchema, { method: "POST", body: { archive_base64: archive } }),
+    previewGit: (repository_url: string, path = "") => request("/api/projects/from-git/preview", gitPreviewSchema, { method: "POST", body: { repository_url, path } }),
+    importGit: (body: unknown) => request("/api/projects/from-git", projectSchema, { method: "POST", body }),
+    previewGitZip: (body: unknown) => request("/api/projects/from-git-zip/preview", gitZipPreviewSchema, { method: "POST", body }),
+    importGitZip: (body: unknown) => request("/api/projects/from-git-zip", projectSchema, { method: "POST", body }),
+    repositoryActivity: (pid: string, signal?: AbortSignal) => request(`${projectPath(pid)}/repository-activity`, z.array(repositoryActivitySchema), { signal }),
     summary: (pid: string, signal?: AbortSignal) => request(`${projectPath(pid)}/summary`, summarySchema, { signal }),
     items: (pid: string, signal?: AbortSignal) => request(`${projectPath(pid)}/items`, z.array(itemSchema), { signal }),
     item: (iid: string, signal?: AbortSignal) => request(itemPath(iid), itemSchema, { signal }),

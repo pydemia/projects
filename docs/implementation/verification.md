@@ -2,6 +2,86 @@
 
 2026-10-21 · Windows / Python 3.12.14 / Node 24.21.0 / PostgreSQL 17.11
 
+## 2026-10-26 프로젝트 기본 선택·순서 변경
+
+APP-REQ-037·AC-69~72. 첫 진입에서 프로젝트 ID가 없으면 현재 사용자 목록의
+첫 항목을 선택한다. 명시적으로 연 전체 목록은 유지한다. 목록과 사이드바는
+세로 행으로 표시하고, 순서는 드래그 또는 위·아래 버튼으로 바꾼다. PostgreSQL의
+사용자 소유 프로젝트에 저장하며 새 프로젝트는 저장된 순서 뒤에 놓는다.
+
+| 검증 층위 | 결과 |
+|---|---|
+| PostgreSQL/API | 전용 무작위 schema에서 세 프로젝트 순서 저장·새로고침·새 프로젝트 추가, 중복·누락·타 사용자 ID 거부를 검사했다. 전체 `uv run pytest` 198개 통과. |
+| 실제 Edge + 격리 PostgreSQL | `scripts/verify-mobile-browser.py`에서 두 프로젝트로 첫 진입 자동 선택, 모바일 시트의 위로 이동, 데스크톱 실제 핸들 드래그, 재접속 후 목록 순서를 확인했다. 320~430px 기존 업무 화면·모달 검사도 통과했다. 생성한 test schema는 정리했다. |
+| 웹·정적 검사 | `npm --prefix web run check` 48개, `npm --prefix web run build`와 favicon 검사, Ruff check/format, mypy 통과. |
+| 운영 | 2026-10-27 `38e1a05` 이미지를 on-prem에 배포하고 Alembic `0007`, 프로젝트 2건 유지, 앱·DB·OAuth2 Proxy·edge health를 확인했다. 기존 Entra 로그인 상태의 Edge에서 프로젝트 ID 없는 개요 URL이 첫 항목으로 이동했다. 실제 드래그로 순서를 바꿔 새로고침 후 지속성을 확인하고 위로 이동 버튼으로 원래 순서를 복원했다. [배포 기록](deployment.md#2026-10-27-프로젝트-순서-변경-운영-배포). 물리 기기 조작은 이 검사에 포함하지 않았다. |
+
+## 2026-10-25 모바일 모달·키보드 사용성 보완
+
+사용자 제보에 따라 공통 Dialog의 모바일 위치와 스크롤 소유권을 다시 검사했다.
+기존 320×568 프로젝트 생성은 528px 높이의 가운데 모달이었고, 작업·더보기
+시트는 레이아웃 viewport 하단에 고정되어 가상 키보드가 보이는 영역을 줄일
+때 버튼이 가려질 수 있었다. 일반 긴 폼은 모바일 전체 화면, 짧은 작업·더보기는
+하단 시트로 표시하도록 조정했다. `visualViewport` resize/scroll에서 가시
+영역의 상단·폭·높이·하단을 반영하고, 폼 저장 행과 짧은 시트의 주요 행동은
+스크롤 중 접근 가능하게 했다. 닫기 후 원래 버튼으로 초점이 돌아오는지
+확인했다. 공통 `pydemia-ui/Dialog`를 계속 사용한다.
+
+| 검증 층위 | 결과 |
+|---|---|
+| 모바일 브라우저 mock | Edge 모바일 에뮬레이션에서 390×844·320×568·667×375의 프로젝트 생성, Git ZIP, 아이디어 긴 폼, 더보기, 작업 추가 모달을 열고 가시 영역 밖으로 벗어나지 않는지 검사. 320×568에서 `visualViewport.height`를 300/200px, `offsetTop`을 30px로 모사해 헤더·확인 버튼 위치와 초점 복귀를 검증. 실제 OS 키보드 조작은 아님. |
+| 실제 앱·PostgreSQL | 무작위 전용 schema를 만드는 `scripts/verify-mobile-browser.py`를 실행해 작업 추가·필터·일괄 변경·더보기 시트의 실제 API 흐름과 위치, Today/Inbox/보드·문서 초안, 320~430px 넘침, 데스크톱·테마·favicon을 확인. 테스트 schema만 정리. |
+| 회귀·정적 검사 | `docker compose up -d db`, `uv run projects migrate`, 전체 `uv run pytest -q` 196개, Ruff check/format, mypy, `npm --prefix web run check` 46개, 웹 빌드·favicon 검사 통과. |
+| 운영 반영 | `d65b4ca`의 GitHub Actions backend·web 성공을 확인하고 `pydemia-projects:9041e44edb611919`로 배포. app·DB healthy, Alembic `0006`, 내부 HTML·JS·CSS·favicon 바이트 일치와 공개 HTTPS의 로그인 시작을 확인. 인증 후 실제 화면은 Microsoft Authenticator 승인 대기. [배포 기록](deployment.md#2026-10-25-git-소스-가져오기모바일-모달-운영-배포). |
+
+시각 근거: [프로젝트 만들기 320px](screenshots/mobile-dialogs/project-create-320.png),
+[긴 아이디어 폼 하단 320px](screenshots/mobile-dialogs/idea-create-bottom-320.png),
+[작업 추가 시트 320px](screenshots/mobile-dialogs/task-add-320.png),
+[더보기 시트 390px](screenshots/mobile-experience/more-390.png).
+물리 기기의 iOS/Android 키보드, 노치·안전 영역과 확대 동작은 이번 브라우저
+모사로 판정하지 않았다. 운영 배포는 위와 같이 진행했으며, 인증 후 화면
+조작과 물리 기기 사용성은 별도 확인이 필요하다.
+
+## 2026-10-25 Git ZIP 생성·백업 복원 문구
+
+APP-REQ-035~036·AC-65~68의 로컬 변경을 검사했다. 프로젝트 목록은
+`백업 ZIP 복원`·`원격 GitHub에서 만들기`·`Git ZIP에서 만들기`를 구분하고,
+백업 안내는 `Projects에서 저장한 백업 ZIP`이라고 표시한다. Git 소스 ZIP은
+package manifest만 읽어 목표를 제안하며 commit·PR 이력을 생성하지 않는다.
+
+| 검증 층위 | 결과 |
+|---|---|
+| 실제 공개 ZIP 읽기 | GitHub `statusline` main Download ZIP 73,426바이트를 실제로 받아 브라우저 확장·`manifest.json`·`Statusline`을 확인. `vscode-extension-quickstart` main ZIP 393,301바이트에서 하위 폴더 두 개를 찾고 `quickstart-extension`을 VS Code 확장으로 분류. |
+| 실제 로컬 Git archive | 현재 저장소 HEAD의 `git archive --format=zip` 6,655,213바이트를 메모리에서 분석해 `pyproject.toml`·Python 패키지·`projects-app`을 확인. 소스 추출·실행·DB 저장 없음. |
+| PostgreSQL·단위 검사 | GitHub ZIP·루트 없는 archive·하위 scope·위험 경로·백업 ZIP 혼동·해시 충돌·인증/CSRF·이력 없음 검사. `docker compose up -d db`, `uv run projects migrate`, 전체 `uv run pytest -q` 196개 통과. |
+| 웹·브라우저 mock | `npm --prefix web run check` 46개 통과. Playwright/Edge의 1440px·390px에서 백업 문구, Git ZIP 선택→목표 확인→생성과 기존 원격 GitHub 흐름·가로 넘침 없음 확인. Mock이므로 브라우저에서 실제 ZIP 파서와 PostgreSQL을 연결한 결과는 아님. |
+| 정적 검사·빌드 | Ruff check/format, mypy, `npm --prefix web run build` 통과. favicon SVG·10종 PNG·ICO 확인. |
+
+실제 공개 ZIP은 읽기 전용으로 내려받아 메모리에서 분석했다. 비공개 ZIP,
+이 절의 로컬 판정 당시 운영 배포와 물리 기기 검증은 수행하지 않았다. 운영
+배포는 위 기록에서 확인하고 물리 기기 검증은 남았다. ZIP 파일명·package 설명은
+검토 전 입력이며 commit·PR 이력을 주장하는 근거로 사용하지 않는다.
+
+## 2026-10-24 GitHub 저장소 이관
+
+APP-REQ-029~034·AC-59~64의 로컬 구현을 검사했다. 미리보기는 manifest의
+이름·설명·의존성에서 목표를 제안하고, 작업 이력은 최근 commit·PR의
+제목·상태·링크만 가져온다. 소스·README 본문을 기능으로 만들지 않는다.
+
+| 검증 층위 | 결과 |
+|---|---|
+| 실제 공개 GitHub 읽기 | `statusline`: 브라우저 확장·`manifest.json`·이력 15건. `colors`: 웹 앱·`package.json`·16건. `mengto-skills`: 스킬 카탈로그·package 부재 경고·15건. `pydantic-config`: Python 패키지·`setup.py`·2건. `vscode-extension-quickstart`: 루트 일반 저장소 2건, `quickstart-extension` 하위 폴더 VS Code 확장·`package.json`·1건. |
+| API mock·PostgreSQL 통합 | URL·외부 redirect·token 허용 목록·manifest 목표·commit/PR 미리보기, CSRF·소유권·중복·변경된 SHA, 트랜잭션 저장, ZIP 반출·별도 schema 복구·이전 ZIP 호환을 검사. 전체 `uv run pytest -q` 185개 통과. |
+| 웹 컴포넌트·브라우저 | `npm --prefix web run check` 45개 통과. Playwright/Edge에서 mock API로 1440px·390px의 분석→이력 확인→생성 조작과 가로 넘침 없음 확인. |
+| 빌드·정적 검사 | `docker compose up -d db`, `uv run projects migrate`, Ruff check/format, mypy, 웹 빌드 통과. favicon SVG·10종 PNG·ICO 연결 검사 통과. |
+
+실제 GitHub 검사는 공개 저장소의 읽기 전용 요청이었다. 공개 API의 익명
+호출 한도에 도달한 뒤 추가 원격 검사를 중단했다. 비공개 저장소는 서버 token
+미설정으로 실제 접근하지 않았으며 정확한 허용 목록과 비노출 경계는 HTTP
+mock으로 확인했다. 브라우저 검사는 mock API이므로 실제 GitHub 응답과
+PostgreSQL 저장을 한 브라우저 세션에서 동시에 실행한 결과는 아니다.
+운영 배포·운영 Entra 계정·물리 기기 검증도 이번 변경에서는 수행하지 않았다.
+
 ## 2026-10-21 pydemia Glassmorphism·시스템 밝기 기본값
 
 이번 수용 조건은 ① Glassmorphism·pydemia 원본 블루/네이비 기본값,
@@ -436,3 +516,28 @@ DB의 Alembic `0005`와 두 작업 테이블, 내부 HTTP의 새 JS/CSS·favicon
 기존 Entra 계정으로 로그인하여 개인 작업공간 및 새 저장 보기 화면에
 진입했다. 이 검사는 운영 데스크톱 브라우저와 HTTP 경로의 확인이며,
 사용자가 수행할 물리 기기 조작 검증의 결과로 간주하지 않는다.
+
+## 2026-10-25 모바일 모달 재점검
+
+사용자가 제공한 물리 기기 사진에서 프로젝트 생성 모달의 좌측 절반이
+화면 밖으로 밀리고 뒤쪽 작업공간이 보였다. 이 사진을 결함 근거로
+사용했다. 기기·브라우저와 확대 상태는 아직 확인되지 않아 동일한 물리
+환경에서의 원인 재현으로 기록하지 않는다.
+
+게시된 `ui.pydemia.ai`의 Dialog·Popover·DropdownMenu·Drawer 기본 예시를
+Edge 모바일 에뮬레이션 320·390 CSS px에서 열어 패널 경계가 화면 안에
+있는 것을 확인했다. Projects는 기존 모바일 CSS가 공통 Dialog의
+`default`/`wide` 중앙 정렬 이동 클래스를 지워야만 정상 배치되는
+구조였다. 모바일에서는 원본 컴포넌트의 `fullscreen` 변형을 선택하고
+좌우 inset을 0으로 고정해 중앙 이동 클래스를 생성하지 않는다.
+
+`node web/scripts/verify-mobile-dialogs.cjs`는 mock API를 쓴 로컬
+브라우저에서 390×844, 320×568, 667×375의 프로젝트 신규·Git ZIP·원격
+GitHub·더보기·아이디어·작업 시트를 검사했다. 모든 패널의 경계와
+가로 넘침, `data-size=fullscreen`, 중앙 이동 클래스 부재, 닫은 뒤 초점
+복귀를 확인했다. 320px에서 가상 키보드로 가시 높이를 300px·200px로
+줄인 경우에도 상하 경계와 저장 버튼이 가시 영역에 남았다. ZIP·GitHub
+화면을 이미지로 열어 필드·버튼이 보이는 것도 확인했다. 웹 검사 46개,
+빌드와 favicon 검사가 통과했다. PostgreSQL migration과 백엔드 196개,
+Ruff·mypy도 통과했다. 이는 실제 물리 기기와 Entra 로그인 후 운영
+브라우저의 검사를 대체하지 않는다.

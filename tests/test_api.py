@@ -106,6 +106,59 @@ def test_accounts_csrf_and_project_isolation(
     assert len(client.get("/api/projects").json()) == 1
 
 
+def test_project_order_is_persisted_and_scoped_to_owner(app, client, project):
+    second = client.post("/api/projects", json={"name": "두 번째"}).json()
+    third = client.post("/api/projects", json={"name": "세 번째"}).json()
+    path = "/api/projects/order"
+    ids = [third["id"], project["id"], second["id"]]
+
+    assert [row["id"] for row in client.get("/api/projects").json()] == [
+        project["id"],
+        second["id"],
+        third["id"],
+    ]
+    assert client.put(path, json={"project_ids": ids}).status_code == 200
+    assert [row["id"] for row in client.get("/api/projects").json()] == ids
+    assert client.put(path, json={"project_ids": ids[:2]}).status_code == 409
+    assert (
+        client.put(path, json={"project_ids": [ids[0]] * 3}).status_code == 422
+    )
+    assert [row["id"] for row in client.get("/api/projects").json()] == ids
+
+    fourth = client.post("/api/projects", json={"name": "새 프로젝트"}).json()
+    assert [row["id"] for row in client.get("/api/projects").json()] == [
+        *ids,
+        fourth["id"],
+    ]
+    with TestClient(app) as other:
+        response = other.post(
+            "/api/auth/register",
+            json={
+                "username": "project-order-other",
+                "password": "other-password-long",
+            },
+        )
+        other.headers["X-CSRF-Token"] = response.json()["csrf_token"]
+        foreign = other.post(
+            "/api/projects", json={"name": "다른 소유자"}
+        ).json()
+        assert (
+            other.put(
+                path, json={"project_ids": [foreign["id"], *ids]}
+            ).status_code
+            == 409
+        )
+        assert (
+            client.put(
+                path, json={"project_ids": [foreign["id"], *ids]}
+            ).status_code
+            == 409
+        )
+        assert [row["id"] for row in other.get("/api/projects").json()] == [
+            foreign["id"]
+        ]
+
+
 def test_task_cancellation_preserves_reason_and_summary_denominator(
     client, project, create_item
 ):

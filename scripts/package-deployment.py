@@ -14,6 +14,7 @@ FILES = (
     "Dockerfile",
     "alembic.ini",
     "compose.production.yaml",
+    "compose.onprem.yaml",
     "docs/planning/references/artifact-templates.json",
     "pyproject.toml",
     "uv.lock",

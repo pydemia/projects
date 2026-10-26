@@ -34,6 +34,8 @@ class Settings:
     llm_auth_file: Path | None = field(default=None, repr=False)
     llm_auth_inline: dict[str, Any] | None = field(default=None, repr=False)
     llm_timeout_seconds: float = 120
+    github_token: str = field(default="", repr=False)
+    github_private_repos: tuple[str, ...] = ()
     secure_cookies: bool = False
     registration_enabled: bool = True
     proxy_auth_email: str = ""
@@ -95,6 +97,14 @@ class Settings:
                 ),
             ),
             **llm,
+            github_token=os.getenv("PROJECTS_GITHUB_TOKEN", ""),
+            github_private_repos=tuple(
+                name.strip()
+                for name in os.getenv(
+                    "PROJECTS_GITHUB_PRIVATE_REPOS", ""
+                ).split(",")
+                if name.strip()
+            ),
             secure_cookies=secure_cookies,
             registration_enabled=registration_enabled,
             proxy_auth_email=proxy_email,

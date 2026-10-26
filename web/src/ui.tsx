@@ -1,5 +1,5 @@
-import { cloneElement, lazy, Suspense } from "react";
-import type { ReactElement, ReactNode } from "react";
+import { cloneElement, lazy, Suspense, useEffect, useState } from "react";
+import type { CSSProperties, ReactElement, ReactNode } from "react";
 import { statusLabels } from "./models";
 import { navigate, routeUrl } from "./hooks";
 import type { Route } from "./hooks";
@@ -58,9 +58,9 @@ export function PageHead({ title, description, children, eyebrow }: {
     return <PageHeader className="pagehead" title={title} subtitle={description}
         eyebrow={eyebrow ?? "PROJECT WORKSPACE"} actions={<div className="actions">{children}</div>} />;
 }
-export function RouteLink({ patch, children, className = "", current, appearance = "inline" }: {
+export function RouteLink({ patch, children, className = "", current, appearance = "inline", onNavigate }: {
     patch: Partial<Route>; children: ReactNode; className?: string; current?: boolean;
-    appearance?: "inline" | "side";
+    appearance?: "inline" | "side"; onNavigate?: () => void;
 }) {
     const props = { href: routeUrl(patch), className,
         "aria-current": current ? "page" as const : undefined,
@@ -68,6 +68,7 @@ export function RouteLink({ patch, children, className = "", current, appearance
             if (!event.metaKey && !event.ctrlKey && !event.shiftKey && event.button === 0) {
                 event.preventDefault();
                 navigate(patch);
+                onNavigate?.();
             }
         } };
     return appearance === "side" ? <SideNavLink {...props}>{children}</SideNavLink> : <a {...props}>{children}</a>;
@@ -75,8 +76,34 @@ export function RouteLink({ patch, children, className = "", current, appearance
 export function Modal({ title, children, onClose, wide = false, className = "" }: {
     title: string; children: ReactNode; onClose: () => void; wide?: boolean; className?: string;
 }) {
+    const [viewport, setViewport] = useState(readVisibleViewport);
+    const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" &&
+        (window.matchMedia?.("(max-width: 760px)").matches ?? window.innerWidth <= 760));
+    const [returnFocus] = useState<HTMLElement | null>(() => typeof document !== "undefined" && document.activeElement instanceof HTMLElement ? document.activeElement : null);
+    useEffect(() => {
+        const visual = window.visualViewport;
+        const mobileQuery = window.matchMedia?.("(max-width: 760px)");
+        const update = () => setViewport(readVisibleViewport());
+        const updateMobile = () => setIsMobile(mobileQuery?.matches ?? window.innerWidth <= 760);
+        window.addEventListener("resize", update);
+        visual?.addEventListener("resize", update);
+        visual?.addEventListener("scroll", update);
+        mobileQuery?.addEventListener("change", updateMobile);
+        return () => {
+            window.removeEventListener("resize", update);
+            visual?.removeEventListener("resize", update);
+            visual?.removeEventListener("scroll", update);
+            mobileQuery?.removeEventListener("change", updateMobile);
+        };
+    }, []);
+    const viewportStyle = {
+        "--dialog-visible-top": `${viewport.top}px`,
+        "--dialog-visible-height": `${viewport.height}px`,
+        "--dialog-visible-bottom": `${viewport.bottom}px`,
+    } as CSSProperties;
     return <Dialog open onOpenChange={open => { if (!open) onClose(); }}>
-        <DialogContent size={wide ? "wide" : "default"} className={`projects-dialog ${className}`}>
+        <DialogContent size={isMobile ? "fullscreen" : wide ? "wide" : "default"} className={`projects-dialog ${className}`} style={viewportStyle}
+            onCloseAutoFocus={event => { if (returnFocus?.isConnected) { event.preventDefault(); returnFocus.focus(); } }}>
             <DialogHeader className="modal-head"><DialogTitle>{title}</DialogTitle>
                 <Button variant="ghost" className="plain" aria-label="대화상자 닫기" onClick={onClose}>닫기 ×</Button>
             </DialogHeader>
@@ -84,6 +111,13 @@ export function Modal({ title, children, onClose, wide = false, className = "" }
             <div className="modal-body">{children}</div>
         </DialogContent>
     </Dialog>;
+}
+function readVisibleViewport() {
+    if (typeof window === "undefined") return { top: 0, height: 0, bottom: 0 };
+    const visual = window.visualViewport;
+    const top = visual?.offsetTop ?? 0;
+    const height = visual?.height ?? window.innerHeight;
+    return { top, height, bottom: Math.max(0, window.innerHeight - top - height) };
 }
 export function safeMarkdownUrl(value: string): string {
     if (value.startsWith("#")) return value;

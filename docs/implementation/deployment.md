@@ -1,8 +1,9 @@
 # Projects 원격 배포와 Microsoft Entra 로그인
 
-2026-10-21 현재 기존 Ubuntu 서버 `codex-devbox`에서
-`projects.pydemia.ai`를 제공합니다. DNS, Let's Encrypt HTTPS와
-`pydemia@pydemia.ai`의 실제 Microsoft Entra 로그인을 확인했습니다.
+2026-10-26 현재 `projects.pydemia.ai`는 온프레미스 `pydemia-server`의
+Cloudflare Tunnel로 제공합니다. 이 문서의 2026-10-21~25 기록은 이전
+`codex-devbox` 운영 이력입니다. 새 구성·백업·복구와 검증 범위는
+[온프레미스 이관 기록](onprem-migration.md)에 있습니다.
 
 ## 구성과 데이터 경계
 
@@ -158,3 +159,82 @@ Microsoft 인증 요청에는 `prompt`가 없었고, 수정 후에는
 로그인 페이지 200, Microsoft 로그인 시작 302와 `prompt=select_account`,
 앱 정적 자산과 favicon 응답을 확인했다. 다른 계정으로 실제 403을 거친
 브라우저 재시도는 이번 검사에 포함하지 않았다.
+
+## 2026-10-25 Git 소스 가져오기·모바일 모달 운영 배포
+
+GitHub URL·Git 소스 ZIP 가져오기와 모바일 모달 보완을 포함한
+`d65b4ca1c577745ed60505c12b348806389b419a`의 GitHub Actions
+`checks`가 backend·web 모두 성공했다. 작업 트리는 깨끗했고 allowlist
+배포 archive의 149개 파일을 해당 HEAD의 Git blob과 대조했다. source hash는
+`9041e44edb611919737158ce99a3cf4d850300c666346faeb36e4028a3ff1519`,
+archive SHA-256은
+`56aec70958ca28face2071ab12c6fa0cd02a7fb1a1d3b7ac614f830ff834149b`다.
+
+서버의 분리된 release 디렉터리에서 archive hash를 다시 확인하고
+`pydemia-projects:9041e44edb611919` 이미지를 빌드했다. 전환 전에
+PostgreSQL custom dump를 생성해 `pg_restore --list`로 읽을 수 있음을
+확인하고, `state/`·`.secrets/`·Compose 설정과 기존 배포 소스를
+`/home/pydemia/.local/share/projects-backups/20261024T201857Z`에 백업했다.
+백업 파일은 서버의 비공개 디렉터리에만 둔다.
+
+전환 후 app·DB가 healthy이고 OAuth2 Proxy가 실행 중이며 Alembic은
+`0006`이다. 앱 내부 `/health`와 HTML·JS·CSS·favicon 응답이 이미지의
+빌드 파일과 바이트 단위로 일치한다. 배포 CSS에 모바일 dialog 규칙이,
+앱 OpenAPI에 Git URL·Git ZIP의 미리보기/생성 네 경로가 있는지 확인했다.
+favicon SHA-256은
+`210e38b2f2f4dace4d0bf32f76dc54c17c8b335a5a056868aebf4795ae8eae33`다.
+공개 HTTPS에서 비로그인 `/api/session`은 401, `/oauth2/sign_in`은
+로그인 화면 200, `/oauth2/start`는 Microsoft 단일 테넌트로 302이며
+`prompt=select_account`가 유지됐다. Edge에서 로그인 화면과 계정 선택까지
+열었고, 계정 로그인은 Microsoft Authenticator 승인 대기 중이다. 따라서
+인증 후 실제 화면 조작과 물리 기기의 OS 키보드·안전 영역은 아직 검증하지 않았다.
+
+## 2026-10-25 모바일 모달 위치 재수정 배포
+
+물리 기기 사진에서 확인된 프로젝트 생성 모달의 가로 이탈에 대응해
+`2d37f3d`를 배포했다. 운영 source hash는
+`6e96df4f91428268367a8091a99af12ae7cce95999b11844376867c5ff192824`,
+archive SHA-256은
+`39db63f8aa3f69a0be54575d4cbc2f1c5fe0795daffad8d0f36bd613c35918e4`다.
+허용된 149개 파일을 Git HEAD blob과 대조하고 서버에서 archive hash를
+다시 확인했다. 분리된 release 디렉터리에서
+`pydemia-projects:6e96df4f91428268` 이미지를 빌드했다.
+
+전환 전에 PostgreSQL custom dump를 `pg_restore --list`로 검사하고,
+`state/`·`.secrets/`·Compose 설정·기존 배포 소스를 서버 전용
+`/home/pydemia/.local/share/projects-backups/20261024T205533Z`에 저장했다.
+전환 후 앱과 DB가 healthy, OAuth2 Proxy가 실행 중이며 Alembic은 `0006`이다.
+앱 내부 `/health`·HTML·JS·CSS·favicon 응답은 새 이미지의 빌드 파일과
+바이트 단위로 일치했다. 공개 HTTPS의 미인증 API는 401, 로그인 화면은
+200, Microsoft 인증 시작은 302 및 `prompt=select_account`다.
+인증된 운영 모바일 화면과 물리 기기 safe area·OS 키보드는 이 배포에서
+직접 검증하지 못했다. 로컬 모바일 브라우저 검사는
+[별도 기록](verification.md#2026-10-25-모바일-모달-재점검)에 있다.
+
+## 2026-10-27 프로젝트 순서 변경 운영 배포
+
+`38e1a05d4237bc0baf2e5e25d838e051220d2f83`의 backend·web·GitGuardian
+GitHub 검사가 통과했다. 이 커밋의 archive SHA-256은
+`68f6eeee9b2851c7b7a37b4e5f5e2b499cfb36247e8a1ca2ce7e7cfec5df7d11`이다.
+처음 서버에서 이미지를 빌드하던 중 호스트가 네트워크에서 사라졌다. 서비스
+전환 전 단계였고, 복구 후 기존 앱·DB가 healthy이고 Alembic `0006`, 프로젝트
+2건임을 확인했다. 종료 직전 커널 로그에 OOM·panic 근거는 확인되지 않아
+중단 원인은 확정하지 않았다.
+
+서버 재빌드를 반복하지 않고 검증된 소스로 개발 PC에서 만든
+`pydemia-projects:38e1a05d4237bc0b` Linux amd64 이미지를 전송했다.
+이미지 tar의 전송 전후 SHA-256은
+`ef7a6a57db3dd5e1ab6d6ee919aa8307ae9fb32e56a520bfebbaf154dbe2cd3a`로
+일치한다. 전환 직전 PostgreSQL custom dump를 생성해 `pg_restore -l`로
+읽을 수 있음을 확인하고, 기존 소스를 백업했다. 백업 경로는 서버의
+`/home/pydemia/.local/share/projects-releases/38e1a05d4237bc0b/`이며
+`.secrets/`와 `state/`는 원래 위치에 보존했다. 인증 파일·설정 권한 0600과
+사용자 데이터 디렉터리 권한 0700을 유지했다.
+
+Compose를 `--no-build --wait`로 전환한 뒤 앱·DB·OAuth2 Proxy·edge가
+healthy이고 Alembic `0007`, 프로젝트 2건, `sort_order` 컬럼을 확인했다.
+공개 로그인 페이지는 HTTPS 200으로 열렸다. 기존 Entra 로그인 상태인 실제
+Edge에서 새 세로 프로젝트 목록과 첫 프로젝트 자동 선택을 확인했다.
+드래그로 두 프로젝트 순서를 바꾼 뒤 새로고침 후에도 유지됨을 확인하고,
+위로 이동 버튼으로 원래 순서를 복원해 다시 새로고침했다. 물리 기기의
+터치 드래그는 이번 검사에 포함하지 않았다.

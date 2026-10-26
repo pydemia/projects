@@ -111,8 +111,35 @@ export type Session = z.infer<typeof sessionSchema>;
 export const projectSchema = z.object({
     id, name: text, goal: text, profile: text,
     version: z.number().int(), created_at: text,
+    sort_order: z.number().int().nullable().default(null),
+    repository_url: text.nullable(), repository_path: text,
+    repository_branch: text.nullable(), repository_sha: text.nullable(),
+    repository_kind: text.nullable(), repository_manifest: text.nullable(),
+    repository_imported_at: text.nullable(),
 });
 export type Project = z.infer<typeof projectSchema>;
+export const repositoryActivitySchema = z.object({
+    id, project_id: id, kind: z.enum(["commit", "pr"]), external_id: text,
+    title: text, url: text, state: z.enum(["committed", "open", "closed", "merged"]),
+    occurred_at: text,
+});
+export type RepositoryActivity = z.infer<typeof repositoryActivitySchema>;
+export const gitPreviewSchema = z.object({
+    repository_url: text, repository_full_name: text, branch: text,
+    sha: text, path: text, kind: text, visibility: z.enum(["public", "private"]),
+    scopes: z.array(z.object({ path: text, label: text })),
+    manifest_path: text, suggested_name: text, suggested_goal: text,
+    activities: z.array(repositoryActivitySchema.omit({ id: true, project_id: true })),
+    warnings: z.array(text),
+});
+export type GitPreview = z.infer<typeof gitPreviewSchema>;
+export const gitZipPreviewSchema = z.object({
+    archive_sha256: text, archive_name: text, path: text, kind: text,
+    scopes: z.array(z.object({ path: text, label: text })),
+    manifest_path: text, suggested_name: text, suggested_goal: text,
+    warnings: z.array(text),
+});
+export type GitZipPreview = z.infer<typeof gitZipPreviewSchema>;
 const countPair = z.object({ total: z.number().nonnegative() });
 export const summarySchema = z.object({
     items_by_kind: z.record(text, z.number().nonnegative()),

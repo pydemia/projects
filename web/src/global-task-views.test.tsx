@@ -22,6 +22,7 @@ beforeEach(() => {
     vi.restoreAllMocks(); sessionStorage.clear();
     vi.spyOn(api, "projects").mockResolvedValue([]);
     vi.spyOn(api, "taskViews").mockResolvedValue([]);
+    vi.spyOn(api, "links").mockResolvedValue([]);
     window.history.replaceState(null, "", "/?view=tasks&taskScope=all&taskLayout=list&taskDensity=compact&taskStatus=open");
 });
 afterEach(() => vi.unstubAllGlobals());
@@ -84,11 +85,11 @@ it("keeps a partial aggregate visibly incomplete and retries from a fresh snapsh
         .mockRejectedValueOnce(new Error("두번째 페이지 실패"))
         .mockResolvedValueOnce(page(rows.slice(0, 100), "fresh", 151)).mockResolvedValueOnce(page(rows.slice(100), null, 151));
     render(<Global />);
-    await screen.findByText(/두번째 페이지 실패/);
+    const error = await screen.findByText(/두번째 페이지 실패/);
     expect(screen.getByRole("status").textContent).toContain("100 / 151개");
     expect(screen.getByRole("status").textContent).toContain("일부 결과");
     expect(document.querySelector(".task-result-count")?.textContent).toContain("불러온 작업 100개");
-    fireEvent.click(screen.getByRole("button", {name: "다시 시도"}));
+    fireEvent.click(within(error.closest('[role="alert"]') as HTMLElement).getByRole("button", {name: "다시 시도"}));
     await waitFor(() => expect(document.querySelector(".task-result-count")?.textContent).toContain("151개 작업"));
     expect(tasks.mock.calls[2]?.[0]).not.toHaveProperty("cursor");
 });

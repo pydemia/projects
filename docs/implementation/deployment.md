@@ -1,5 +1,18 @@
 # Projects 원격 배포와 Microsoft Entra 로그인
 
+## 2026-11-23 Story·Task 목록 운영 반영
+
+Story 목록은 제목 행만 표시한다. Task는 제목 버튼이나 행 여백에서 본문을 열고,
+관련 Story 제목은 개수 표시를 펼쳤을 때 표시한다. 소스 변경은 `33ee591`이다.
+
+- 기존 앱 이미지 `sha256:7611ef7be69201f3b8ba4d61753034ce18b851856415720a85d62562eb77016d`에 목록 UI 정적 자산 네 개를 추가해 이미지 `sha256:32f446962e6aa5c182ae5923032ced3b4ba8ce73f3c40808431615bff40a6608`로 전환
+- 현재 운영의 로그아웃 변경과 작업 요약을 포함한 기존 번들에서 목록 UI에 필요한 부분만 수정. 마크다운 모듈이 새 진입점과 같은 React 인스턴스를 사용하도록 양쪽 import 경로를 갱신
+- 현재 release는 `20261112-agent-track-dependencies-33dfdfe3c12a0ffb/story-task-lists-20261123-fa7d22fa19ef8f9a-df33fb47`. 적용 목록과 이전 Compose 파일 목록은 서버 release의 `manifest.json`과 `previous-config-files.json`에 보관
+- 앱 health, 환경변수 값, 실행 설정과 마운트, DB·edge·oauth2-proxy 컨테이너 ID 보존 확인. 공개 HTML·정적 자산·favicon의 해시와 비로그인 세션 거부 확인
+- 실제 Edge·격리 PostgreSQL에서 소스 빌드 흐름 11개 확인. 공개 운영 자산은 테스트 API 응답을 사용해 Edge 1720·390·320px에서 목록·본문·키보드 조작 확인
+
+다음 전체 프런트엔드 빌드 배포 전에는 현재 운영 로그아웃 연동과 작업 요약 동작을 소스에서 재현하고 확인한다.
+
 ## 2026-11-09 목록 상태점 드롭다운 운영 반영
 
 후속 사용자 요청에 따라 완료 checkbox를 제거하고 원형 상태점+펼침 메뉴로 바꿨다.

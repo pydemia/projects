@@ -482,11 +482,12 @@ export function TaskWorkspace({ projectId, userId, route, items, selectedItem, r
                 ? groupedRows[index - 1]?.data.state !== task.data.state
                 : groupedRows[index - 1]?.data.list_name !== task.data.list_name)) &&
                 <strong className="task-group-label">{rowGrouping === "today" ? ["마감 지남", "오늘", "미처리 계획"][todayGroup(task, today)] : rowGrouping === "state" ? statusLabels[task.data.state] : task.data.list_name}</strong>}
-            <div className="task-row-main"><TaskTitleEdit task={task} onOpen={() => openTask(task.id)} disabled={!!busyId} onSaved={item => {if (item.kind === "task") taskCache.current.set(item.id, {...task, ...item, project_name: task.project_name, board_order: task.board_order}); onChanged();}} /><TaskStoryChips taskId={task.id} />
+            <div className="task-row-main"><TaskTitleEdit task={task} onOpen={() => openTask(task.id)} disabled={!!busyId} onSaved={item => {if (item.kind === "task") taskCache.current.set(item.id, {...task, ...item, project_name: task.project_name, board_order: task.board_order}); onChanged();}} />
                 <div className="task-meta">{!projectId && <><strong>{task.project_name ?? task.project_id}</strong>{!can(task.project_id, "task.update") && <span>읽기 전용</span>}</>}<span>{statusLabels[task.data.state]}</span>
                     {!listFields.includes("list_name") && <span>{task.data.list_name}</span>}
                     {scope === "today" && task.data.planned_date && !listFields.includes("planned_date") && <span>실행 <DateTimeValue value={task.data.planned_date} dateOnly /></span>}
                 </div>
+                <TaskStoryChips taskId={task.id} collapsible />
             </div>
             <TaskFieldCells task={task} fields={listFields} definitions={definitions} onChanged={item => {if (item.kind === "task") taskCache.current.set(item.id, {...task, ...item, project_name: item.project_name ?? task.project_name, board_order: item.board_order ?? task.board_order}); setError(""); onChanged();}} onError={setError} />
             {mode === "simple" && <div className="task-plan-actions">

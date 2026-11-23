@@ -44,7 +44,7 @@ export function TaskTitleEdit({ task, onSaved, disabled = false, dragSurface = f
     }
     return <span className="task-title task-title-edit" data-task-title-id={task.id}>
         <InlineTextEdit label={`${task.title} 제목`} value={task.title} required maxLength={300} disabled={disabled || loading}
-            preview={onOpen && <Button variant="ghost" className="task-open-button" onClick={onOpen}>{task.title}</Button>}
+            preview={onOpen && <Button variant="ghost" className="task-open-button" onClick={onOpen}><span>{task.title}</span></Button>}
             initialDraft={!disabled ? recovery.restored?.title : undefined}
             onDraftChange={value => {entered.current = value; if (value === null) recovery.clear();}}
             dragSurface={dragSurface} onBegin={() => {base.current = task; setConflict(false); setError("");}}

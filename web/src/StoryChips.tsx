@@ -47,11 +47,19 @@ export function TaskStoryProvider({projectId, items, revision, children}: {
     </TaskStories.Provider>;
 }
 
-export function TaskStoryChips({taskId}: {taskId: string}) {
+export function TaskStoryChips({taskId, collapsible = false}: {taskId: string; collapsible?: boolean}) {
     const stories = useContext(TaskStories).get(taskId) ?? [];
     if (!stories.length) return null;
-    return <span className="task-story-chips" aria-label="관련 Story"
-        onPointerDown={event => event.stopPropagation()} onClick={event => event.stopPropagation()} onKeyDown={event => event.stopPropagation()}>
+    const links = <span className="task-story-chips" aria-label="관련 Story">
         {stories.map(story => <RouteLink key={story.id} patch={itemRoute(story)} className="task-story-chip">{story.title}</RouteLink>)}
     </span>;
+    const interactions = {
+        onPointerDown: (event: React.PointerEvent) => event.stopPropagation(),
+        onClick: (event: React.MouseEvent) => event.stopPropagation(),
+        onKeyDown: (event: React.KeyboardEvent) => event.stopPropagation(),
+    };
+    return collapsible ? <details className="task-story-disclosure" {...interactions}>
+        <summary>관련 Story <span>{stories.length}</span></summary>
+        {links}
+    </details> : <span {...interactions}>{links}</span>;
 }

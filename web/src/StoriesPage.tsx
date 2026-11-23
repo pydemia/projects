@@ -14,7 +14,6 @@ import { Card, CardContent } from "./pydemia-ui/card";
 import { Input } from "./pydemia-ui/input";
 import { NativeSelect } from "./pydemia-ui/native-select";
 import { SearchInput } from "./pydemia-ui/search-input";
-import { SideNav } from "./pydemia-ui/navigation";
 import { Textarea } from "./pydemia-ui/textarea";
 import { ActionButton, Badge, Empty, ErrorNotice, Field, Loading, Modal, PageHead, RouteLink } from "./ui";
 import "./story-task.css";
@@ -58,11 +57,11 @@ export function StoriesPage({projectId, userId, route, items, onChanged, onPlan}
             <Card className="doclist workspace-collection" aria-label="Story 목록"><CardContent>
                 <div className="workspace-list-heading"><h2>Story 목록</h2><span>{filtered.length}개</span></div>
                 <SearchInput label="Story 검색" value={query} onValueChange={setQuery} onSearch={value => navigate({q: value, item: ""})} variant="toolbar" placeholder="제목·문제·기대 결과 검색" />
-                <SideNav aria-label="Story 항목" className="doc-list-items">
+                <nav aria-label="Story 항목" className="story-list">
                     {filtered.map(item => <RouteLink key={item.id} patch={{view: "stories", kind: "requirement", item: item.id}}
-                        appearance="side" className="doc-item" current={selected?.id === item.id}><strong>{item.title}</strong></RouteLink>)}
+                        className="doc-item story-list-row" current={selected?.id === item.id}><strong>{item.title}</strong></RouteLink>)}
                     {!filtered.length && <p className="muted">{route.q ? "검색 결과가 없습니다." : "아직 등록한 Story가 없습니다."}</p>}
-                </SideNav>
+                </nav>
             </CardContent></Card>
             <Card className="document-main workspace-detail"><CardContent>
                 {selected ? <>

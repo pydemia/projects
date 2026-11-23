@@ -1,0 +1,57 @@
+.my-tasks-nav { display: block; padding: 10px 12px; margin-bottom: 12px; color: var(--foreground); font-weight: 650; text-decoration: none; }
+.task-scope-bar { margin-bottom: 8px; max-width: 100%; overflow-x: auto; }
+.projects-theme .task-workspace > .task-scope-bar { margin-top: 0; }
+.projects-theme .task-workspace > .task-mode-bar { margin-top: 0; }
+.projects-theme .task-workspace > .task-compose { margin-top: 0; }
+.projects-theme .task-workspace .task-quick-add > .field { margin-bottom: 0; }
+.projects-theme .task-workspace .task-quick-add > .field:has(select) { flex: 0 1 230px; }
+.projects-theme .task-workspace .task-quick-add > .field:has(input:not([type="date"])) { flex: 1 1 240px; }
+.global-task-summary { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 12px; margin-bottom: 10px; }
+.global-task-summary .field { margin: 0; }
+.projects-theme .task-workspace > .pagehead { margin-bottom: 12px; }
+.task-workspace .pagehead p:first-child, .task-workspace .pagehead h1 + p { display: none; }
+.projects-theme .task-workspace .task-mode-bar { padding-bottom: 7px; margin-bottom: 8px; }
+.task-workspace .task-scope-bar > fieldset, .task-density-control { margin: 0; }
+.task-density-control > legend { position: static; width: auto; height: auto; padding: 0; margin: 0 0 5px; overflow: visible; clip: auto; clip-path: none; white-space: normal; font-size: 12px; font-weight: 650; }
+.task-density-control [data-slot="segment"] { min-width: 72px; }
+.task-density-control input:checked + [data-slot="segment"] { font-weight: 750; }
+.projects-theme .task-workspace .task-compose { margin-bottom: 10px; }
+.projects-theme .task-workspace .task-quick-add { padding: 0; margin-bottom: 0; border: 0; background: transparent; }
+.projects-theme .task-workspace .task-quick-hint { display: none; }
+.projects-theme .task-workspace .task-compose > div { padding: 12px 16px; }
+.projects-theme .task-workspace .task-tools { display: flex; margin: 8px 0; gap: 8px; }
+.task-view-settings { margin: 8px 0; font-size: 12px; }
+.task-view-settings > summary { cursor: pointer; }
+.projects-theme .task-workspace[data-density="simple"] .task-row { padding-block: 8px; }
+.projects-theme .task-row .task-checkbox-target { display: inline-flex; flex: 0 0 44px; align-items: center; justify-content: center; width: 44px; min-height: 44px; margin: 0; cursor: pointer; }
+.projects-theme .task-row .task-checkbox-target > [data-ui="checkbox-control"] { align-self: center; width: 20px; min-width: 20px; height: 20px; min-height: 20px; padding: 0; margin: 0; border-width: 2px; border-radius: 3px; box-shadow: none; }
+.projects-theme .task-row .task-checkbox-target > [data-state="unchecked"] { border-color: color-mix(in srgb, var(--foreground) 65%, transparent); }
+.projects-theme .task-row .task-checkbox-target > :is([data-state="checked"], [data-state="indeterminate"]) { background: var(--accent); border-color: var(--accent); color: var(--accent-foreground); }
+.projects-theme .task-row .task-list-state-field { display: inline-flex; flex: 0 0 auto; width: 112px; max-width: 100%; }
+.projects-theme .task-row .task-list-state { width: 100%; min-height: 44px; font-size: 12px; }
+.task-note-references { margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--border); }
+.task-note-references small { display: block; overflow-wrap: anywhere; }
+.calendar-overflow { margin-top: 18px; }
+.calendar-overflow a { display: block; padding: 4px 0; }
+@media (max-width: 760px) {
+  .projects-theme .task-row .task-checkbox-target { grid-column: 1; grid-row: 1 / span 2; }
+  .projects-theme .task-workspace[data-mobile-selecting="false"] .task-row .task-select-target,
+  .projects-theme .task-workspace[data-mobile-selecting="true"] .task-row .task-check-target { display: none; }
+  .projects-theme .task-workspace[data-mobile-selecting="false"] .task-row[data-workflow="delivery"] .task-plan-actions,
+  .projects-theme .task-workspace[data-mobile-selecting="false"] .task-row[data-workflow="delivery"] > button { grid-column: 1 / -1; }
+  .projects-theme .task-workspace.has-task-selection > .task-scope-bar,
+  .projects-theme .task-workspace.has-task-selection > .task-tabs-root { display: none; }
+  .projects-theme .task-workspace .task-tabs-root > .task-view-settings { display: none; }
+  .projects-theme .task-workspace .task-scope-bar [data-slot="segment"] { padding-inline: 10px; }
+  .task-workspace .task-scope-bar { margin-bottom: 10px; }
+  .global-task-summary { gap: 8px; }
+  .global-task-summary select { max-width: 100%; }
+  .task-row > button { max-width: 100%; }
+  .projects-theme .task-row > button:not(.task-check) { grid-column: 2 / -1; justify-self: start; width: auto; white-space: nowrap; }
+  .projects-theme .task-workspace[data-density="simple"] .task-row .task-check { display: inline-flex; }
+  .projects-theme .task-workspace .task-row > .task-workflow { display: none; }
+  .task-note-references input { max-width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .task-workspace *, .task-workspace *::before, .task-workspace *::after { scroll-behavior: auto; animation: none; transition: none; }
+}

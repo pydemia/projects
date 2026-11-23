@@ -123,11 +123,17 @@
 .projects-theme .theme-controls { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
 .projects-theme .theme-controls select { width: 100%; max-width: 150px; min-height: 34px; padding: 5px 8px; font-size: 12px; border-radius: var(--field-radius); }
 .projects-theme .theme-controls select:first-of-type { max-width: 176px; }
-.projects-theme .auth-theme { grid-column: 1 / -1; justify-self: end; margin-top: -54px; margin-bottom: 24px; }
+.projects-theme .auth-theme { flex: 1 1 280px; min-width: 0; max-width: 340px; margin: 0 0 0 auto; }
+.projects-theme .auth-header .theme-controls { display: flex; width: 100%; gap: 8px; }
+.projects-theme .auth-header .theme-controls select { flex: 1 1 0; min-width: 0; max-width: none; min-height: 40px; }
+.projects-theme .auth-header .theme-controls select:first-of-type { flex-grow: 1.3; max-width: none; }
 .projects-theme [data-ui="empty"] { align-items: flex-start; text-align: left; }
 .projects-theme [data-ui="alert"] { display: block; }
 @media (max-width: 760px) {
-  .projects-theme .auth-theme { margin: -28px 0 24px; }
+  .projects-theme .auth-header .theme-controls select { min-height: 44px; }
   .projects-theme .topbar .theme-controls select { max-width: 120px; min-height: 32px; font-size: 10px; }
   .projects-theme .topbar .theme-controls select:first-of-type { max-width: 140px; }
+}
+@media (max-width: 480px) {
+  .projects-theme .auth-theme { flex-basis: 100%; max-width: none; }
 }

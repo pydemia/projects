@@ -23,7 +23,23 @@
 .task-plan-actions { display: flex; gap: 4px; }
 .task-row-main { flex: 1; min-width: 0; }
 .task-row .task-title { display: inline-block; font-weight: 650; color: var(--foreground); text-decoration: none; overflow-wrap: anywhere; }
-.task-row .task-title:hover { color: var(--accent); text-decoration: underline; }
+.projects-theme .task-row { cursor: pointer; }
+.projects-theme .task-row .task-open-button {
+  flex: 1;
+  min-width: 0;
+  height: auto;
+  min-height: 32px;
+  justify-content: flex-start;
+  padding: 4px 0;
+  font: inherit;
+  text-align: left;
+  color: var(--foreground);
+  text-decoration: none;
+  white-space: normal;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+.task-row button:disabled { pointer-events: auto; }
 .task-row .task-check { min-width: 34px; width: 34px; height: 34px; padding: 0; }
 .task-meta { display: flex; align-items: center; gap: 7px 12px; flex-wrap: wrap; margin-top: 5px; color: var(--muted); font-size: 11px; }
 .task-workflow { color: var(--muted); font-size: 11px; }

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { api, ApiError, request, setCsrf } from "./api";
+import { api, ApiError, downloadArchive, request, setCsrf } from "./api";
 import { itemSchema, runSchema } from "./models";
 import { idea, candidateRun } from "./fixtures.test-data";
 
@@ -28,5 +28,34 @@ describe("API I/O", () => {
         const valid = runSchema.parse({ ...candidateRun, reference_manifest: { selected_template: { inspected: false } } });
         expect(valid.reference_manifest.selected_template).toEqual({ inspected: false });
         expect(runSchema.safeParse({ ...candidateRun, result: { ...candidateRun.result, source_ids: ["made-up-id"] } }).success).toBe(false);
+    });
+    it("signals expired session and ZIP requests once each without retrying failed writes", async () => {
+        const unauthorized = vi.fn();
+        window.addEventListener("projects:unauthorized", unauthorized);
+        const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(new Response("expired", {status: 401})));
+        vi.stubGlobal("fetch", fetchMock);
+        try {
+            await expect(api.saveItem(idea.id, {expected_revision: 1})).rejects.toMatchObject({status: 401});
+            await expect(downloadArchive("/api/projects/p/export", "p.zip")).rejects.toMatchObject({status: 401});
+            expect(unauthorized).toHaveBeenCalledTimes(2);
+            expect(fetchMock).toHaveBeenCalledTimes(2);
+        } finally { window.removeEventListener("projects:unauthorized", unauthorized); }
+    });
+    it("keeps bad credentials, forbidden requests and network failures out of session recovery", async () => {
+        const unauthorized = vi.fn();
+        window.addEventListener("projects:unauthorized", unauthorized);
+        const fetchMock = vi.fn()
+            .mockResolvedValueOnce(new Response("bad password", {status: 401}))
+            .mockResolvedValueOnce(new Response("bad registration", {status: 401}))
+            .mockResolvedValueOnce(new Response("forbidden", {status: 403}))
+            .mockRejectedValueOnce(new TypeError("network"));
+        vi.stubGlobal("fetch", fetchMock);
+        try {
+            await expect(api.auth("login", {})).rejects.toMatchObject({status: 401});
+            await expect(api.auth("register", {})).rejects.toMatchObject({status: 401});
+            await expect(api.saveItem(idea.id, {})).rejects.toMatchObject({status: 403});
+            await expect(api.items("p")).rejects.toMatchObject({status: 0});
+            expect(unauthorized).not.toHaveBeenCalled();
+        } finally { window.removeEventListener("projects:unauthorized", unauthorized); }
     });
 });

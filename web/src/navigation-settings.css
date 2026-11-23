@@ -1,0 +1,17 @@
+.projects-theme .topbar { min-width: 0; flex-wrap: wrap; gap: 12px 16px; }
+.projects-theme .topbar .crumb { flex: 1 1 180px; min-width: 0; align-items: center; gap: 8px; }
+@media (min-width: 761px) {
+    .projects-theme .topbar .crumb { display: flex; }
+}
+.projects-theme .topbar .crumb strong { min-width: 0; max-width: 38vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.projects-theme .desktop-topbar-actions { flex: 0 0 auto; }
+.projects-theme .sidebar-bottom .preferences-link { margin: 0 6px 8px 0; }
+.projects-theme .mobile-settings-link { display: inline-flex; flex: 0 0 44px; min-width: 44px; min-height: 44px; align-items: center; justify-content: center; white-space: nowrap; }
+.project-actions { display: inline-block; min-width: 0; }
+.project-actions-trigger { min-width: 36px; min-height: 36px; font-size: 22px; }
+.project-rename-inline { width: min(360px, calc(100vw - 32px)); }
+@media (max-width: 760px) {
+    .project-actions-trigger { min-width: 44px; min-height: 44px; }
+    .projects-theme .mobile-topbar .mobile-project-button { flex: 1 1 auto; max-width: none; }
+    .projects-theme .mobile-topbar > strong { flex: 0 0 auto; margin-left: 0; }
+}

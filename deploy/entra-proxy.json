@@ -1,0 +1,107 @@
+{
+    "server": {
+        "bindAddress": "0.0.0.0:4180",
+        "secureBindAddress": "-"
+    },
+    "upstreamConfig": {
+        "upstreams": [
+            {
+                "id": "projects",
+                "path": "/",
+                "uri": "http://app:8000/",
+                "passHostHeader": true
+            }
+        ]
+    },
+    "providers": [
+        {
+            "id": "entra",
+            "provider": "entra-id",
+            "clientID": "${OAUTH2_PROXY_CLIENT_ID}",
+            "clientSecret": "${OAUTH2_PROXY_CLIENT_SECRET}",
+            "scope": "openid profile email",
+            "code_challenge_method": "S256",
+            "loginURLParameters": [
+                {
+                    "name": "prompt",
+                    "default": [
+                        "select_account"
+                    ]
+                }
+            ],
+            "additionalClaims": [
+                "tid",
+                "iss"
+            ],
+            "oidcConfig": {
+                "issuerURL": "https://login.microsoftonline.com/fb44f64f-973f-480d-ab48-f30f3bababb6/v2.0",
+                "emailClaim": "preferred_username",
+                "userIDClaim": "sub",
+                "insecureSkipNonce": false,
+                "insecureSkipIssuerVerification": false
+            },
+            "microsoftEntraIDConfig": {
+                "allowedTenants": [
+                    "fb44f64f-973f-480d-ab48-f30f3bababb6"
+                ]
+            }
+        }
+    ],
+    "injectRequestHeaders": [
+        {
+            "name": "X-Forwarded-User",
+            "preserveRequestValue": false,
+            "values": [
+                {
+                    "claimSource": {
+                        "claim": "user"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "X-Forwarded-Email",
+            "preserveRequestValue": false,
+            "values": [
+                {
+                    "claimSource": {
+                        "claim": "email"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "X-Forwarded-Preferred-Username",
+            "preserveRequestValue": false,
+            "values": [
+                {
+                    "claimSource": {
+                        "claim": "preferred_username"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "X-Projects-Entra-Tenant",
+            "preserveRequestValue": false,
+            "values": [
+                {
+                    "claimSource": {
+                        "claim": "tid"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "X-Projects-Entra-Issuer",
+            "preserveRequestValue": false,
+            "values": [
+                {
+                    "claimSource": {
+                        "claim": "iss"
+                    }
+                }
+            ]
+        }
+    ]
+}

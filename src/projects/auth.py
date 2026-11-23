@@ -10,12 +10,12 @@ from collections import OrderedDict, deque
 from collections.abc import Callable
 from datetime import timedelta
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from projects.config import Settings, valid_proxy_email
-from projects.database import Account, LoginSession, utcnow
+from projects.database import Account, EntraIdentity, LoginSession, utcnow
 from projects.domain import Problem
 
 
@@ -90,11 +90,20 @@ def authenticate(db: Session, username: str, password: str) -> Account:
 
 
 def authenticate_proxy(
-    db: Session, settings: Settings, email: str, subject: str
+    db: Session,
+    settings: Settings,
+    email: str,
+    subject: str,
+    tenant_id: str = "",
+    issuer: str = "",
 ) -> Account:
     email = email.strip().lower()
     if not settings.proxy_auth_enabled or not valid_proxy_email(email):
         raise Problem(401, "Microsoft 로그인이 필요합니다.")
+    if settings.proxy_auth_policy is not None:
+        return authenticate_entra_identity(
+            db, settings, email, subject, tenant_id, issuer
+        )
     if not settings.proxy_auth_domain:
         if not hmac.compare_digest(email, settings.proxy_auth_email):
             raise Problem(401, "Microsoft 로그인이 필요합니다.")
@@ -150,6 +159,97 @@ def authenticate_proxy(
         if user is not None:
             return user
     raise Problem(401, "Projects 계정을 연결할 수 없습니다.")
+
+
+def authenticate_entra_identity(
+    db: Session,
+    settings: Settings,
+    email: str,
+    subject: str,
+    tenant_id: str,
+    issuer: str,
+) -> Account:
+    """Use proxy-verified issuer+subject; login eligibility never grants sharing."""
+    policy = settings.proxy_auth_policy
+    assert policy is not None
+    tenant = next((row for row in policy.tenants if row.id == tenant_id), None)
+    if (
+        tenant is None
+        or issuer != f"https://login.microsoftonline.com/{tenant_id}/v2.0"
+        or email.rsplit("@", 1)[1] not in tenant.email_domains
+        or not re.fullmatch(r"[A-Za-z0-9_-]{1,255}", subject)
+    ):
+        raise Problem(401, "허용된 Microsoft 조직 계정으로 로그인해 주세요.")
+
+    identity = db.get(EntraIdentity, (tenant_id, subject))
+    if identity is not None:
+        account = db.get(Account, identity.account_id)
+        assert account is not None
+        return account
+
+    # A transaction-scoped lock makes identical first logins converge before
+    # provisioning. Username collisions across tenants still use ON CONFLICT.
+    key = hashlib.sha256(f"{tenant_id}:{subject}".encode()).digest()
+    db.execute(
+        select(
+            func.pg_advisory_xact_lock(int.from_bytes(key[:8], signed=True))
+        )
+    )
+    identity = db.get(EntraIdentity, (tenant_id, subject))
+    if identity is not None:
+        account = db.get(Account, identity.account_id)
+        assert account is not None
+        return account
+
+    account = None
+    if tenant_id == policy.legacy_tenant_id:
+        account = db.scalar(
+            select(Account)
+            .where(Account.entra_subject == subject)
+            .with_for_update()
+        )
+        if account is None and email == settings.proxy_auth_email:
+            account = db.scalar(
+                select(Account)
+                .where(Account.username == settings.proxy_auth_username)
+                .with_for_update()
+                .execution_options(populate_existing=True)
+            )
+            if account is None or account.entra_subject not in (None, subject):
+                raise Problem(401, "허용된 Projects 계정이 없습니다.")
+            account.entra_subject = subject
+        if account is not None:
+            # Only the original issuer can claim legacy subject bindings.
+            bound = db.scalar(
+                select(EntraIdentity).where(
+                    EntraIdentity.account_id == account.id
+                )
+            )
+            if bound is not None:
+                raise Problem(401, "Projects 계정을 연결할 수 없습니다.")
+    if account is None:
+        fallback = "entra-" + key.hex()
+        usernames = [email, fallback] if len(email) <= 80 else [fallback]
+        encoded = password_hash(secrets.token_urlsafe(32))
+        for username in usernames:
+            account_id = db.scalar(
+                insert(Account)
+                .values(username=username, password_hash=encoded)
+                .on_conflict_do_nothing()
+                .returning(Account.id)
+            )
+            if account_id is not None:
+                account = db.get(Account, account_id)
+                break
+    if account is None:
+        raise Problem(401, "Projects 계정을 연결할 수 없습니다.")
+    db.add(
+        EntraIdentity(
+            tenant_id=tenant_id, subject=subject, account_id=account.id
+        )
+    )
+    db.flush()
+    return account
 
 
 def create_session(

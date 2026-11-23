@@ -239,6 +239,10 @@ def test_legacy_archive_without_repository_fields_still_restores(client):
         if key.startswith("repository_"):
             data["project"].pop(key)
     data.pop("repository_activities", None)
+    # Build an actual v1 archive, rather than a v1 manifest around v2 data.
+    data["schema_version"] = 1
+    data.pop("external_references", None)
+    data.pop("task_transfers", None)
     content = json_bytes(data)
     legacy = zip_files(
         {

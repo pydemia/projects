@@ -1,3 +1,4 @@
+import { ownerAccess } from "./permissions.test-support";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { expect, it, vi } from "vitest";
 import { api } from "./api";
@@ -21,7 +22,7 @@ it("previews package goal and commit/PR history before creating a project", asyn
         profile: "simple", version: 1, created_at: "2026-10-21T00:00:00Z",
         repository_url: source, repository_path: "", repository_branch: "main", repository_sha: sha,
         repository_kind: "browser_extension", repository_manifest: "manifest.json",
-        repository_imported_at: "2026-10-21T00:00:00Z",
+        repository_imported_at: "2026-10-21T00:00:00Z", access: ownerAccess("00000000-0000-4000-8000-000000000001"),
     });
     const inspect = vi.spyOn(api, "previewGit").mockResolvedValue(preview);
     const create = vi.spyOn(api, "importGit").mockResolvedValue(project);

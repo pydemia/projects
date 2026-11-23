@@ -1,5 +1,15 @@
 # Projects 기획 초안 v0.3
 
+2026-11-09 [기획 기능과 Story·Task 개선안](21-planning-story-task-improvement.md):
+최초 기획/진행 중 변경 기획, Story–Task 다대다·독립 Task, 관계/검증·선택 일정과
+기존 자료 보존을 구체화했다. [조작 가능한 시안](prototype/planning-story-task.html)을
+함께 제공한다. 기획·시안 검토 범위이며 앱과 운영에는 아직 반영하지 않았다.
+
+2026-11-07 [Entra 로그인·멀티테넌시·프로젝트 권한](20-tenancy-and-project-permissions.md):
+운영 500 조사, pydemia.ai 조직 로그인, 프로젝트별 멤버·역할·허용 동작과 목록 접근 구현.
+[현재 구현·검증](../implementation/project-access-goal.md)과
+[운영 배포](../implementation/deployment.md)를 함께 확인한다.
+
 작성일: 2026-10-21 · 상태: 사용자 검토 전 · 작업명: Projects
 
 이 문서는 초기 기획·조사 기록입니다. 이후 PostgreSQL, Codex 기본 로그인,
@@ -45,6 +55,11 @@ Note 연계에 앞선 임시 문서 범위로 로컬 앱을 구현했습니다.
 12. [작업공간 벤치마크](12-task-workspace-benchmark.md): Jira·Confluence·ClickUp·To Do·TickTick·Todoist 비교, 간편/정교 보기와 GTD/ABC 기획
 13. [작업 상호작용 REA 재분석](13-task-interaction-rea.md): ClickUp 배포 코드·실제 드래그 테스트, TickTick 등 비교, 조작별 개선 범위와 AC-40~51
 14. [모바일 UI·UX 기획](14-mobile-experience.md): 휴대전화 전용 탐색·오늘/Inbox·한 열 보드·주간 agenda·목록→상세와 AC-52~58. [데스크톱/모바일 구조 시안](prototype/mobile-workspace.html)은 앱이 아닌 검토용 mock
+15. [Git 저장소에서 프로젝트 만들기](15-git-repository-import.md): 기존 GitHub 저장소·Git ZIP의 구조를 분석해 프로젝트를 생성하는 기획
+16. [ClickUp 비교 기반 작업 탐색·프로젝트 간 이동 기획](16-clickup-task-discovery-and-transfer.md): 전역 작업 목록, 날짜 범위·표시·밀도의 독립 전환, 관계·이력을 보존하는 이동과 Note 참조. [조작 시안](prototype/task-workspace-v2.html) · [스킬 적용·검토](16-clickup-review.md)
+17. [입력 간소화·작업 필드·이름 있는 보기](17-clickup-task-management.md): 제목 한 줄 생성, 목록 내 편집, 다섯 타입 사용자 필드·열 관리와 저장 보기 탭. 실제 앱 검증·운영 배포 완료
+18. [직접 편집·사용자 설정·프로젝트 메뉴](18-inline-editing-and-preferences.md): 프로젝트명·작업 제목/본문/속성/유형의 선택 편집, 초안·충돌 복구, 설정 화면과 GNB·검색 여백, 프로젝트 항목의 ZIP
+19. [로그인 만료 후 원래 화면 복귀](19-session-expiry-and-return.md): 모드별 로그인, 전체 경로 복원, 초안 checkpoint·반복 방지·프록시 경계
 
 ## 먼저 구현할 사용 흐름
 

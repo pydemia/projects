@@ -13,6 +13,11 @@ from starlette.datastructures import State
 
 from projects.database import Item, Project, SkillRun, utcnow
 from projects.domain import Problem
+from projects.project_access import (
+    accessible_project_ids,
+    project_access,
+    require_project_access,
+)
 from projects.records import (
     add_link,
     create_item,
@@ -50,6 +55,159 @@ def event(run: SkillRun, status: str, detail: str = "") -> None:
     run.updated_at = utcnow()
 
 
+def _run_item_references(value: object) -> set[str] | None:
+    references: set[str] = set()
+    if isinstance(value, dict):
+        for key, child in value.items():
+            if key in {
+                "source_id",
+                "target_id",
+                "item_id",
+                "case_id",
+                "artifact_id",
+                "requirement_id",
+            }:
+                if not isinstance(child, str) or not child:
+                    return None
+                references.add(child)
+            elif key in {
+                "source_ids",
+                "feature_ids",
+                "project_source_refs",
+                "requirement_ids",
+                "applied_ids",
+            }:
+                if not isinstance(child, list) or any(
+                    not isinstance(item_id, str) or not item_id
+                    for item_id in child
+                ):
+                    return None
+                references.update(child)
+            else:
+                nested = _run_item_references(child)
+                if nested is None:
+                    return None
+                references.update(nested)
+    elif isinstance(value, list):
+        for child in value:
+            nested = _run_item_references(child)
+            if nested is None:
+                return None
+            references.update(nested)
+    return references
+
+
+def run_read_projects(db: Session, run: SkillRun) -> set[str] | None:
+    """Resolve full run provenance, or return None for unknown item origins."""
+    applied_ids = run.applied_ids or []
+    if any(
+        not isinstance(item_id, str) or not item_id for item_id in applied_ids
+    ):
+        return None
+    item_ids = set(applied_ids)
+    if run.target_id is not None:
+        item_ids.add(run.target_id)
+    # Catalog profiles also have artifact_id, which identifies a Hub/reference
+    # template rather than a project Item. Only this manifest field is an Item
+    # reference; result and source record data use the project schema.
+    manifest_references = {
+        "project_source_refs": (run.reference_manifest or {}).get(
+            "project_source_refs", []
+        )
+    }
+    for value in (run.result, manifest_references, run.source_snapshots):
+        references = _run_item_references(value)
+        if references is None:
+            return None
+        item_ids.update(references)
+    historical_projects: dict[str, set[str]] = {}
+    for snapshot in run.source_snapshots or []:
+        if not isinstance(snapshot, dict):
+            return None
+        item_id = snapshot.get("id")
+        if not isinstance(item_id, str) or not item_id:
+            return None
+        item_ids.add(item_id)
+        project_id = snapshot.get("project_id")
+        historical_projects.setdefault(item_id, set())
+        if isinstance(project_id, str) and project_id:
+            historical_projects[item_id].add(project_id)
+    if any(
+        not isinstance(item_id, str) or not item_id for item_id in item_ids
+    ):
+        return None
+    # Column queries read PostgreSQL's current project even if a caller has an
+    # old Item instance in the ORM identity map following a project transfer.
+    current_projects = {
+        item_id: project_id
+        for item_id, project_id in db.execute(
+            select(Item.id, Item.project_id).where(Item.id.in_(item_ids))
+        ).all()
+    }
+    projects = {run.project_id, *current_projects.values()}
+    for item_id in item_ids - current_projects.keys():
+        fallback = historical_projects.get(item_id, set())
+        if len(fallback) != 1:
+            return None
+        projects.update(fallback)
+    return projects
+
+
+def run_is_readable(db: Session, run: SkillRun, actor_id: str) -> bool:
+    """Require current read access to every project's full run provenance."""
+    projects = run_read_projects(db, run)
+    if projects is None:
+        return False
+    readable = set(
+        db.scalars(
+            accessible_project_ids(db, actor_id).where(
+                Project.id.in_(projects)
+            )
+        )
+    )
+    return projects <= readable
+
+
+def authorize_run_request(db: Session, run: SkillRun, actor_id: str) -> None:
+    """Bind a new or explicitly retried request to the actor's current grant."""
+    require_project_access(
+        db, run.project_id, actor_id, "run.execute", lock=True
+    )
+    if not run_is_readable(db, run, actor_id):
+        raise Problem(404, "실행을 찾을 수 없습니다.")
+    access = project_access(db, run.project_id, actor_id)
+    run.requested_by = actor_id
+    run.requested_membership_id = access["membership_id"]
+
+
+def require_run_request_access(db: Session, run: SkillRun) -> None:
+    """Queued inputs cannot outlive the membership that authorized them."""
+    if run.requested_by is None:
+        # Only pre-ACL persisted runs lack a requester. Never invent a grant:
+        # the legacy owner must still hold an actual current membership.
+        project = db.get(Project, run.project_id)
+        if project is None or run.requested_membership_id is not None:
+            raise Problem(
+                403, "실행 요청자의 프로젝트 권한을 확인할 수 없습니다."
+            )
+        access = project_access(db, project.id, project.owner_id)
+        if "run.execute" not in access["capabilities"]:
+            raise Problem(403, "실행 요청자의 프로젝트 실행 권한이 없습니다.")
+        run.requested_by = project.owner_id
+        run.requested_membership_id = access["membership_id"]
+    # Worker claims already lock the run. This read deliberately avoids a
+    # project write lock, whose global ordering is project before run.
+    access = project_access(db, run.project_id, run.requested_by)
+    if "run.execute" not in access["capabilities"]:
+        raise Problem(403, "실행 요청자의 프로젝트 실행 권한이 없습니다.")
+    if run.requested_membership_id != access["membership_id"]:
+        raise Problem(
+            403, "실행 요청 당시의 프로젝트 멤버십이 만료되었습니다."
+        )
+    if not run_is_readable(db, run, run.requested_by):
+        raise Problem(403, "실행 입력을 읽을 권한이 변경되었습니다.")
+
+
 def enqueue_run(
     db: Session,
     state: State,
@@ -57,8 +215,23 @@ def enqueue_run(
     user_id: str,
     payload: RunInput,
 ) -> SkillRun:
+    require_project_access(db, project_id, user_id, "run.execute", lock=True)
+    if payload.target_id:
+        target_project_id = db.scalar(
+            select(Item.project_id).where(Item.id == payload.target_id)
+        )
+        if target_project_id is None:
+            raise Problem(404, "항목을 찾을 수 없습니다.")
+        if target_project_id != project_id:
+            # Keep inaccessible and missing targets indistinguishable. Reading
+            # the foreign grant takes no project write lock, so inverse queued
+            # requests cannot acquire A then B and B then A.
+            require_project_access(db, target_project_id, user_id)
+            raise Problem(
+                422, "다른 프로젝트의 문서를 실행 대상으로 사용할 수 없습니다."
+            )
     target = (
-        item_for_user(db, payload.target_id, user_id)
+        item_for_user(db, payload.target_id, user_id, lock=True)
         if payload.target_id
         else None
     )
@@ -119,6 +292,7 @@ def enqueue_run(
         reference_manifest=manifest,
         events=[],
     )
+    authorize_run_request(db, run, user_id)
     db.add(run)
     db.flush()
     event(run, "queued")
@@ -187,6 +361,15 @@ def process_next_run(
         )
         if run is None:
             return False
+        try:
+            require_run_request_access(db, run)
+        except Problem:
+            run.status = "failed"
+            run.error = (
+                "실행 요청자의 프로젝트 권한이 변경되어 실행을 중단했습니다."
+            )
+            event(run, "failed", run.error)
+            return True
         if run.status == "running":
             event(run, "interrupted", "이전 작업자의 lease가 만료되었습니다.")
         if run.attempt >= 3:
@@ -206,11 +389,17 @@ def process_next_run(
             return True
         with Session(state.engine) as check:
             current = check.get(SkillRun, snapshot["id"])
-            return (
+            if (
                 current is None
                 or current.status != "running"
                 or current.attempt != attempt
-            )
+            ):
+                return True
+            try:
+                require_run_request_access(check, current)
+            except Problem:
+                return True
+            return False
 
     try:
         bundles = [
@@ -240,6 +429,24 @@ def process_next_run(
         runner = configured_runner(state)
         from projects.codex_runner import CodexLoginRunner
 
+        # Bundle/message preparation can take time. Re-read PostgreSQL just
+        # before the external call, without holding a network-long DB lock.
+        with Session(state.engine) as check:
+            current = check.get(SkillRun, snapshot["id"])
+            if (
+                current is None
+                or current.status != "running"
+                or current.attempt != attempt
+                or (shutdown is not None and shutdown.is_set())
+            ):
+                return True
+            try:
+                require_run_request_access(check, current)
+            except Problem as exc:
+                raise RuntimeFailure(
+                    "access_revoked",
+                    "실행 요청자의 프로젝트 권한이 변경되어 실행을 중단했습니다.",
+                ) from exc
         result = (
             runner.run(messages, cancelled=cancelled)
             if isinstance(runner, CodexLoginRunner)
@@ -321,6 +528,9 @@ def apply_result(
     *,
     apply_document: bool = False,
 ) -> None:
+    require_project_access(db, run.project_id, user_id, "run.apply", lock=True)
+    if not run_is_readable(db, run, user_id):
+        raise Problem(404, "실행을 찾을 수 없습니다.")
     if run.status == "applied":
         return
     if run.status != "review_ready" or run.result is None:
@@ -341,12 +551,31 @@ def apply_result(
         x < 0 or x >= len(result.requirements) for x in selected
     ):
         raise Problem(422, "유효한 후보를 선택해 주세요.")
+    # Every apply writes a review decision, while selected candidates can
+    # additionally create tasks, relations and tests.
+    required_permissions = {"item.write"}
+    for index in selected:
+        candidate = result.requirements[index]
+        if run.target_id or candidate.feature_ids:
+            required_permissions.add("relation.write")
+        if candidate.disposition not in ("conflict", "defer", "duplicate"):
+            if candidate.tasks or candidate.design_changes:
+                required_permissions.update({"task.create", "relation.write"})
+            if candidate.tests:
+                required_permissions.update({"test.write", "relation.write"})
+    for permission in sorted(required_permissions):
+        require_project_access(db, run.project_id, user_id, permission)
     target = (
         item_for_user(db, run.target_id, user_id, lock=True)
         if run.target_id
         else None
     )
     if target is not None:
+        if target.project_id != run.project_id:
+            raise Problem(
+                409,
+                "대상이 다른 프로젝트로 이동했습니다. 대상 프로젝트에서 다시 실행해 주세요.",
+            )
         require_revision(target, run.target_revision or 0)
     # Serialize whole change bundles and dependency insertion in one transaction.
     db.scalar(
@@ -363,6 +592,7 @@ def apply_result(
                 target.title,
                 result.document,
                 target.data,
+                actor_id=user_id,
             )
         else:
             fields = {
@@ -399,10 +629,24 @@ def apply_result(
             )
             applied.append(decision.id)
             if target:
-                add_link(db, run.project_id, decision, target, "source")
+                add_link(
+                    db,
+                    run.project_id,
+                    decision,
+                    target,
+                    "source",
+                    actor_id=user_id,
+                )
             for feature_id in candidate.feature_ids:
                 feature = item_for_user(db, feature_id, user_id)
-                add_link(db, run.project_id, decision, feature, "relates_to")
+                add_link(
+                    db,
+                    run.project_id,
+                    decision,
+                    feature,
+                    "relates_to",
+                    actor_id=user_id,
+                )
             continue
         requirement = create_item(
             db,
@@ -418,12 +662,26 @@ def apply_result(
         )
         applied.append(requirement.id)
         if target:
-            add_link(db, run.project_id, requirement, target, "source")
+            add_link(
+                db,
+                run.project_id,
+                requirement,
+                target,
+                "source",
+                actor_id=user_id,
+            )
         for feature_id in candidate.feature_ids:
             feature = item_for_user(db, feature_id, user_id)
             if feature.project_id != run.project_id:
                 raise Problem(422, "기능의 프로젝트가 다릅니다.")
-            add_link(db, run.project_id, requirement, feature, "relates_to")
+            add_link(
+                db,
+                run.project_id,
+                requirement,
+                feature,
+                "relates_to",
+                actor_id=user_id,
+            )
         tasks = []
         for draft in candidate.tasks:
             task = create_item(
@@ -436,7 +694,14 @@ def apply_result(
             )
             tasks.append(task)
             applied.append(task.id)
-            add_link(db, run.project_id, task, requirement, "implements")
+            add_link(
+                db,
+                run.project_id,
+                task,
+                requirement,
+                "implements",
+                actor_id=user_id,
+            )
         for change in candidate.design_changes:
             artifact = item_for_user(db, change.artifact_id, user_id)
             task = create_item(
@@ -451,8 +716,22 @@ def apply_result(
                 },
             )
             applied.append(task.id)
-            add_link(db, run.project_id, task, requirement, "implements")
-            add_link(db, run.project_id, task, artifact, "relates_to")
+            add_link(
+                db,
+                run.project_id,
+                task,
+                requirement,
+                "implements",
+                actor_id=user_id,
+            )
+            add_link(
+                db,
+                run.project_id,
+                task,
+                artifact,
+                "relates_to",
+                actor_id=user_id,
+            )
         for test_draft in candidate.tests:
             case = create_item(
                 db,
@@ -463,9 +742,23 @@ def apply_result(
                 {"steps": test_draft.steps, "expected": test_draft.expected},
             )
             applied.append(case.id)
-            add_link(db, run.project_id, case, requirement, "verifies")
+            add_link(
+                db,
+                run.project_id,
+                case,
+                requirement,
+                "verifies",
+                actor_id=user_id,
+            )
             for task in tasks:
-                add_link(db, run.project_id, case, task, "verifies")
+                add_link(
+                    db,
+                    run.project_id,
+                    case,
+                    task,
+                    "verifies",
+                    actor_id=user_id,
+                )
     review = create_item(
         db,
         run.project_id,

@@ -10,13 +10,11 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     ForeignKeyConstraint,
-    Index,
     Integer,
     String,
     Text,
     UniqueConstraint,
     create_engine,
-    text,
 )
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
@@ -44,6 +42,15 @@ class Account(Base):
     entra_subject: Mapped[str | None] = mapped_column(String(255), unique=True)
 
 
+class EntraIdentity(Base):
+    __tablename__ = "entra_identities"
+    tenant_id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    subject: Mapped[str] = mapped_column(String(255), primary_key=True)
+    account_id: Mapped[str] = mapped_column(
+        ForeignKey("accounts.id"), unique=True
+    )
+
+
 class LoginSession(Base):
     __tablename__ = "login_sessions"
     token_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
@@ -54,16 +61,6 @@ class LoginSession(Base):
 
 class Project(Base):
     __tablename__ = "projects"
-    __table_args__ = (
-        Index(
-            "uq_projects_owner_repository_scope",
-            "owner_id",
-            "repository_url",
-            "repository_path",
-            unique=True,
-            postgresql_where=text("repository_url IS NOT NULL"),
-        ),
-    )
     id: Mapped[str] = mapped_column(
         String(36), primary_key=True, default=new_id
     )
@@ -83,10 +80,145 @@ class Project(Base):
     repository_imported_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True)
     )
+    access_revision: Mapped[int] = mapped_column(Integer, default=1)
+    archived: Mapped[bool] = mapped_column(default=False)
     version: Mapped[int] = mapped_column(Integer, default=1)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=utcnow,
+    )
+
+
+class ProjectRole(Base):
+    __tablename__ = "project_roles"
+    __table_args__ = (
+        UniqueConstraint("project_id", "id"),
+        UniqueConstraint("project_id", "name"),
+        CheckConstraint("preset IN ('owner','editor','viewer','custom')"),
+    )
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=new_id
+    )
+    project_id: Mapped[str] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"), index=True
+    )
+    name: Mapped[str] = mapped_column(String(80))
+    preset: Mapped[str] = mapped_column(String(10))
+    permissions: Mapped[list[str]] = mapped_column(JSON)
+    revision: Mapped[int] = mapped_column(Integer, default=1)
+
+
+class ProjectMembership(Base):
+    __tablename__ = "project_memberships"
+    __table_args__ = (
+        UniqueConstraint("project_id", "account_id"),
+        ForeignKeyConstraint(
+            ["project_id", "role_id"],
+            ["project_roles.project_id", "project_roles.id"],
+        ),
+    )
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=new_id
+    )
+    project_id: Mapped[str] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"), index=True
+    )
+    account_id: Mapped[str] = mapped_column(
+        ForeignKey("accounts.id"), index=True
+    )
+    role_id: Mapped[str] = mapped_column(String(36))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow
+    )
+
+
+class ProjectPreference(Base):
+    __tablename__ = "project_preferences"
+    account_id: Mapped[str] = mapped_column(
+        ForeignKey("accounts.id"), primary_key=True
+    )
+    project_id: Mapped[str] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"), primary_key=True
+    )
+    sort_order: Mapped[int | None] = mapped_column(Integer)
+
+
+class ProjectInvitation(Base):
+    __tablename__ = "project_invitations"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["project_id", "role_id"],
+            ["project_roles.project_id", "project_roles.id"],
+        ),
+        CheckConstraint("kind IN ('membership','ownership')"),
+    )
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=new_id
+    )
+    project_id: Mapped[str] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"), index=True
+    )
+    role_id: Mapped[str] = mapped_column(String(36))
+    kind: Mapped[str] = mapped_column(String(20), default="membership")
+    token_hash: Mapped[str] = mapped_column(String(64))
+    target_account_id: Mapped[str | None] = mapped_column(
+        ForeignKey("accounts.id")
+    )
+    created_by: Mapped[str] = mapped_column(ForeignKey("accounts.id"))
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    claimed_by: Mapped[str | None] = mapped_column(ForeignKey("accounts.id"))
+    claimed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True)
+    )
+    revoked_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True)
+    )
+
+
+class ProjectAccessEvent(Base):
+    __tablename__ = "project_access_events"
+    __table_args__ = (
+        UniqueConstraint("project_id", "actor_id", "operation_id"),
+    )
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=new_id
+    )
+    project_id: Mapped[str] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"), index=True
+    )
+    actor_id: Mapped[str] = mapped_column(ForeignKey("accounts.id"))
+    action: Mapped[str] = mapped_column(String(50))
+    target_id: Mapped[str | None] = mapped_column(String(36))
+    before: Mapped[dict] = mapped_column(JSON, default=dict)
+    after: Mapped[dict] = mapped_column(JSON, default=dict)
+    operation_id: Mapped[str] = mapped_column(String(100))
+    request_hash: Mapped[str] = mapped_column(String(64))
+    result: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow
+    )
+
+
+class ProjectTaskFieldDefinition(Base):
+    __tablename__ = "project_task_field_definitions"
+    __table_args__ = (
+        CheckConstraint("revision > 0"),
+        CheckConstraint(
+            "type IN ('text','number','date','select','checkbox')"
+        ),
+    )
+    project_id: Mapped[str] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"), primary_key=True
+    )
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=new_id
+    )
+    name: Mapped[str] = mapped_column(String(80))
+    type: Mapped[str] = mapped_column(String(20))
+    options: Mapped[list[str]] = mapped_column(JSON, default=list)
+    revision: Mapped[int] = mapped_column(Integer, default=1)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow
     )
 
 
@@ -164,14 +296,38 @@ class TaskPosition(Base):
     position: Mapped[int] = mapped_column(Integer, nullable=False)
 
 
+class TaskFieldDefinition(Base):
+    __tablename__ = "task_field_definitions"
+    __table_args__ = (
+        CheckConstraint("revision > 0"),
+        CheckConstraint(
+            "type IN ('text','number','date','select','checkbox')"
+        ),
+    )
+    owner_id: Mapped[str] = mapped_column(
+        ForeignKey("accounts.id"), primary_key=True
+    )
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=new_id
+    )
+    name: Mapped[str] = mapped_column(String(80))
+    type: Mapped[str] = mapped_column(String(20))
+    options: Mapped[list[str]] = mapped_column(JSON, default=list)
+    revision: Mapped[int] = mapped_column(Integer, default=1)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow
+    )
+
+
 class TaskView(Base):
     __tablename__ = "task_views"
     id: Mapped[str] = mapped_column(
         String(36), primary_key=True, default=new_id
     )
-    project_id: Mapped[str] = mapped_column(
+    project_id: Mapped[str | None] = mapped_column(
         ForeignKey("projects.id", ondelete="CASCADE"), index=True
     )
+    scope_type: Mapped[str] = mapped_column(String(20), default="project")
     owner_id: Mapped[str] = mapped_column(
         ForeignKey("accounts.id"), index=True
     )
@@ -184,29 +340,65 @@ class TaskView(Base):
 
 class Link(Base):
     __tablename__ = "links"
-    __table_args__ = (
-        UniqueConstraint("source_id", "target_id", "relation"),
-        ForeignKeyConstraint(
-            ["project_id", "source_id"],
-            ["items.project_id", "items.id"],
-        ),
-        ForeignKeyConstraint(
-            ["project_id", "target_id"],
-            ["items.project_id", "items.id"],
-        ),
-    )
+    __table_args__ = (UniqueConstraint("source_id", "target_id", "relation"),)
     id: Mapped[str] = mapped_column(
         String(36), primary_key=True, default=new_id
     )
     project_id: Mapped[str] = mapped_column(
         ForeignKey("projects.id"), index=True
     )
-    source_id: Mapped[str] = mapped_column(String(36))
-    target_id: Mapped[str] = mapped_column(String(36))
+    source_id: Mapped[str] = mapped_column(ForeignKey("items.id"))
+    target_id: Mapped[str] = mapped_column(ForeignKey("items.id"))
     relation: Mapped[str] = mapped_column(String(30))
     source_revision: Mapped[int] = mapped_column(Integer)
     target_revision: Mapped[int] = mapped_column(Integer)
     review: Mapped[dict] = mapped_column(JSON, default=dict)
+
+
+class ProjectArchiveReferences(Base):
+    __tablename__ = "project_archive_references"
+    project_id: Mapped[str] = mapped_column(
+        ForeignKey("projects.id"), primary_key=True
+    )
+    data: Mapped[dict] = mapped_column(JSON)
+
+
+class TaskTransfer(Base):
+    __tablename__ = "task_transfers"
+    __table_args__ = (UniqueConstraint("owner_id", "operation_id"),)
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=new_id
+    )
+    owner_id: Mapped[str] = mapped_column(ForeignKey("accounts.id"))
+    operation_id: Mapped[str] = mapped_column(String(100))
+    payload_hash: Mapped[str] = mapped_column(String(64))
+    changes: Mapped[list] = mapped_column(JSON)
+    result: Mapped[dict] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow
+    )
+
+
+class AssistantOperation(Base):
+    __tablename__ = "assistant_operations"
+    __table_args__ = (UniqueConstraint("principal_id", "operation_id"),)
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=new_id
+    )
+    principal_id: Mapped[str] = mapped_column(String(200))
+    owner_id: Mapped[str] = mapped_column(ForeignKey("accounts.id"))
+    operation_id: Mapped[str] = mapped_column(String(36))
+    request_hash: Mapped[str] = mapped_column(String(64))
+    request_method: Mapped[str] = mapped_column(String(10))
+    request_path: Mapped[str] = mapped_column(Text)
+    request_body_sha256: Mapped[str] = mapped_column(String(64))
+    action: Mapped[str] = mapped_column(String(30))
+    project_id: Mapped[str] = mapped_column(ForeignKey("projects.id"))
+    task_id: Mapped[str] = mapped_column(ForeignKey("items.id"))
+    receipt: Mapped[dict] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow
+    )
 
 
 class TestRun(Base):
@@ -260,6 +452,8 @@ class SkillRun(Base):
     project_id: Mapped[str] = mapped_column(
         ForeignKey("projects.id"), index=True
     )
+    requested_by: Mapped[str | None] = mapped_column(ForeignKey("accounts.id"))
+    requested_membership_id: Mapped[str | None] = mapped_column(String(36))
     operation: Mapped[str] = mapped_column(String(40))
     instruction: Mapped[str] = mapped_column(Text)
     target_id: Mapped[str | None] = mapped_column(ForeignKey("items.id"))

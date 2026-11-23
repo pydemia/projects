@@ -1,5 +1,6 @@
 """HTTP composition and transactional project actions."""
 
+import copy
 import hmac
 import os
 import shutil
@@ -10,7 +11,7 @@ from pathlib import Path
 from typing import Annotated
 from urllib.parse import urlsplit
 
-from fastapi import Depends, FastAPI, Request, Response
+from fastapi import Depends, FastAPI, Query, Request, Response
 from fastapi.responses import JSONResponse
 from sqlalchemy import select, text
 from sqlalchemy.engine import Engine
@@ -18,6 +19,18 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from projects import project_access as access_service
+from projects.access_schemas import (
+    AccessRequest,
+    ArchiveUpdate,
+    InvitationAccept,
+    InvitationCreate,
+    InvitationPreviewInput,
+    MemberRoleUpdate,
+    OwnershipRequest,
+    RoleCreate,
+    RoleUpdate,
+)
 from projects.auth import (
     LoginLimiter,
     authenticate,
@@ -33,9 +46,13 @@ from projects.database import (
     Item,
     Link,
     Project,
+    ProjectInvitation,
+    ProjectPreference,
+    ProjectTaskFieldDefinition,
     RepositoryActivity,
     Revision,
     SkillRun,
+    TaskFieldDefinition,
     TaskView,
     TestRun,
     make_engine,
@@ -43,6 +60,18 @@ from projects.database import (
 )
 from projects.domain import Problem, validate_item_data
 from projects.git_zip_import import inspect_git_zip
+from projects.note_reference_data import AddNoteReference, RemoveNoteReference
+from projects.note_references import (
+    add_note_ref,
+    list_note_refs,
+    remove_note_ref,
+)
+from projects.project_access import (
+    accessible_project_ids,
+    initialize_project_access,
+    project_access,
+    require_project_access,
+)
 from projects.records import (
     add_link,
     create_baseline,
@@ -73,14 +102,18 @@ from projects.schemas import (
     LinkInput,
     ProjectInput,
     ProjectOrderInput,
+    ProjectRename,
     ReconnectInput,
     ResolveInput,
     RestoreInput,
     ReviewInput,
     RunInput,
     TaskBulkChange,
+    TaskFieldInput,
     TaskMove,
+    TaskPropertiesUpdate,
     TaskQuickCreate,
+    TaskTypeUpdate,
     TaskViewInput,
     TaskViewUpdate,
     TestRunInput,
@@ -91,6 +124,24 @@ from projects.task_board import (
     move_task,
     quick_create_task,
 )
+from projects.task_context import task_context
+from projects.task_fields import (
+    attach_personal_fields,
+    field_definition,
+    validate_view_fields,
+)
+from projects.task_queries import TaskQuery, query_tasks
+from projects.task_transfers import (
+    commit_transfer,
+    operation_result,
+    preview_transfer,
+    undo_transfer,
+)
+from projects.transfer_schemas import (
+    TransferCommit,
+    TransferPreview,
+    TransferUndo,
+)
 
 
 def db_session(request: Request) -> Iterator[Session]:
@@ -98,7 +149,8 @@ def db_session(request: Request) -> Iterator[Session]:
         yield db
 
 
-DB = Annotated[Session, Depends(db_session)]
+# Commit before publishing cookies or write acknowledgements to the next request.
+DB = Annotated[Session, Depends(db_session, scope="function")]
 
 
 def signed_in(request: Request, db: DB) -> Account:
@@ -114,6 +166,12 @@ def signed_in(request: Request, db: DB) -> Account:
         proxy_user = proxy_account(request, db)
         if proxy_user.id != user.id:
             raise Problem(401, "로그인이 필요합니다.")
+    if request.method not in ("GET", "HEAD", "OPTIONS"):
+        # Personal preferences/receipts serialize by actor; shared data then locks
+        # project IDs before items so ACL changes cannot race authorized writes.
+        db.scalar(
+            select(Account).where(Account.id == user.id).with_for_update()
+        )
     return user
 
 
@@ -127,6 +185,8 @@ def proxy_account(request: Request, db: Session) -> Account:
         settings,
         request.headers.get("X-Forwarded-Email", ""),
         request.headers.get("X-Forwarded-User", ""),
+        request.headers.get("X-Projects-Entra-Tenant", ""),
+        request.headers.get("X-Projects-Entra-Issuer", ""),
     )
 
 
@@ -219,9 +279,32 @@ def create_app(
         settings.github_token, settings.github_private_repos
     )
     app.add_middleware(BrowserBoundary)
+    from projects.assistant_integration import router as assistant_router
+
+    app.include_router(assistant_router)
+    from projects.story_routes import create_story_router
+
+    app.include_router(create_story_router(db_session, signed_in))
+    from projects.planning_routes import install_planning_routes
+    from projects.schedule_routes import install_schedule_routes
+
+    install_planning_routes(app, db_session, signed_in)
+    install_schedule_routes(app, db_session, signed_in)
 
     @app.exception_handler(Problem)
     async def problem_handler(request: Request, exc: Problem) -> JSONResponse:
+        if request.url.path.startswith("/api/integrations/assistant/v1/"):
+            code = {
+                401: "authentication_required",
+                403: "forbidden",
+                404: "not_found",
+                409: "conflict",
+                422: "invalid_request",
+                503: "unconfigured",
+            }.get(exc.status, "integration_error")
+            return JSONResponse(
+                {"code": code, "detail": exc.detail}, status_code=exc.status
+            )
         return JSONResponse({"detail": exc.detail}, status_code=exc.status)
 
     @app.exception_handler(IntegrityError)
@@ -258,6 +341,9 @@ def create_app(
         return {
             "user": {"id": user.id, "username": user.username},
             "csrf_token": session.csrf_token,
+            "auth_mode": "microsoft"
+            if settings.proxy_auth_enabled
+            else "password",
         }
 
     @app.get("/api/auth/options")
@@ -305,6 +391,7 @@ def create_app(
                     return {
                         "user": {"id": user.id, "username": user.username},
                         "csrf_token": session.csrf_token,
+                        "auth_mode": "microsoft",
                     }
             return session_response(db, user, response)
         user = signed_in(request, db)
@@ -312,6 +399,7 @@ def create_app(
         return {
             "user": {"id": user.id, "username": user.username},
             "csrf_token": session.csrf_token,
+            "auth_mode": "password",
         }
 
     @app.post("/api/auth/logout")
@@ -331,14 +419,27 @@ def create_app(
     def projects(db: DB, user: User) -> list[dict]:
         rows = db.scalars(
             select(Project)
-            .where(Project.owner_id == user.id)
+            .outerjoin(
+                ProjectPreference,
+                (ProjectPreference.project_id == Project.id)
+                & (ProjectPreference.account_id == user.id),
+            )
+            .where(Project.id.in_(accessible_project_ids(db, user.id)))
             .order_by(
-                Project.sort_order.asc().nulls_last(),
+                ProjectPreference.sort_order.asc().nulls_last(),
                 Project.created_at,
                 Project.id,
             )
         )
-        return [serialize(x) for x in rows]
+        return [project_response(db, row, user.id) for row in rows]
+
+    def project_response(db: Session, project: Project, user_id: str) -> dict:
+        preference = db.get(ProjectPreference, (user_id, project.id))
+        return {
+            **serialize(project),
+            "sort_order": preference.sort_order if preference else None,
+            "access": project_access(db, project.id, user_id),
+        }
 
     @app.put("/api/projects/order")
     def reorder_projects(
@@ -349,7 +450,7 @@ def create_app(
         rows = list(
             db.scalars(
                 select(Project)
-                .where(Project.owner_id == user.id)
+                .where(Project.id.in_(accessible_project_ids(db, user.id)))
                 .order_by(Project.id)
                 .with_for_update()
             )
@@ -361,9 +462,19 @@ def create_app(
             )
         ordered = [by_id[project_id] for project_id in payload.project_ids]
         for index, project in enumerate(ordered):
-            project.sort_order = index
+            preference = db.get(ProjectPreference, (user.id, project.id))
+            if preference is None:
+                db.add(
+                    ProjectPreference(
+                        account_id=user.id,
+                        project_id=project.id,
+                        sort_order=index,
+                    )
+                )
+            else:
+                preference.sort_order = index
         db.flush()
-        return [serialize(project) for project in ordered]
+        return [project_response(db, project, user.id) for project in ordered]
 
     @app.post("/api/projects", status_code=201)
     def new_project(payload: ProjectInput, db: DB, user: User) -> dict:
@@ -372,7 +483,8 @@ def create_app(
         project = Project(owner_id=user.id, **payload.model_dump())
         db.add(project)
         db.flush()
-        return serialize(project)
+        initialize_project_access(db, project)
+        return project_response(db, project, user.id)
 
     @app.post("/api/projects/from-git/preview")
     def preview_git(
@@ -398,7 +510,7 @@ def create_app(
             )
         duplicate = db.scalar(
             select(Project).where(
-                Project.owner_id == user.id,
+                Project.id.in_(accessible_project_ids(db, user.id)),
                 Project.repository_url == preview["repository_url"],
                 Project.repository_path == preview["path"],
             )
@@ -420,6 +532,7 @@ def create_app(
         )
         db.add(project)
         db.flush()
+        initialize_project_access(db, project)
         create_item(
             db,
             project.id,
@@ -452,7 +565,7 @@ def create_app(
                 )
             )
         db.flush()
-        return serialize(project)
+        return project_response(db, project, user.id)
 
     @app.post("/api/projects/from-git-zip/preview")
     def preview_git_zip(
@@ -485,6 +598,7 @@ def create_app(
         )
         db.add(project)
         db.flush()
+        initialize_project_access(db, project)
         create_item(
             db,
             project.id,
@@ -501,18 +615,178 @@ def create_app(
             data={"source_url": "", "notes": "Git 소스 ZIP 분석"},
         )
         db.flush()
-        return serialize(project)
+        return project_response(db, project, user.id)
 
     # Import is registered before /projects/{project_id}.
     @app.post("/api/projects/import", status_code=201)
     def import_archive(payload: ImportInput, db: DB, user: User) -> dict:
         from projects.portable import import_project
 
-        return serialize(import_project(db, user.id, payload.archive_base64))
+        project = import_project(db, user.id, payload.archive_base64)
+        return project_response(db, project, user.id)
 
     @app.get("/api/projects/{project_id}")
     def project_detail(project_id: str, db: DB, user: User) -> dict:
-        return serialize(project_for_user(db, project_id, user.id))
+        return project_response(
+            db, project_for_user(db, project_id, user.id), user.id
+        )
+
+    @app.get("/api/projects/{project_id}/access")
+    def current_project_access(project_id: str, db: DB, user: User) -> dict:
+        return project_access(db, project_id, user.id)
+
+    @app.get("/api/projects/{project_id}/roles")
+    def project_roles(project_id: str, db: DB, user: User) -> list[dict]:
+        return access_service.list_roles(db, project_id, user.id)
+
+    @app.post("/api/projects/{project_id}/roles", status_code=201)
+    def create_project_role(
+        project_id: str, payload: RoleCreate, db: DB, user: User
+    ) -> dict:
+        return access_service.create_role(db, project_id, user.id, payload)
+
+    @app.patch("/api/projects/{project_id}/roles/{role_id}")
+    def update_project_role(
+        project_id: str, role_id: str, payload: RoleUpdate, db: DB, user: User
+    ) -> dict:
+        return access_service.update_role(
+            db, project_id, user.id, role_id, payload
+        )
+
+    @app.delete("/api/projects/{project_id}/roles/{role_id}")
+    def delete_project_role(
+        project_id: str,
+        role_id: str,
+        payload: AccessRequest,
+        db: DB,
+        user: User,
+    ) -> dict:
+        return access_service.delete_role(
+            db, project_id, user.id, role_id, payload
+        )
+
+    @app.get("/api/projects/{project_id}/members")
+    def project_members(project_id: str, db: DB, user: User) -> list[dict]:
+        return access_service.list_members(db, project_id, user.id)
+
+    @app.patch("/api/projects/{project_id}/members/{account_id}")
+    def update_project_member(
+        project_id: str,
+        account_id: str,
+        payload: MemberRoleUpdate,
+        db: DB,
+        user: User,
+    ) -> dict:
+        return access_service.change_member_role(
+            db, project_id, user.id, account_id, payload
+        )
+
+    @app.delete("/api/projects/{project_id}/members/{account_id}")
+    def remove_project_member(
+        project_id: str,
+        account_id: str,
+        payload: AccessRequest,
+        db: DB,
+        user: User,
+    ) -> dict:
+        return access_service.remove_member(
+            db, project_id, user.id, account_id, payload
+        )
+
+    @app.get("/api/projects/{project_id}/invitations")
+    def project_invitations(project_id: str, db: DB, user: User) -> list[dict]:
+        return access_service.list_invitations(db, project_id, user.id)
+
+    @app.post("/api/projects/{project_id}/invitations", status_code=201)
+    def create_project_invitation(
+        project_id: str, payload: InvitationCreate, db: DB, user: User
+    ) -> dict:
+        return access_service.create_invitation(
+            db, project_id, user.id, payload
+        )
+
+    @app.delete("/api/projects/{project_id}/invitations/{invitation_id}")
+    def revoke_project_invitation(
+        project_id: str,
+        invitation_id: str,
+        payload: AccessRequest,
+        db: DB,
+        user: User,
+    ) -> dict:
+        return access_service.revoke_invitation(
+            db, project_id, user.id, invitation_id, payload
+        )
+
+    @app.post("/api/project-invitations/{invitation_id}/preview")
+    def preview_project_invitation(
+        invitation_id: str, payload: InvitationPreviewInput, db: DB, user: User
+    ) -> dict:
+        return access_service.preview_invitation(
+            db, invitation_id, user.id, payload.token
+        )
+
+    @app.post("/api/project-invitations/{invitation_id}/accept")
+    def accept_project_invitation(
+        invitation_id: str, payload: InvitationAccept, db: DB, user: User
+    ) -> dict:
+        return access_service.accept_invitation(
+            db, invitation_id, user.id, payload
+        )
+
+    @app.post("/api/projects/{project_id}/ownership", status_code=201)
+    def request_project_ownership(
+        project_id: str, payload: OwnershipRequest, db: DB, user: User
+    ) -> dict:
+        return access_service.request_ownership(
+            db, project_id, user.id, payload
+        )
+
+    @app.post("/api/projects/{project_id}/ownership/{invitation_id}/accept")
+    def accept_project_ownership(
+        project_id: str,
+        invitation_id: str,
+        payload: InvitationAccept,
+        db: DB,
+        user: User,
+    ) -> dict:
+        invitation = db.get(ProjectInvitation, invitation_id)
+        if invitation is None or invitation.project_id != project_id:
+            raise Problem(404, "소유권 이전 요청을 찾을 수 없습니다.")
+        return access_service.accept_ownership(
+            db, invitation_id, user.id, payload
+        )
+
+    @app.post("/api/projects/{project_id}/leave")
+    def leave_project(
+        project_id: str, payload: AccessRequest, db: DB, user: User
+    ) -> dict:
+        return access_service.leave_project(db, project_id, user.id, payload)
+
+    @app.patch("/api/projects/{project_id}/archive")
+    def archive_project(
+        project_id: str, payload: ArchiveUpdate, db: DB, user: User
+    ) -> dict:
+        return access_service.set_project_archived(
+            db, project_id, user.id, payload
+        )
+
+    @app.patch("/api/projects/{project_id}")
+    def rename_project(
+        project_id: str, payload: ProjectRename, db: DB, user: User
+    ) -> dict:
+        project = require_project_access(
+            db, project_id, user.id, "project.update", lock=True
+        )
+        if project.version != payload.expected_version:
+            raise Problem(
+                409, "프로젝트가 변경되었습니다. 다시 불러온 뒤 수정해 주세요."
+            )
+        if not payload.name.strip():
+            raise Problem(422, "프로젝트 이름을 입력해 주세요.")
+        project.name = payload.name.strip()
+        project.version += 1
+        db.flush()
+        return project_response(db, project, user.id)
 
     @app.get("/api/projects/{project_id}/repository-activity")
     def repository_activity(project_id: str, db: DB, user: User) -> list[dict]:
@@ -529,7 +803,7 @@ def create_app(
     @app.get("/api/projects/{project_id}/summary")
     def summary(project_id: str, db: DB, user: User) -> dict:
         project_for_user(db, project_id, user.id)
-        return project_summary(db, project_id)
+        return project_summary(db, project_id, actor_id=user.id)
 
     @app.get("/api/projects/{project_id}/items")
     def items(
@@ -583,7 +857,21 @@ def create_app(
     def new_item(
         project_id: str, payload: ItemInput, db: DB, user: User
     ) -> dict:
-        project_for_user(db, project_id, user.id)
+        require_project_access(
+            db,
+            project_id,
+            user.id,
+            "task.create"
+            if payload.kind == "task"
+            else "test.write"
+            if payload.kind == "test_case"
+            else "item.write",
+            lock=True,
+        )
+        if payload.kind == "task":
+            attach_personal_fields(
+                db, user.id, project_id, payload.data.get("custom_fields", {})
+            )
         validate_references(db, project_id, payload.kind, payload.data)
         if payload.kind == "task" and payload.data.get("state") == "done":
             raise Problem(
@@ -595,7 +883,9 @@ def create_app(
     def quick_task(
         project_id: str, payload: TaskQuickCreate, db: DB, user: User
     ) -> dict:
-        project_for_user(db, project_id, user.id)
+        require_project_access(
+            db, project_id, user.id, "task.create", lock=True
+        )
         task = quick_create_task(db, project_id, payload)
         return {
             **serialize(task),
@@ -606,8 +896,10 @@ def create_app(
     def bulk_tasks(
         project_id: str, payload: TaskBulkChange, db: DB, user: User
     ) -> list[dict]:
-        project_for_user(db, project_id, user.id)
-        changed = bulk_change_tasks(db, project_id, payload)
+        require_project_access(
+            db, project_id, user.id, "task.update", lock=True
+        )
+        changed = bulk_change_tasks(db, project_id, payload, actor_id=user.id)
         positions = board_orders(db, _tasks(db, project_id))
         return [
             {**serialize(task), "board_order": positions[task.id]}
@@ -621,6 +913,198 @@ def create_app(
                     Item.project_id == project_id, Item.kind == "task"
                 )
             )
+        )
+
+    @app.get("/api/tasks")
+    def global_tasks(
+        query: Annotated[TaskQuery, Query()],
+        db: DB,
+        user: User,
+    ) -> dict:
+        return query_tasks(db, user.id, query)
+
+    @app.get("/api/task-fields")
+    def task_fields(
+        db: DB, user: User, project_id: str | None = None
+    ) -> list[dict]:
+        if project_id is not None:
+            require_project_access(db, project_id, user.id)
+            return [
+                serialize(row)
+                for row in db.scalars(
+                    select(ProjectTaskFieldDefinition)
+                    .where(ProjectTaskFieldDefinition.project_id == project_id)
+                    .order_by(
+                        ProjectTaskFieldDefinition.created_at,
+                        ProjectTaskFieldDefinition.id,
+                    )
+                )
+            ]
+        # Global selectors see readable project fields, plus only this account's
+        # personal library. Definitions never depend on a project's old creator.
+        scoped = [
+            serialize(row)
+            for row in db.scalars(
+                select(ProjectTaskFieldDefinition)
+                .where(
+                    ProjectTaskFieldDefinition.project_id.in_(
+                        accessible_project_ids(db, user.id)
+                    )
+                )
+                .order_by(
+                    ProjectTaskFieldDefinition.created_at,
+                    ProjectTaskFieldDefinition.id,
+                )
+            )
+        ]
+        seen = {row["id"] for row in scoped}
+        return [
+            {
+                key: value
+                for key, value in serialize(row).items()
+                if key != "owner_id"
+            }
+            for row in db.scalars(
+                select(TaskFieldDefinition)
+                .where(TaskFieldDefinition.owner_id == user.id)
+                .order_by(
+                    TaskFieldDefinition.created_at, TaskFieldDefinition.id
+                )
+            )
+            if row.id not in seen
+        ] + scoped
+
+    @app.post("/api/task-fields", status_code=201)
+    def create_task_field(payload: TaskFieldInput, db: DB, user: User) -> dict:
+        values = payload.model_dump(exclude={"project_id"})
+        if payload.project_id is not None:
+            require_project_access(
+                db, payload.project_id, user.id, "field.manage", lock=True
+            )
+            row: TaskFieldDefinition | ProjectTaskFieldDefinition = (
+                ProjectTaskFieldDefinition(
+                    project_id=payload.project_id, **values
+                )
+            )
+        else:
+            row = TaskFieldDefinition(owner_id=user.id, **values)
+        db.add(row)
+        db.flush()
+        return {
+            key: value
+            for key, value in serialize(row).items()
+            if key != "owner_id"
+        }
+
+    @app.get("/api/task-views")
+    def global_task_views(db: DB, user: User) -> list[dict]:
+        return [
+            serialize(row)
+            for row in db.scalars(
+                select(TaskView)
+                .where(
+                    TaskView.owner_id == user.id,
+                    TaskView.scope_type == "global",
+                    TaskView.scope == "personal",
+                )
+                .order_by(TaskView.name, TaskView.id),
+            )
+        ]
+
+    @app.post("/api/task-views", status_code=201)
+    def create_global_task_view(
+        payload: TaskViewInput,
+        db: DB,
+        user: User,
+    ) -> dict:
+        validate_view_fields(db, user.id, payload.settings.model_dump())
+        db.scalar(
+            select(Account).where(Account.id == user.id).with_for_update()
+        )
+        if payload.is_default:
+            for other in db.scalars(
+                select(TaskView).where(
+                    TaskView.owner_id == user.id,
+                    TaskView.scope_type == "global",
+                    TaskView.is_default.is_(True),
+                )
+            ):
+                other.is_default = False
+            db.flush()
+        row = TaskView(
+            project_id=None,
+            scope_type="global",
+            owner_id=user.id,
+            name=payload.name.strip(),
+            scope="personal",
+            settings=payload.settings.model_dump(),
+            is_default=payload.is_default,
+        )
+        db.add(row)
+        db.flush()
+        return serialize(row)
+
+    @app.post("/api/task-transfers/preview")
+    def transfer_preview(payload: TransferPreview, db: DB, user: User) -> dict:
+        return preview_transfer(db, user.id, payload)
+
+    @app.post("/api/task-transfers")
+    def transfer_commit(payload: TransferCommit, db: DB, user: User) -> dict:
+        return commit_transfer(db, user.id, payload)
+
+    @app.post("/api/items/{item_id}/transfer")
+    def transfer_one(
+        item_id: str,
+        payload: TransferCommit,
+        db: DB,
+        user: User,
+    ) -> dict:
+        if len(payload.tasks) != 1 or payload.tasks[0].id != item_id:
+            raise Problem(422, "이 작업 하나를 이동 대상으로 지정해 주세요.")
+        return commit_transfer(db, user.id, payload)
+
+    @app.get("/api/task-transfers/by-operation/{operation_id}")
+    def transfer_result(operation_id: str, db: DB, user: User) -> dict:
+        return operation_result(db, user.id, operation_id)
+
+    @app.post("/api/task-transfers/{transfer_id}/undo")
+    def transfer_undo(
+        transfer_id: str,
+        payload: TransferUndo,
+        db: DB,
+        user: User,
+    ) -> dict:
+        return undo_transfer(db, user.id, transfer_id, payload)
+
+    @app.get("/api/items/{item_id}/note-references")
+    def note_refs(item_id: str, db: DB, user: User) -> list[dict]:
+        return list_note_refs(db, user.id, item_id)
+
+    @app.get("/api/items/{item_id}/task-context")
+    def task_provenance(item_id: str, db: DB, user: User) -> dict:
+        return task_context(db, user.id, item_id)
+
+    @app.post("/api/items/{item_id}/note-references", status_code=201)
+    def add_note_reference(
+        item_id: str,
+        payload: AddNoteReference,
+        db: DB,
+        user: User,
+    ) -> dict:
+        mutable_item(db, item_id, user, "task.update")
+        return serialize(add_note_ref(db, user.id, item_id, payload))
+
+    @app.delete("/api/items/{item_id}/note-references/{reference_id}")
+    def delete_note_reference(
+        item_id: str,
+        reference_id: str,
+        payload: RemoveNoteReference,
+        db: DB,
+        user: User,
+    ) -> dict:
+        mutable_item(db, item_id, user, "task.update")
+        return serialize(
+            remove_note_ref(db, user.id, item_id, reference_id, payload)
         )
 
     @app.get("/api/projects/{project_id}/task-views")
@@ -644,8 +1128,21 @@ def create_app(
         project_id: str, payload: TaskViewInput, db: DB, user: User
     ) -> dict:
         project_for_user(db, project_id, user.id)
+        field_keys = [
+            *payload.settings.card_fields,
+            *(payload.settings.list_fields or []),
+        ]
+        attach_personal_fields(
+            db,
+            user.id,
+            project_id,
+            {key[7:]: None for key in field_keys if key.startswith("custom:")},
+        )
+        validate_view_fields(
+            db, user.id, payload.settings.model_dump(), project_id=project_id
+        )
         db.scalar(
-            select(Project).where(Project.id == project_id).with_for_update()
+            select(Account).where(Account.id == user.id).with_for_update()
         )
         if payload.is_default:
             for row in db.scalars(
@@ -676,11 +1173,32 @@ def create_app(
         row = db.get(TaskView, view_id)
         if row is None or row.owner_id != user.id:
             raise Problem(404, "저장된 보기를 찾을 수 없습니다.")
-        project_for_user(db, row.project_id, user.id)
+        if row.project_id is not None:
+            project_for_user(db, row.project_id, user.id)
+            field_keys = [
+                *payload.settings.card_fields,
+                *(payload.settings.list_fields or []),
+            ]
+            attach_personal_fields(
+                db,
+                user.id,
+                row.project_id,
+                {
+                    key[7:]: None
+                    for key in field_keys
+                    if key.startswith("custom:")
+                },
+            )
+        validate_view_fields(
+            db,
+            user.id,
+            payload.settings.model_dump(),
+            project_id=row.project_id,
+        )
+        if row.project_id is not None:
+            project_for_user(db, row.project_id, user.id)
         db.scalar(
-            select(Project)
-            .where(Project.id == row.project_id)
-            .with_for_update()
+            select(Account).where(Account.id == user.id).with_for_update()
         )
         db.refresh(row, with_for_update=True)
         if row.revision != payload.expected_revision:
@@ -689,6 +1207,7 @@ def create_app(
             for other in db.scalars(
                 select(TaskView).where(
                     TaskView.project_id == row.project_id,
+                    TaskView.scope_type == row.scope_type,
                     TaskView.owner_id == user.id,
                     TaskView.is_default.is_(True),
                     TaskView.id != row.id,
@@ -708,7 +1227,8 @@ def create_app(
         row = db.get(TaskView, view_id)
         if row is None or row.owner_id != user.id:
             raise Problem(404, "저장된 보기를 찾을 수 없습니다.")
-        project_for_user(db, row.project_id, user.id)
+        if row.project_id is not None:
+            project_for_user(db, row.project_id, user.id)
         db.delete(row)
         return {"ok": True}
 
@@ -716,11 +1236,44 @@ def create_app(
     def item_detail(item_id: str, db: DB, user: User) -> dict:
         return serialize(item_for_user(db, item_id, user.id))
 
+    def mutable_item(
+        db: Session, item_id: str, user: Account, permission: str | None = None
+    ) -> Item:
+        snapshot = db.execute(
+            select(Item.project_id, Item.kind).where(Item.id == item_id)
+        ).one_or_none()
+        if snapshot is None:
+            raise Problem(404, "항목을 찾을 수 없습니다.")
+        project_id, kind = snapshot
+        action = permission or (
+            "task.update"
+            if kind == "task"
+            else "test.write"
+            if kind == "test_case"
+            else "item.write"
+        )
+        require_project_access(db, project_id, user.id, action, lock=True)
+        if (
+            db.scalar(select(Item.project_id).where(Item.id == item_id))
+            != project_id
+        ):
+            raise Problem(
+                409, "작업의 소속이 변경되었습니다. 다시 불러와 주세요."
+            )
+        return item_for_user(db, item_id, user.id, lock=True)
+
     @app.put("/api/items/{item_id}")
     def update_item(
         item_id: str, payload: ItemUpdate, db: DB, user: User
     ) -> dict:
-        item = item_for_user(db, item_id, user.id, lock=True)
+        item = mutable_item(db, item_id, user)
+        if item.kind == "task":
+            attach_personal_fields(
+                db,
+                user.id,
+                item.project_id,
+                payload.data.get("custom_fields", {}),
+            )
         validate_references(db, item.project_id, item.kind, payload.data)
         return serialize(
             revise_item(
@@ -730,15 +1283,96 @@ def create_app(
                 payload.title,
                 payload.body,
                 payload.data,
+                actor_id=user.id,
             )
         )
+
+    @app.patch("/api/items/{item_id}/task-properties")
+    def update_task_properties(
+        item_id: str, payload: TaskPropertiesUpdate, db: DB, user: User
+    ) -> dict:
+        item = mutable_item(db, item_id, user, "task.update")
+        require_revision(item, payload.expected_revision)
+        if item.kind != "task":
+            raise Problem(422, "작업의 필드만 수정할 수 있습니다.")
+        data = copy.deepcopy(item.data)
+        custom = data.setdefault("custom_fields", {})
+        for key, value in payload.values.items():
+            if key.startswith("custom:"):
+                field_id = key[7:]
+                # Even clearing an unknown field must never guess ownership.
+                attach_personal_fields(
+                    db, user.id, item.project_id, {field_id: value}
+                )
+                if (
+                    field_definition(
+                        db, user.id, field_id, project_id=item.project_id
+                    )
+                    is None
+                ):
+                    raise Problem(422, "사용할 수 없는 사용자 필드입니다.")
+                if value is None:
+                    custom.pop(field_id, None)
+                else:
+                    custom[field_id] = value
+            else:
+                data[key] = value
+        return serialize(
+            revise_item(
+                db,
+                item,
+                payload.expected_revision,
+                item.title,
+                item.body,
+                data,
+                status=item.status,
+                actor_id=user.id,
+            )
+        )
+
+    @app.patch("/api/items/{item_id}/task-type")
+    def update_task_type(
+        item_id: str, payload: TaskTypeUpdate, db: DB, user: User
+    ) -> dict:
+        item = mutable_item(db, item_id, user, "task.update")
+        require_revision(item, payload.expected_revision)
+        if item.kind != "task":
+            raise Problem(422, "작업의 유형만 수정할 수 있습니다.")
+        if item.data.get("workflow", "delivery") == payload.workflow:
+            return serialize(item)
+        data = copy.deepcopy(item.data)
+        data["workflow"] = payload.workflow
+        data["requires_test"] = payload.workflow == "delivery"
+        try:
+            updated = revise_item(
+                db,
+                item,
+                payload.expected_revision,
+                item.title,
+                item.body,
+                data,
+                status=item.status,
+                allow_workflow_change=True,
+                actor_id=user.id,
+            )
+        except Problem as exc:
+            if exc.status == 409 and data.get("state") == "done":
+                raise Problem(
+                    409,
+                    f"{exc.detail} 작업을 다시 연 뒤 유형을 변경하거나 "
+                    "완료 근거를 먼저 보완해 주세요.",
+                ) from exc
+            raise
+        return serialize(updated)
 
     @app.post("/api/items/{item_id}/move")
     def move_board_task(
         item_id: str, payload: TaskMove, db: DB, user: User
     ) -> dict:
-        item = item_for_user(db, item_id, user.id, lock=True)
-        position, undo_before, undo_after = move_task(db, item, payload)
+        item = mutable_item(db, item_id, user, "task.update")
+        position, undo_before, undo_after = move_task(
+            db, item, payload, actor_id=user.id
+        )
         return {
             **serialize(item),
             "board_order": position,
@@ -754,7 +1388,7 @@ def create_app(
     def confirm_item(
         item_id: str, payload: ExpectedRevision, db: DB, user: User
     ) -> dict:
-        item = item_for_user(db, item_id, user.id, lock=True)
+        item = mutable_item(db, item_id, user)
         require_revision(item, payload.expected_revision)
         if item.status == "confirmed":
             return serialize(item)
@@ -767,6 +1401,7 @@ def create_app(
                 item.body,
                 item.data,
                 status="confirmed",
+                actor_id=user.id,
             )
         )
 
@@ -784,7 +1419,7 @@ def create_app(
     def restore(
         item_id: str, payload: RestoreInput, db: DB, user: User
     ) -> dict:
-        item = item_for_user(db, item_id, user.id, lock=True)
+        item = mutable_item(db, item_id, user)
         old = db.get(Revision, (item.id, payload.revision))
         if old is None:
             raise Problem(404, "과거 버전을 찾을 수 없습니다.")
@@ -796,13 +1431,37 @@ def create_app(
                 old.title,
                 old.body,
                 old.data,
+                actor_id=user.id,
             )
         )
 
     @app.get("/api/projects/{project_id}/links")
     def links(project_id: str, db: DB, user: User) -> list[dict]:
         project_for_user(db, project_id, user.id)
-        return [serialize(x) for x in project_links(db, project_id)]
+        readable = set(db.scalars(accessible_project_ids(db, user.id)))
+        rows = project_links(db, project_id)
+        endpoint_ids = {
+            item_id
+            for link in rows
+            for item_id in (link.source_id, link.target_id)
+        }
+        endpoint_projects = {
+            item_id: project_id
+            for item_id, project_id in db.execute(
+                select(Item.id, Item.project_id).where(
+                    Item.id.in_(endpoint_ids)
+                )
+            ).all()
+        }
+        return [
+            serialize(link)
+            for link in rows
+            if link.project_id in readable
+            and all(
+                endpoint_projects.get(item_id, "") in readable
+                for item_id in (link.source_id, link.target_id)
+            )
+        ]
 
     @app.post("/api/projects/{project_id}/links", status_code=201)
     def new_link(
@@ -812,16 +1471,65 @@ def create_app(
         source = item_for_user(db, payload.source_id, user.id)
         target = item_for_user(db, payload.target_id, user.id)
         return serialize(
-            add_link(db, project_id, source, target, payload.relation)
+            add_link(
+                db,
+                project_id,
+                source,
+                target,
+                payload.relation,
+                actor_id=user.id,
+            )
         )
 
     def owned_link(db: Session, user: Account, link_id: str) -> Link:
-        link = db.scalar(
-            select(Link).where(Link.id == link_id).with_for_update()
-        )
+        link = db.get(Link, link_id)
         if link is None:
             raise Problem(404, "연결을 찾을 수 없습니다.")
-        project_for_user(db, link.project_id, user.id)
+        from projects.project_access import lock_project_access
+
+        endpoints = list(
+            db.scalars(
+                select(Item.project_id).where(
+                    Item.id.in_([link.source_id, link.target_id])
+                )
+            )
+        )
+        locked_project_ids = {link.project_id, *endpoints}
+        original_endpoints = {
+            item_id: project_id
+            for item_id, project_id in db.execute(
+                select(Item.id, Item.project_id).where(
+                    Item.id.in_([link.source_id, link.target_id])
+                )
+            ).all()
+        }
+        original_link_project = link.project_id
+        lock_project_access(db, locked_project_ids)
+        current_endpoints = {
+            item_id: project_id
+            for item_id, project_id in db.execute(
+                select(Item.id, Item.project_id).where(
+                    Item.id.in_([link.source_id, link.target_id])
+                )
+            ).all()
+        }
+        current_link_project = db.scalar(
+            select(Link.project_id).where(Link.id == link_id)
+        )
+        if current_link_project is None:
+            raise Problem(404, "연결을 찾을 수 없습니다.")
+        if (
+            current_endpoints != original_endpoints
+            or current_link_project != original_link_project
+            or not set(current_endpoints.values()) <= locked_project_ids
+        ):
+            raise Problem(
+                409, "연결 항목의 소속이 변경되었습니다. 다시 불러와 주세요."
+            )
+        require_project_access(db, link.project_id, user.id, "relation.write")
+        for project_id in endpoints:
+            require_project_access(db, project_id, user.id, "relation.write")
+        db.refresh(link, with_for_update=True)
         return link
 
     @app.delete("/api/links/{link_id}")
@@ -863,7 +1571,7 @@ def create_app(
     def new_test_run(
         item_id: str, payload: TestRunInput, db: DB, user: User
     ) -> dict:
-        case = item_for_user(db, item_id, user.id, lock=True)
+        case = mutable_item(db, item_id, user, "test.write")
         if case.kind != "test_case":
             raise Problem(422, "테스트 케이스에만 실행 결과를 연결합니다.")
         if (
@@ -893,8 +1601,22 @@ def create_app(
     @app.get("/api/projects/{project_id}/baselines")
     def baselines(project_id: str, db: DB, user: User) -> list[dict]:
         project_for_user(db, project_id, user.id)
+        readable_items = set(
+            db.scalars(
+                select(Item.id).where(
+                    Item.project_id.in_(accessible_project_ids(db, user.id))
+                )
+            )
+        )
         return [
-            serialize(x)
+            {
+                **serialize(x),
+                "revisions": {
+                    item_id: revision
+                    for item_id, revision in x.revisions.items()
+                    if item_id in readable_items
+                },
+            }
             for x in db.scalars(
                 select(Baseline)
                 .where(Baseline.project_id == project_id)
@@ -906,13 +1628,15 @@ def create_app(
     def new_baseline(
         project_id: str, payload: BaselineInput, db: DB, user: User
     ) -> dict:
-        project_for_user(db, project_id, user.id)
+        require_project_access(
+            db, project_id, user.id, "baseline.write", lock=True
+        )
         return serialize(create_baseline(db, project_id, payload.name))
 
     @app.get("/api/projects/{project_id}/trace")
     def trace_detail(project_id: str, db: DB, user: User) -> dict:
         project_for_user(db, project_id, user.id)
-        return trace(db, project_id)
+        return trace(db, project_id, actor_id=user.id)
 
     @app.get("/api/catalog")
     def catalog(user: User) -> dict:
@@ -961,6 +1685,8 @@ def create_app(
 
     @app.get("/api/projects/{project_id}/runs")
     def runs(project_id: str, db: DB, user: User) -> list[dict]:
+        from projects.jobs import run_is_readable
+
         project_for_user(db, project_id, user.id)
         return [
             serialize(x)
@@ -969,6 +1695,7 @@ def create_app(
                 .where(SkillRun.project_id == project_id)
                 .order_by(SkillRun.created_at.desc())
             )
+            if run_is_readable(db, x, user.id)
         ]
 
     @app.post("/api/projects/{project_id}/runs", status_code=201)
@@ -977,21 +1704,37 @@ def create_app(
     ) -> dict:
         from projects.jobs import enqueue_run
 
-        project_for_user(db, project_id, user.id)
+        require_project_access(
+            db, project_id, user.id, "run.execute", lock=True
+        )
         return serialize(
             enqueue_run(db, app.state, project_id, user.id, payload)
         )
 
     def owned_run(
-        db: Session, user: Account, run_id: str, *, lock: bool = False
+        db: Session,
+        user: Account,
+        run_id: str,
+        *,
+        lock: bool = False,
+        permission: str = "project.read",
     ) -> SkillRun:
+        project_id = db.scalar(
+            select(SkillRun.project_id).where(SkillRun.id == run_id)
+        )
+        if project_id is None:
+            raise Problem(404, "실행을 찾을 수 없습니다.")
+        require_project_access(db, project_id, user.id, permission, lock=lock)
         statement = select(SkillRun).where(SkillRun.id == run_id)
         if lock:
             statement = statement.with_for_update()
         run = db.scalar(statement)
         if run is None:
             raise Problem(404, "실행을 찾을 수 없습니다.")
-        project_for_user(db, run.project_id, user.id)
+        from projects.jobs import run_is_readable
+
+        if not run_is_readable(db, run, user.id):
+            raise Problem(404, "실행을 찾을 수 없습니다.")
         return run
 
     @app.get("/api/runs/{run_id}")
@@ -1002,7 +1745,7 @@ def create_app(
     def cancel(run_id: str, db: DB, user: User) -> dict:
         from projects.jobs import event
 
-        run = owned_run(db, user, run_id, lock=True)
+        run = owned_run(db, user, run_id, lock=True, permission="run.execute")
         if run.status in ("queued", "running", "review_ready"):
             run.status = "cancelled"
             event(run, "cancelled")
@@ -1011,9 +1754,9 @@ def create_app(
 
     @app.post("/api/runs/{run_id}/retry")
     def retry(run_id: str, db: DB, user: User) -> dict:
-        from projects.jobs import event
+        from projects.jobs import authorize_run_request, event
 
-        run = owned_run(db, user, run_id, lock=True)
+        run = owned_run(db, user, run_id, lock=True, permission="run.execute")
         if run.status not in ("failed", "cancelled"):
             raise Problem(409, "실패·취소된 실행만 재개할 수 있습니다.")
         if run.attempt >= 3:
@@ -1021,6 +1764,7 @@ def create_app(
                 409,
                 "재시도 한도입니다. 입력을 검토한 뒤 새 실행을 만들어 주세요.",
             )
+        authorize_run_request(db, run, user.id)
         run.status = "queued"
         run.error = None
         event(run, "queued", "사용자 요청으로 같은 입력·스킬을 재개합니다.")
@@ -1031,7 +1775,7 @@ def create_app(
     def apply(run_id: str, payload: ApplyInput, db: DB, user: User) -> dict:
         from projects.jobs import apply_result
 
-        run = owned_run(db, user, run_id, lock=True)
+        run = owned_run(db, user, run_id, lock=True, permission="run.apply")
         apply_result(
             db,
             run,
@@ -1046,7 +1790,7 @@ def create_app(
         from projects.portable import export_document
 
         item = item_for_user(db, item_id, user.id)
-        content = export_document(db, app.state, item)
+        content = export_document(db, app.state, item, actor_id=user.id)
         return Response(
             content,
             media_type="application/zip",
@@ -1061,7 +1805,8 @@ def create_app(
     ) -> dict:
         from projects.portable import reconnect_document
 
-        item = item_for_user(db, item_id, user.id, lock=True)
+        item = mutable_item(db, item_id, user)
+        require_project_access(db, item.project_id, user.id, "project.import")
         return reconnect_document(db, item, payload)
 
     @app.get("/api/projects/{project_id}/export")
@@ -1070,7 +1815,7 @@ def create_app(
 
         project = project_for_user(db, project_id, user.id)
         return Response(
-            export_project(db, project),
+            export_project(db, project, actor_id=user.id),
             media_type="application/zip",
             headers={
                 "Content-Disposition": f'attachment; filename="project-{project.id}.zip"'

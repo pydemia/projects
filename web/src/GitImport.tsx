@@ -1,8 +1,8 @@
+import { DateTimeValue } from "./date-time-settings";
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { api, errorMessage } from "./api";
 import type { GitPreview, Project } from "./models";
-import { dateLabel } from "./models";
 import { Button } from "./pydemia-ui/button";
 import { Card, CardContent } from "./pydemia-ui/card";
 import { Input } from "./pydemia-ui/input";
@@ -55,7 +55,7 @@ export function GitImport({ onClose, onCreated }: {
             <Field label="프로젝트 이름"><Input required maxLength={200} value={name} onChange={event => setName(event.target.value)} /></Field>
             <Field label="목표"><Textarea rows={3} maxLength={20000} value={goal} onChange={event => setGoal(event.target.value)} /></Field>
             <Field label="프로필"><NativeSelect value={profile} onChange={event => setProfile(event.target.value as "simple" | "standard")}><option value="simple">간편</option><option value="standard">표준</option></NativeSelect></Field>
-            <div className="git-import-history"><strong>가져올 작업 이력</strong><p className="muted small">최근 commit과 PR의 제목·상태·링크만 읽기 전용으로 저장합니다.</p><ul className="activity">{preview.activities.slice(0, 8).map(row => <li key={`${row.kind}:${row.external_id}`}><a href={row.url} target="_blank" rel="noopener noreferrer">{row.kind === "pr" ? "PR" : "commit"} · {row.title}</a><small>{row.state} · {dateLabel(row.occurred_at)}</small></li>)}</ul>{!preview.activities.length && <p className="muted small">가져올 최근 이력이 없습니다.</p>}</div>
+            <div className="git-import-history"><strong>가져올 작업 이력</strong><p className="muted small">최근 commit과 PR의 제목·상태·링크만 읽기 전용으로 저장합니다.</p><ul className="activity">{preview.activities.slice(0, 8).map(row => <li key={`${row.kind}:${row.external_id}`}><a href={row.url} target="_blank" rel="noopener noreferrer">{row.kind === "pr" ? "PR" : "commit"} · {row.title}</a><small>{row.state} · <DateTimeValue value={row.occurred_at} /></small></li>)}</ul>{!preview.activities.length && <p className="muted small">가져올 최근 이력이 없습니다.</p>}</div>
             {preview.warnings.map(warning => <p className="hint" key={warning}>{warning}</p>)}
             <div className="form-actions"><Button variant="outline" type="button" onClick={onClose}>취소</Button><Button className="primary" type="submit" disabled={busy || !name.trim()}>{busy ? "생성 중…" : "프로젝트 만들기"}</Button></div>
         </form>}

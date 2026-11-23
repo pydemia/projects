@@ -1,8 +1,16 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { formatDateOnly } from "./date-time";
+import { useDateTimeSettings } from "./date-time-settings";
+import { z } from "zod";
+import { useAuthenticationDraft, type AuthenticationDraft } from "./auth-drafts";
+import { useProjectPermissions } from "./ProjectPermissions";
 import { ApiError, api, errorMessage } from "./api";
+import { TaskTitleEdit } from "./TaskTitleEdit";
+import { TaskStoryChips } from "./StoryChips";
 import { navigate, useMobileViewport } from "./hooks";
 import { statusLabels } from "./models";
-import type { Item } from "./models";
+import type { Item, TaskFieldDefinition } from "./models";
+import { formatTaskField, taskFieldLabel } from "./TaskFields";
 import { Button } from "./pydemia-ui/button";
 import { Checkbox } from "./pydemia-ui/checkbox";
 import {
@@ -19,6 +27,7 @@ import { RouteLink } from "./ui";
 type Task = Extract<Item, { kind: "task" }>;
 type TaskState = Task["data"]["state"];
 const states: TaskState[] = ["todo", "in_progress", "in_review", "done", "cancelled"];
+const quickCardDraftSchema = z.object({state: z.enum(["todo", "in_progress", "in_review", "done", "cancelled"]), title: z.string(), reason: z.string()}).strict();
 type UndoMove = {
     taskId: string; title: string; expectedRevision: number;
     source_state: TaskState; target_state: TaskState;
@@ -40,7 +49,7 @@ function readUndo(key: string): UndoMove | null {
     } catch { return null; }
 }
 
-export function TaskBoard({ projectId, tasks, lens, savedSort, onSortChange, selectedIds, onSelect, cardFields, onChanged, onError }: {
+export function TaskBoard({ projectId, tasks, lens, savedSort, onSortChange, selectedIds, onSelect, cardFields, definitions = [], onChanged, onError }: {
     projectId: string;
     tasks: Task[];
     lens: "gtd" | "abc";
@@ -49,25 +58,31 @@ export function TaskBoard({ projectId, tasks, lens, savedSort, onSortChange, sel
     selectedIds: ReadonlySet<string>;
     onSelect: (taskId: string, shift: boolean) => void;
     cardFields: readonly string[];
+    definitions?: readonly TaskFieldDefinition[];
     onChanged: () => void;
     onError: (message: string) => void;
 }) {
+    const {dateFormat, timeZone} = useDateTimeSettings();
+    const recovery: AuthenticationDraft<z.infer<typeof quickCardDraftSchema>> = useAuthenticationDraft(`board:${projectId || "global"}:creation`, quickCardDraftSchema,
+        () => quickState ? {state: quickState, title: quickTitle, reason: quickReason} : null);
     const mobile = useMobileViewport();
+    const wrapRef = useRef<HTMLDivElement>(null);
+    const can = useProjectPermissions();
     const sortKey = `projects:board-sort:${projectId}`;
     const undoKey = `projects:board-undo:${projectId}`;
     const mobileStateKey = `projects:board-mobile-state:${projectId}`;
     const [sortMode, setSortMode] = useState<"manual" | "auto">(() =>
-        sessionStorage.getItem(sortKey) === "auto" ? "auto" : "manual");
+        !projectId || sessionStorage.getItem(sortKey) === "auto" ? "auto" : "manual");
     useEffect(() => {
-        if (savedSort) setSortMode(savedSort === "manual" ? "manual" : "auto");
-    }, [savedSort]);
+        if (savedSort) setSortMode(projectId && savedSort === "manual" ? "manual" : "auto");
+    }, [savedSort, projectId]);
     const [optimistic, setOptimistic] = useState<KanbanColumn[] | null>(null);
     const [busy, setBusy] = useState(false);
     const [search, setSearch] = useState("");
     const [statusOpenId, setStatusOpenId] = useState<string | null>(null);
-    const [quickState, setQuickState] = useState<TaskState | null>(null);
-    const [quickTitle, setQuickTitle] = useState("");
-    const [quickReason, setQuickReason] = useState("");
+    const [quickState, setQuickState] = useState<TaskState | null>(recovery.restored?.state ?? null);
+    const [quickTitle, setQuickTitle] = useState(recovery.restored?.title ?? "");
+    const [quickReason, setQuickReason] = useState(recovery.restored?.reason ?? "");
     const [mobileState, setMobileState] = useState<TaskState>(() => {
         const saved = sessionStorage.getItem(mobileStateKey) as TaskState | null;
         return saved && states.includes(saved) ? saved : "todo";
@@ -79,22 +94,57 @@ export function TaskBoard({ projectId, tasks, lens, savedSort, onSortChange, sel
             .sort((left, right) => sortMode === "manual"
                 ? (left.board_order ?? 0) - (right.board_order ?? 0) || left.created_at.localeCompare(right.created_at)
                 : tasks.indexOf(left) - tasks.indexOf(right))
-            .map(task => ({ id: task.id, title: task.title, description: cardFields.map(field => {
+            .map(task => ({ id: task.id, title: task.title, description: [...(!projectId ? [task.project_name ?? task.project_id] : []), ...cardFields.map(field => {
+                if (field.startsWith("custom:")) {
+                    const value = formatTaskField(task, field, definitions, dateFormat, timeZone);
+                    return value === "—" ? "" : `${taskFieldLabel(field, definitions, task.project_id)} ${value}`;
+                }
                 if (field === "list_name") return task.data.list_name;
-                if (field === "due_date") return task.data.due_date ? `마감 ${task.data.due_date}` : "";
-                if (field === "planned_date") return task.data.planned_date ? `실행 ${task.data.planned_date}` : "";
+                if (field === "due_date") return task.data.due_date ? `마감 ${formatDateOnly(task.data.due_date, dateFormat, timeZone)}` : "";
+                if (field === "planned_date") return task.data.planned_date ? `실행 ${formatDateOnly(task.data.planned_date, dateFormat, timeZone)}` : "";
                 if (field === "estimated_minutes") return task.data.estimated_minutes ? `${task.data.estimated_minutes}분` : "";
                 if (field === "abc_priority") return task.data.abc_priority !== "none" ? `ABC ${task.data.abc_priority}` : "";
                 if (field === "github_issue_url") return task.data.github_issue_url ? "GitHub Issue" : "";
                 if (field === "context" || field === "goal") return task.data[field];
                 return "";
-            }).filter(Boolean).join(" · ") })),
-    })), [tasks, sortMode, cardFields]);
+            })].filter(Boolean).join(" · ") })),
+    })), [tasks, sortMode, cardFields, projectId, definitions, dateFormat, timeZone]);
     useEffect(() => { setOptimistic(null); setBusy(false); }, [tasks]);
     const columns = optimistic ?? baseColumns;
+    function scrollToColumn(state: TaskState) {
+        const board = wrapRef.current?.querySelector<HTMLElement>('[data-ui="kanban"]');
+        const column = board?.querySelector<HTMLElement>(`[data-kanban-column="${state}"]`);
+        if (!board || !column) return;
+        const left = board.scrollLeft + column.getBoundingClientRect().left - board.getBoundingClientRect().left;
+        if (board.scrollTo) board.scrollTo({left});
+        else board.scrollLeft = left;
+    }
+    useEffect(() => { if (mobile) scrollToColumn(mobileState); }, [mobile]);
+    useEffect(() => {
+        if (!mobile) return;
+        const nav = wrapRef.current?.querySelector<HTMLElement>('.mobile-board-picker nav');
+        const active = nav?.querySelector<HTMLElement>('[aria-current="true"]');
+        if (!nav || !active) return;
+        const bounds = nav.getBoundingClientRect();
+        const button = active.getBoundingClientRect();
+        if (button.left < bounds.left) nav.scrollLeft += button.left - bounds.left;
+        else if (button.right > bounds.right) nav.scrollLeft += button.right - bounds.right;
+    }, [mobile, mobileState]);
     function selectMobileState(state: TaskState) {
         sessionStorage.setItem(mobileStateKey, state);
         setMobileState(state);
+        if (mobile) scrollToColumn(state);
+    }
+    function rememberScrolledColumn(board: HTMLElement) {
+        if (!mobile) return;
+        const left = board.getBoundingClientRect().left;
+        const nearest = [...board.querySelectorAll<HTMLElement>('[data-kanban-column]')]
+            .sort((a, b) => Math.abs(a.getBoundingClientRect().left - left) - Math.abs(b.getBoundingClientRect().left - left))[0];
+        const state = nearest?.dataset.kanbanColumn as TaskState | undefined;
+        if (state && states.includes(state) && state !== mobileState) {
+            sessionStorage.setItem(mobileStateKey, state);
+            setMobileState(state);
+        }
     }
     function rememberUndo(value: UndoMove | null) {
         if (value) sessionStorage.setItem(undoKey, JSON.stringify(value));
@@ -103,7 +153,7 @@ export function TaskBoard({ projectId, tasks, lens, savedSort, onSortChange, sel
     }
 
     async function commitMove(next: KanbanColumn[], move: KanbanMove) {
-        if (busy) return;
+        if (busy || !can(taskById.get(move.cardId)?.project_id ?? "", "task.update")) return;
         if (sortMode === "auto" && move.fromColumnId === move.toColumnId) {
             onError("GTD/ABC 자동 정렬 중에는 열 안 순서를 바꿀 수 없습니다. 보드 정렬을 수동으로 바꿔 주세요.");
             return;
@@ -145,6 +195,7 @@ export function TaskBoard({ projectId, tasks, lens, savedSort, onSortChange, sel
     }
 
     async function undoLastMove() {
+        if (!can(projectId, "task.update")) return;
         if (!undo || busy) return;
         setBusy(true); onError("");
         try {
@@ -187,6 +238,7 @@ export function TaskBoard({ projectId, tasks, lens, savedSort, onSortChange, sel
     }
 
     async function quickCreate(event: React.FormEvent, state: TaskState) {
+        if (!can(projectId, "task.create")) {event.preventDefault(); return;}
         event.preventDefault();
         if (!quickTitle.trim() || busy) return;
         setBusy(true); onError("");
@@ -196,16 +248,18 @@ export function TaskBoard({ projectId, tasks, lens, savedSort, onSortChange, sel
                 cancellation_reason: state === "cancelled" ? quickReason.trim() : "",
             });
             setQuickTitle(""); setQuickReason(""); setQuickState(null);
+            recovery.clear();
             onChanged();
         } catch (cause) {
             setBusy(false); onError(errorMessage(cause));
         }
     }
 
-    return <div className="task-board-wrap" data-mobile-state={mobileState}>
-        {mobile && <div className="mobile-board-picker"><label htmlFor="mobile-board-state">상태 열</label><NativeSelect id="mobile-board-state" value={mobileState} onChange={event => selectMobileState(event.target.value as TaskState)}>
-            {columns.map(column => <option key={column.id} value={column.id}>{column.title} · {column.cards.length}개</option>)}
-        </NativeSelect><p className="muted small">카드 메뉴로 상태와 순서를 변경할 수 있습니다.</p></div>}
+    return <div ref={wrapRef} className="task-board-wrap" data-mobile-state={mobileState}>
+        {mobile && <div className="mobile-board-picker"><nav aria-label="보드 상태 열">
+            {columns.map(column => <Button key={column.id} variant={mobileState === column.id ? "outline" : "ghost"} aria-current={mobileState === column.id ? "true" : undefined}
+                onClick={() => selectMobileState(column.id as TaskState)}>{column.title} · {column.cards.length}</Button>)}
+        </nav><p className="muted small">좌우로 스크롤해 상태 열을 살펴보세요. 카드 메뉴로 이동할 수 있습니다.</p></div>}
         <div className="task-board-toolbar">
             <label htmlFor="task-board-sort">보드 정렬</label>
             <NativeSelect id="task-board-sort" value={sortMode} onChange={event => {
@@ -214,18 +268,21 @@ export function TaskBoard({ projectId, tasks, lens, savedSort, onSortChange, sel
                 sessionStorage.setItem(sortKey, next);
                 onSortChange(next === "manual" ? "manual" : lens);
             }}>
-                <option value="manual">수동 순서 · 드래그 가능</option>
+                <option value="manual" disabled={!projectId}>수동 순서 · 드래그 가능</option>
                 <option value="auto">{lens.toUpperCase()} 자동 순서 · 열 안 이동 제한</option>
             </NativeSelect>
-            <span role="status" aria-live="polite">{busy ? "이동 저장 중…" : "카드를 끌거나 이동 버튼·메뉴를 사용하세요."}</span>
-            {undo && <Button variant="outline" disabled={busy} onClick={() => { void undoLastMove(); }}>
+            {!projectId && <span>전역 보드는 자동 정렬입니다. 수동 순서는 프로젝트 작업에서 변경하세요.</span>}<span role="status" aria-live="polite">{busy ? "이동 저장 중…" : "카드를 끌거나 이동 버튼·메뉴를 사용하세요."}</span>
+            {undo && <Button variant="outline" disabled={busy || !can(projectId, "task.update")} onClick={() => { void undoLastMove(); }}>
                 {undo.title} 이동 되돌리기
             </Button>}
         </div>
         <Kanban label="작업 상태 보드" columns={columns} onColumnsChange={(next, move) => { void commitMove(next, move); }}
+            renderCardTitle={card => { const task = taskById.get(card.id); return task ? <><TaskTitleEdit task={task} disabled={busy} dragSurface onSaved={() => onChanged()} /><TaskStoryChips taskId={task.id} /></> : card.title; }}
+            onScroll={event => rememberScrolledColumn(event.currentTarget)}
             canReorder={sortMode === "manual"}
+            canMoveCard={card => !busy && can(taskById.get(card.id)?.project_id ?? "", "task.update")}
             canMove={move => {
-                if (busy) return false;
+                if (busy || !can(taskById.get(move.cardId)?.project_id ?? "", "task.update")) return false;
                 if (sortMode === "auto" && move.fromColumnId === move.toColumnId) {
                     onError("자동 정렬 중에는 열 안 순서를 바꿀 수 없습니다. 보드 정렬을 수동으로 바꿔 주세요.");
                     return false;
@@ -233,7 +290,7 @@ export function TaskBoard({ projectId, tasks, lens, savedSort, onSortChange, sel
                 return true;
             }}
             className={busy ? "task-kanban task-board-busy" : "task-kanban"}
-            renderColumnFooter={column => <div className="task-board-create">
+            renderColumnFooter={column => projectId && can(projectId, "task.create") ? <div className="task-board-create">
                 {quickState === column.id ? <form onSubmit={event => { void quickCreate(event, column.id as TaskState); }}>
                     <Input autoFocus aria-label={`${column.title} 새 작업 제목`} maxLength={300} value={quickTitle}
                         onChange={event => setQuickTitle(event.target.value)} placeholder="새 작업 제목" />
@@ -241,11 +298,11 @@ export function TaskBoard({ projectId, tasks, lens, savedSort, onSortChange, sel
                         onChange={event => setQuickReason(event.target.value)} placeholder="취소 사유" />}
                     <div><Button type="submit" disabled={busy || !quickTitle.trim() || column.id === "cancelled" && !quickReason.trim()}
                         onClick={event => { event.preventDefault(); void quickCreate(event, column.id as TaskState); }}>추가</Button>
-                        <Button type="button" variant="ghost" onClick={() => { setQuickState(null); setQuickTitle(""); }}>취소</Button></div>
+                        <Button type="button" variant="ghost" onClick={() => { setQuickState(null); setQuickTitle(""); setQuickReason(""); recovery.clear(); }}>취소</Button></div>
                 </form> : <Button variant="ghost" disabled={busy} onClick={() => { setQuickState(column.id as TaskState); setQuickTitle(""); }}>
                     + {column.title} 작업
                 </Button>}
-            </div>}
+            </div> : null}
             renderCard={card => {
                 const task = taskById.get(card.id);
                 if (!task) return null;
@@ -256,7 +313,7 @@ export function TaskBoard({ projectId, tasks, lens, savedSort, onSortChange, sel
                         disabled={busy} onClick={event => onSelect(task.id, event.shiftKey)} />
                     <RouteLink patch={{ item: task.id }} className="task-board-detail">상세 열기</RouteLink>
                     <Popover open={statusOpenId === task.id} onOpenChange={open => { setStatusOpenId(open ? task.id : null); if (open) setSearch(""); }}>
-                        <PopoverTrigger className="task-status-trigger" disabled={busy} aria-label={`${task.title} 상태 메뉴`}>
+                        <PopoverTrigger className="task-status-trigger" disabled={busy || !can(task.project_id, "task.update")} aria-label={`${task.title} 상태 메뉴`}>
                             {statusLabels[task.data.state]} ▾
                         </PopoverTrigger>
                         <PopoverContent align="start" className="task-status-popover">
@@ -280,11 +337,11 @@ export function TaskBoard({ projectId, tasks, lens, savedSort, onSortChange, sel
                             <DropdownMenuLabel>{task.title}</DropdownMenuLabel>
                             <DropdownMenuItem onSelect={() => navigate({ item: task.id })}>상세 편집</DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem disabled={sortMode === "auto" || cardIndex <= 0}
+                            <DropdownMenuItem disabled={!can(task.project_id, "task.update") || sortMode === "auto" || cardIndex <= 0}
                                 onSelect={() => adjacent(task, "up")}>위로 이동</DropdownMenuItem>
-                            <DropdownMenuItem disabled={sortMode === "auto" || cardIndex < 0 || cardIndex >= (currentColumn?.cards.length ?? 0) - 1}
+                            <DropdownMenuItem disabled={!can(task.project_id, "task.update") || sortMode === "auto" || cardIndex < 0 || cardIndex >= (currentColumn?.cards.length ?? 0) - 1}
                                 onSelect={() => adjacent(task, "down")}>아래로 이동</DropdownMenuItem>
-                            <DropdownMenuItem onSelect={() => moveWithMenu(task, "done")}>완료 열로 이동</DropdownMenuItem>
+                            <DropdownMenuItem disabled={!can(task.project_id, "task.update")} onSelect={() => moveWithMenu(task, "done")}>완료 열로 이동</DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </div>;

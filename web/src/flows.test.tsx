@@ -1,4 +1,5 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { ownerProject, renderWithOwnerPermissions as render } from "./permissions.test-support";
+import { fireEvent, render as renderUi, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { api, ApiError } from "./api";
@@ -7,6 +8,7 @@ import { RunsPage } from "./RunsPage";
 import { candidateRun, idea, projectId, userId } from "./fixtures.test-data";
 import { loadDraft } from "./hooks";
 import { defaultData, itemSchema } from "./models";
+import { ProjectPermissionsProvider } from "./ProjectPermissions";
 
 describe("editable work and real execution states", () => {
     it("opens an idea with requirement skills and preserves a manually edited skill list", async () => {
@@ -76,5 +78,32 @@ describe("editable work and real execution states", () => {
         expect(screen.getByRole("checkbox", { name: "이 문서 결과 적용 선택" }).getAttribute("data-state")).toBe("unchecked");
         await user.click(screen.getByRole("button", { name: "선택 후보 1건 적용" }));
         await waitFor(() => expect(apply).toHaveBeenCalledWith(mixed.id, [1], false));
+    });
+
+    it("lets a custom role prepare a skill execution while refusing application without run.apply", async () => {
+        vi.spyOn(api, "runs").mockResolvedValue([candidateRun]);
+        vi.spyOn(api, "run").mockResolvedValue(candidateRun);
+        const apply = vi.spyOn(api, "applyRun");
+        const owner = ownerProject(projectId);
+        const executor = {...owner, access: {...owner.access!,
+            role: {...owner.access!.role, name: "스킬 실행 담당", preset: "custom" as const},
+            capabilities: ["project.read", "run.execute", "item.write"],
+        }};
+        const page = (run: string) => <ProjectPermissionsProvider projects={[executor]}>
+            <RunsPage projectId={projectId} userId={userId}
+                route={{project: projectId, view: "runs", item: "", run, q: "", kind: "", baseline: ""}}
+                items={[idea]} runtime={{status: "ready", data: {configured: true, provider: "codex_login", model: "", capabilities: []}}}
+                onRuntimeReload={vi.fn()} onChanged={vi.fn()} />
+        </ProjectPermissionsProvider>;
+        const view = renderUi(page("new"));
+        fireEvent.change(screen.getByLabelText("작업 요청"), {target: {value: "실행 후 검토할 요청"}});
+        expect(screen.getByRole("button", {name: "스킬 실행"})).toHaveProperty("disabled", false);
+        view.rerender(page(candidateRun.id));
+        const candidate = await screen.findByRole("checkbox", {name: "선택할 두 번째 요건 채택 후보로 선택"});
+        fireEvent.click(candidate);
+        const applyControl = screen.getByRole("button", {name: /선택 후보 .*건 적용/});
+        expect(applyControl).toHaveProperty("disabled", true);
+        fireEvent.click(applyControl);
+        expect(apply).not.toHaveBeenCalled();
     });
 });

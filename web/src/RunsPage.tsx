@@ -1,10 +1,13 @@
+import { DateTimeValue } from "./date-time-settings";
 import { useEffect, useState } from "react";
 import { z } from "zod";
+import { useProjectPermissions } from "./ProjectPermissions";
 import { api, errorMessage } from "./api";
+import { planningApi } from "./planning-api";
 import { loadDraft, navigate, removeDraft, storeDraft, useResource } from "./hooks";
 import type { Resource, Route } from "./hooks";
 import {
-    artifactDefinition, dateLabel, defaultData, operationLabels, operationSchema, shortId,
+    artifactDefinition, defaultData, operationLabels, operationSchema, shortId,
 } from "./models";
 import type { Bundle, Catalog, Item, Operation, Runtime, SkillRun } from "./models";
 import { ArtifactFields } from "./ItemFields";
@@ -37,13 +40,15 @@ export function RunsPage({ projectId, userId, route, items, catalog, runtime, on
     catalog?: Catalog; runtime: Resource<Runtime>; onRuntimeReload: () => void;
     onChanged: () => void;
 }) {
+    const can = useProjectPermissions();
+    const executable = can(projectId, "run.execute");
     const runs = useResource(`runs:${projectId}`, signal => api.runs(projectId, signal));
     const [query, setQuery] = useState("");
     const visibleRuns = runs.status === "ready" ? runs.data.filter(run =>
         `${operationLabels[run.operation]} ${run.instruction} ${run.status}`.toLocaleLowerCase().includes(query.toLocaleLowerCase())) : [];
     return <>
         <PageHead title="스킬 작업" description="원문 bundle과 근거를 고정해 실행하고, 결과를 검토한 뒤 선택 적용합니다.">
-            <RouteLink className="button primary" patch={{ run: "new", item: "" }}>+ 새 실행</RouteLink>
+            {executable && <RouteLink className="button primary" patch={{ run: "new", item: "" }}>+ 새 실행</RouteLink>}
             <ActionButton onClick={runs.reload}>이력 새로고침</ActionButton>
         </PageHead>
         <div className={`document-layout run-layout ${route.run ? "has-selection" : ""}`}>
@@ -55,12 +60,12 @@ export function RunsPage({ projectId, userId, route, items, catalog, runtime, on
                     {!runs.data.length && <p className="muted">아직 실행한 작업이 없습니다.</p>}
                     {!!runs.data.length && !visibleRuns.length && <p className="muted">일치하는 실행 이력이 없습니다.</p>}
                     {[...visibleRuns].sort((a, b) => b.created_at.localeCompare(a.created_at)).map(run => <RouteLink key={run.id} patch={{ run: run.id }} appearance="side" className="doc-item" current={route.run === run.id}>
-                        <strong>{operationLabels[run.operation]}</strong><small className="truncate-two">{run.instruction}</small><Badge value={run.status} /><small>{dateLabel(run.created_at)}</small>
+                        <strong>{operationLabels[run.operation]}</strong><small className="truncate-two">{run.instruction}</small><Badge value={run.status} /><small><DateTimeValue value={run.created_at} /></small>
                     </RouteLink>)}
                 </SideNav>}</CardContent></Card>
             <Card className="document-main workspace-detail"><CardContent>
                 {route.run && <ActionButton className="mobile-detail-back" type="button" onClick={() => navigate({ run: "", item: "" })}>← 실행 이력</ActionButton>}
-                {route.run && route.run !== "new" ? <RunDetail key={route.run} runId={route.run} projectId={projectId} userId={userId} items={items} onStatusChanged={runs.reload} onChanged={() => { runs.reload(); onChanged(); }} /> : <RunComposer key={`${projectId}:${route.item}`} projectId={projectId} userId={userId} targetId={route.item} items={items} catalog={catalog} runtime={runtime} onRuntimeReload={onRuntimeReload} onCreated={run => { runs.reload(); navigate({ run: run.id }); }} />}</CardContent></Card>
+                {route.run && route.run !== "new" ? <RunDetail key={route.run} runId={route.run} projectId={projectId} userId={userId} items={items} onStatusChanged={runs.reload} onChanged={() => { runs.reload(); onChanged(); }} /> : executable ? <RunComposer key={`${projectId}:${route.item}`} projectId={projectId} userId={userId} targetId={route.item} items={items} catalog={catalog} runtime={runtime} onRuntimeReload={onRuntimeReload} onCreated={run => { runs.reload(); navigate({ run: run.id }); }} /> : <Empty title="스킬 실행은 읽기 전용입니다."><p>왼쪽 이력에서 기존 실행과 결과를 확인할 수 있습니다.</p></Empty>}</CardContent></Card>
         </div>
     </>;
 }
@@ -70,6 +75,7 @@ function RunComposer({ projectId, userId, targetId, items, catalog, runtime, onR
     catalog?: Catalog; runtime: Resource<Runtime>; onRuntimeReload: () => void;
     onCreated: (run: SkillRun) => void;
 }) {
+    const can = useProjectPermissions();
     const initialTarget = items.find(item => item.id === targetId);
     const key = `projects:run-draft:${userId}:${projectId}:${targetId || "new"}`;
     const [saved] = useState(() => loadDraft(key));
@@ -111,6 +117,7 @@ function RunComposer({ projectId, userId, targetId, items, catalog, runtime, onR
         finally { setBusy(false); }
     }
     async function start(event: React.FormEvent) {
+        if (!can(projectId, "run.execute")) {event.preventDefault(); return;}
         event.preventDefault(); setBusy(true); setError("");
         try {
             if (resolvedKey !== skillKey) {
@@ -183,6 +190,8 @@ function RunDetail({ runId, projectId, userId, items, onChanged, onStatusChanged
     runId: string; projectId: string; userId: string; items: Item[];
     onChanged: () => void; onStatusChanged: () => void;
 }) {
+    const can = useProjectPermissions();
+    const executable = can(projectId, "run.execute");
     const run = useResource(`run:${runId}`, signal => api.run(runId, signal));
     const [indices, setIndices] = useState<number[]>([]);
     const [applyDocument, setApplyDocument] = useState(false);
@@ -204,12 +213,14 @@ function RunDetail({ runId, projectId, userId, items, onChanged, onStatusChanged
         return () => window.clearInterval(interval);
     }, [activeStatus, run.reload]);
     async function action(action: "cancel" | "retry") {
+        if (!executable) return;
         setBusy(true); setError(""); setNotice("");
         try { await api.runAction(runId, action); run.reload(); onChanged(); }
         catch (error) { setError(errorMessage(error)); }
         finally { setBusy(false); }
     }
     async function apply() {
+        if (!applicable) return;
         setBusy(true); setError(""); setNotice("");
         try {
             const result = await api.applyRun(runId, indices, applyDocument);
@@ -218,18 +229,37 @@ function RunDetail({ runId, projectId, userId, items, onChanged, onStatusChanged
         } catch (error) { setError(errorMessage(error)); }
         finally { setBusy(false); }
     }
+    async function reviewPlanning() {
+        if (!can(projectId, "run.apply") || !can(projectId, "item.write")) return;
+        setBusy(true); setError("");
+        try {
+            const draft = await planningApi.create(projectId, {mode: "incremental", intent: "", reference_ids: [], proposals: [], source_run_id: runId});
+            navigate({plan: "incremental", planningDraft: draft.id});
+        } catch (error) {setError(errorMessage(error));}
+        finally {setBusy(false);}
+    }
     if (run.status === "loading") return <Loading />;
     if (run.status === "error") return <ErrorNotice error={run.error} retry={run.reload} />;
     const data = run.data;
     if (data.project_id !== projectId) return <ErrorNotice error="현재 프로젝트의 실행이 아닙니다." />;
     const result = data.result;
+    const applicable = can(projectId, "run.apply") && can(projectId, "item.write") && indices.every(index => {
+        const candidate = result?.requirements[index];
+        if (!candidate) return false;
+        const active = !["conflict", "defer", "duplicate"].includes(candidate.disposition);
+        const createsTasks = active && (candidate.tasks.length > 0 || candidate.design_changes.length > 0);
+        const createsTests = active && candidate.tests.length > 0;
+        const writesRelations = !!data.target_id || candidate.feature_ids.length > 0 || createsTasks || createsTests;
+        return (!writesRelations || can(projectId, "relation.write"))
+            && (!createsTasks || can(projectId, "task.create")) && (!createsTests || can(projectId, "test.write"));
+    });
     const target = items.find(item => item.id === data.target_id);
     const hasLocalDraft = data.target_id ? !!loadDraft(`projects:draft:${userId}:${projectId}:${data.target_id}`) : false;
     return <section>
-        <div className="doc-heading"><div><div className="eyebrow">SKILL RUN · {shortId(data.id)}</div><h2>{operationLabels[data.operation]}</h2><div className="doc-meta"><Badge value={data.status} /><time>{dateLabel(data.updated_at)}</time></div></div><div className="actions"><ActionButton className="small" onClick={run.reload}>최신 상태 확인</ActionButton>
-            {(data.status === "queued" || data.status === "running") && <ActionButton disabled={busy} onClick={() => { void action("cancel"); }}>실행 취소</ActionButton>}
-            {data.status === "review_ready" && <ActionButton disabled={busy} onClick={() => { void action("cancel"); }}>결과 취소</ActionButton>}
-            {(data.status === "failed" || data.status === "cancelled") && <ActionButton disabled={busy} onClick={() => { void action("retry"); }}>다시 실행</ActionButton>}
+        <div className="doc-heading"><div><div className="eyebrow">SKILL RUN · {shortId(data.id)}</div><h2>{operationLabels[data.operation]}</h2><div className="doc-meta"><Badge value={data.status} /><DateTimeValue value={data.updated_at} /></div></div><div className="actions"><ActionButton className="small" onClick={run.reload}>최신 상태 확인</ActionButton>
+            {(data.status === "queued" || data.status === "running") && <ActionButton disabled={busy || !executable} onClick={() => { void action("cancel"); }}>실행 취소</ActionButton>}
+            {data.status === "review_ready" && <ActionButton disabled={busy || !executable} onClick={() => { void action("cancel"); }}>결과 취소</ActionButton>}
+            {(data.status === "failed" || data.status === "cancelled") && <ActionButton disabled={busy || !executable} onClick={() => { void action("retry"); }}>다시 실행</ActionButton>}
         </div></div>
         {error && <ErrorNotice error={error} />}
         {notice && <p className="success-message" role="status">{notice}</p>}
@@ -239,15 +269,16 @@ function RunDetail({ runId, projectId, userId, items, onChanged, onStatusChanged
         <section className="run-request"><h3>작업 요청</h3><p className="preserve-lines">{data.instruction}</p><p className="hint">대상: {target?.title ?? (data.target_id ? shortId(data.target_id) : "새 임시 Markdown 문서")} {data.target_revision !== null && `· r${data.target_revision}`}</p></section>
         <details className="reference-details"><summary>고정 스킬·입력 근거·참조 manifest</summary><h3>skills.lock</h3><pre>{JSON.stringify(data.skills_lock, null, 2)}</pre><h3>입력 revision</h3><pre>{JSON.stringify(data.source_snapshots, null, 2)}</pre><h3>참조 manifest</h3><pre>{JSON.stringify(data.reference_manifest, null, 2)}</pre></details>
         {result ? <>
-            {result.document !== null && <section className="run-result section-space"><div className="section-head"><h2>문서 제안</h2>{data.status === "review_ready" && <Checkbox variant="card" label="이 문서 결과 적용 선택" checked={applyDocument} onCheckedChange={checked => setApplyDocument(checked === true)} />}</div>
+            {result.document !== null && <section className="run-result section-space"><div className="section-head"><h2>문서 제안</h2>{data.status === "review_ready" && <Checkbox variant="card" label="이 문서 결과 적용 선택" disabled={!can(projectId, "run.apply")} checked={applyDocument} onCheckedChange={checked => setApplyDocument(checked === true)} />}</div>
                 <Markdown body={result.document} />
                 {target && <details className="reference-details"><summary>현재 저장한 본문과 비교</summary><div className="comparison"><div><h3>현재 본문 · r{target.revision}</h3><pre>{target.body}</pre></div><div><h3>실행 제안</h3><pre>{result.document}</pre></div></div></details>}
             </section>}
             {result.review && <section className="section-space"><h2>검수·리뷰 결과</h2><Markdown body={result.review} /></section>}
             {result.requirements.length > 0 && <section className="section-space"><h2>요건·변경 후보 · {result.requirements.length}건</h2>
+                {(data.status === "review_ready" || data.status === "applied") && <ActionButton disabled={busy || !can(projectId, "run.apply") || !can(projectId, "item.write")} onClick={() => {void reviewPlanning();}}>Story·Task를 나눠 기획 검토</ActionButton>}
                 <p className="hint">선택한 후보만 요건·설계 변경 요청·작업·테스트 초안으로 연결합니다. 충돌·보류는 결정 기록까지만 남깁니다.</p>
                 <div className="proposal-list">{result.requirements.map((candidate, index) => <article className="proposal" key={`${index}:${candidate.title}`}>
-                    {data.status === "review_ready" && <Checkbox aria-label={`${candidate.title} 채택 후보로 선택`} checked={indices.includes(index)} onCheckedChange={checked => setIndices(checked === true ? [...indices, index] : indices.filter(value => value !== index))} />}
+                    {data.status === "review_ready" && <Checkbox aria-label={`${candidate.title} 채택 후보로 선택`} disabled={!can(projectId, "run.apply")} checked={indices.includes(index)} onCheckedChange={checked => setIndices(checked === true ? [...indices, index] : indices.filter(value => value !== index))} />}
                     <div><div className="row-head"><h3>{candidate.title}</h3><Badge value={candidate.disposition} /></div><Markdown body={candidate.body} /><p className="muted">판정 이유: {candidate.rationale}</p><h4>수용 조건</h4><StringList values={candidate.acceptance_criteria} />
                         <details><summary>연결할 설계 변경 {candidate.design_changes.length} · 작업 {candidate.tasks.length} · 테스트 {candidate.tests.length}</summary><h4>설계 변경</h4><ul>{candidate.design_changes.map((change, at) => <li key={at}>{items.find(item => item.id === change.artifact_id)?.title ?? shortId(change.artifact_id)} · {change.instruction}</li>)}</ul>
                             <h4>작업</h4>{candidate.tasks.map((task, at) => <div key={at}><strong>{task.title}</strong><p>{task.body}</p><StringList values={task.acceptance_criteria} /></div>)}
@@ -260,7 +291,7 @@ function RunDetail({ runId, projectId, userId, items, onChanged, onStatusChanged
             {data.status === "review_ready" && (result.document !== null || result.requirements.length > 0 || (data.operation === "review_document" && !!result.review.trim())) && <div className="apply-area">
                 {hasLocalDraft && <p className="notice">대상 문서의 미저장 초안이 이 브라우저에 있습니다. 적용 후에도 내 초안을 보존하며, 이후 저장 시 revision 충돌을 확인해야 합니다.</p>}
                 <p className="hint">적용 결과는 새 초안으로 저장합니다.</p>
-                <ActionButton className="primary" disabled={busy || (!applyDocument && indices.length === 0 && data.operation !== "review_document")} onClick={() => { void apply(); }}>{busy ? "적용 중…" : data.operation === "review_document" ? "검수 결과 기록" : applyDocument ? "선택한 결과를 초안으로 저장" : `선택 후보 ${indices.length}건 적용`}</ActionButton>
+                <ActionButton className="primary" disabled={busy || !applicable || (!applyDocument && indices.length === 0 && data.operation !== "review_document")} onClick={() => { void apply(); }}>{busy ? "적용 중…" : data.operation === "review_document" ? "검수 결과 기록" : applyDocument ? "선택한 결과를 초안으로 저장" : `선택 후보 ${indices.length}건 적용`}</ActionButton>
             </div>}
         </> : data.status !== "running" && data.status !== "queued" && <Empty title="확인할 생성 결과가 없습니다."><p>실패·취소되었거나 아직 결과가 저장되지 않은 실행입니다.</p></Empty>}
         {data.applied_ids.length > 0 && <section className="section-space"><h3>적용으로 생성·수정한 항목</h3><ul className="text-list">{data.applied_ids.map(id => { const item = items.find(item => item.id === id); return <li key={id}>{item ? <RouteLink patch={itemRoute(item)}>{item.title}</RouteLink> : shortId(id)}</li>; })}</ul></section>}

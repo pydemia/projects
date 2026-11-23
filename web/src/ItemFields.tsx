@@ -130,7 +130,7 @@ export function ItemDataFields({ kind, data, onChange, catalog, items, existingI
         case "artifact": return <ArtifactFields data={data} onChange={onChange} catalog={catalog} items={items} />;
         case "task": return <>
             <div className="form-grid">
-                <Field label="작업 유형" hint="개인 할 일은 가볍게 완료합니다. 구현 작업은 근거·테스트 완료 조건을 유지합니다. 생성 후 유형은 바꿀 수 없습니다.">
+                <Field label="작업 유형" hint={existingItem ? "유형은 본문 탭의 유형 값을 눌러 변경합니다. 구현 작업의 완료에는 근거·테스트 조건이 적용됩니다." : "개인 할 일은 가볍게 완료합니다. 구현 작업은 근거·테스트 완료 조건을 유지합니다."}>
                     <NativeSelect value={textValue(data, "workflow") || "delivery"} disabled={!!existingItem} onChange={event => set("workflow", event.target.value)}>
                         <option value="personal">개인 할 일</option><option value="delivery">구현 작업</option>
                     </NativeSelect>

@@ -1,0 +1,26 @@
+.schedules-page { max-width: 1150px; padding: 0 0 2rem; }
+.schedules-page header p { margin-top: .4rem; }
+.schedule-create, .schedule-actions, .schedule-row-heading { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; }
+.schedule-create { align-items: end; margin: 1rem 0; }
+.schedule-create label, .schedule-inline-editor > label, .schedule-date-fields label { display: grid; gap: .3rem; }
+.schedule-create label:has(input) { flex: 1 1 200px; }
+.schedule-list { margin-top: 1rem; }
+.schedule-row { padding: .9rem 0; border-top: 1px solid var(--border, #87909f40); }
+.schedule-row-heading > strong { flex: 1 1 180px; }
+.schedule-dates { margin: .5rem 0 0; font-size: .9rem; }
+.schedule-inline-editor { display: grid; gap: .7rem; margin: 1rem 0 .5rem; max-width: 850px; }
+.schedule-date-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(155px, 1fr)); gap: .7rem; }
+.schedule-member-option { display: flex; align-items: center; gap: .5rem; padding: .3rem 0; }
+.schedule-member-option input { width: auto; }
+.schedule-inline-editor fieldset { border: 0; padding: 0; max-height: 20rem; overflow: auto; }
+.schedule-section { margin-top: 2rem; }
+.schedule-assignment { padding: .5rem 0; border-bottom: 1px solid var(--border, #87909f40); }
+.schedule-assignment form { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+.schedule-assignment form > span { flex: 1 1 180px; }
+.schedule-assignment label { flex: 0 1 180px; }
+.schedule-assignment input, .schedule-assignment select { width: 100%; }
+.schedule-snapshots { list-style: none; padding: 0; }
+.schedule-snapshots li { display: flex; gap: .6rem; justify-content: space-between; align-items: center; padding: .5rem 0; }
+.schedule-diff { padding-left: 1.3rem; }
+.schedule-diff li { margin: .7rem 0; overflow-wrap: anywhere; }
+@media (max-width: 650px) { .schedule-row-heading .schedule-actions { flex-basis: 100%; } .schedule-snapshots li { align-items: start; flex-wrap: wrap; } }

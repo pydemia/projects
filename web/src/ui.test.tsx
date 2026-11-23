@@ -5,6 +5,8 @@ import { loadDraft, storeDraft } from "./hooks";
 
 describe("untrusted document content", () => {
     it("renders Korean Markdown while disabling HTML, scripts and remote images", async () => {
+        // Resolve the lazy renderer before asserting content safety, not module loading speed.
+        await import("./MarkdownContent");
         const { container } = render(<Markdown body={'## 한국어 본문\n\n<script>alert(1)</script>\n\n<img src=x onerror=alert(2)>\n\n[위험 링크](javascript:alert%281%29)\n\n![외부 그림](https://example.com/tracking.png)\n\n|항목|결과|\n|---|---|\n|저장|확인|'} />);
         expect(await screen.findByRole("heading", { name: "한국어 본문" })).toBeTruthy();
         expect(container.querySelector("script")).toBeNull();

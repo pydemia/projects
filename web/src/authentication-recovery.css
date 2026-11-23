@@ -1,0 +1,19 @@
+.authentication-recovery {
+    position: fixed;
+    z-index: 10000;
+    bottom: max(1rem, env(safe-area-inset-bottom));
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(36rem, calc(100% - 2rem));
+    padding: 1rem 1.25rem;
+    background: var(--surface, #202a35);
+    color: var(--foreground, #e8edf4);
+    border: 1px solid var(--border, #536070);
+    border-radius: .75rem;
+    box-shadow: 0 8px 32px #0004;
+}
+.authentication-recovery.in-dialog { position: sticky; left: auto; bottom: 0; transform: none; width: 100%; margin-top: 1rem; }
+.authentication-recovery p { margin: .5rem 0 .75rem; }
+@media (max-width: 640px) {
+    .authentication-recovery { bottom: calc(5rem + env(safe-area-inset-bottom)); }
+}

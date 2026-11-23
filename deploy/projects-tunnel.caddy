@@ -10,11 +10,29 @@
     request_body {
         max_size 12MB
     }
+    @assistantIntegration path /api/integrations/assistant/v1 /api/integrations/assistant/v1/*
+    handle @assistantIntegration {
+        reverse_proxy app:8000 {
+            header_up -Cookie
+            header_up -Proxy-Authorization
+            header_up -X-Forwarded-Access-Token
+            header_up -X-Forwarded-User
+            header_up -X-Forwarded-Email
+            header_up -X-Forwarded-Preferred-Username
+            header_up -X-Forwarded-Groups
+            header_up -X-Auth-Request-*
+            header_up -X-Pydemia-*
+            header_up -X-Projects-Entra-Tenant
+            header_up -X-Projects-Entra-Issuer
+        }
+    }
     reverse_proxy oauth2-proxy:4180 {
         header_up X-Forwarded-Proto https
         header_up -Authorization
         header_up -X-Forwarded-Email
         header_up -X-Forwarded-User
+        header_up -X-Projects-Entra-Tenant
+        header_up -X-Projects-Entra-Issuer
         header_up -X-Forwarded-Preferred-Username
         header_up -X-Forwarded-Access-Token
         header_up -X-Auth-Request-Access-Token

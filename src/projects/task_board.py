@@ -111,7 +111,11 @@ def quick_create_task(
 
 
 def bulk_change_tasks(
-    db: Session, project_id: str, payload: TaskBulkChange
+    db: Session,
+    project_id: str,
+    payload: TaskBulkChange,
+    *,
+    actor_id: str | None = None,
 ) -> list[Item]:
     """Validate every requested change, then commit revisions and order together."""
     if all(
@@ -160,7 +164,7 @@ def bulk_change_tasks(
         task = by_id[entry.id]
         data = updated_data[task.id]
         if data["state"] == "done":
-            check_task_completion(db, task, data, states)
+            check_task_completion(db, task, data, states, actor_id=actor_id)
     orders = board_orders(db, tasks)
     groups: dict[str, list[Item]] = defaultdict(list)
     for task in tasks:
@@ -188,6 +192,7 @@ def bulk_change_tasks(
                 task.body,
                 updated_data[task.id],
                 completion_states=states,
+                actor_id=actor_id,
             )
         )
     _write_board_order(db, groups)
@@ -195,7 +200,7 @@ def bulk_change_tasks(
 
 
 def move_task(
-    db: Session, task: Item, move: TaskMove
+    db: Session, task: Item, move: TaskMove, *, actor_id: str | None = None
 ) -> tuple[int, str | None, str | None]:
     """Move one task, with its revision and every affected rank in one transaction."""
     if task.kind != "task":
@@ -278,7 +283,13 @@ def move_task(
     if move.target_state != move.source_state or insertion != orders[task.id]:
         data = {**task.data, "state": move.target_state}
         revise_item(
-            db, task, move.expected_revision, task.title, task.body, data
+            db,
+            task,
+            move.expected_revision,
+            task.title,
+            task.body,
+            data,
+            actor_id=actor_id,
         )
     current = {
         row.item_id: row

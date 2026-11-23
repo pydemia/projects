@@ -14,6 +14,8 @@ projects.pydemia.ai {
         header_up -Authorization
         header_up -X-Forwarded-Email
         header_up -X-Forwarded-User
+        header_up -X-Projects-Entra-Tenant
+        header_up -X-Projects-Entra-Issuer
         header_up -X-Forwarded-Preferred-Username
         header_up -X-Forwarded-Access-Token
         header_up -X-Auth-Request-Access-Token

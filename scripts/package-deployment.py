@@ -18,6 +18,7 @@ FILES = (
     "docs/planning/references/artifact-templates.json",
     "pyproject.toml",
     "uv.lock",
+    "scripts/render-entra-proxy.py",
     "web/index.html",
     "web/package.json",
     "web/package-lock.json",

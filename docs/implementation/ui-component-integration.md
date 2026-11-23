@@ -1,5 +1,35 @@
 # pydemia UI 편입·테마·favicon
 
+2026-11-03 재인증 안내는 기존 Dialog/Modal·Button·Loading을 조합했다.
+checkpoint 실패 안내를 현재 Dialog 내부에 portal해 편집창 focus trap에서도
+재시도를 선택할 수 있다. Note의 복귀/checkpoint 구조를 앱 계층에 적용했고
+공통 UI registry 원본·의존성·테마·favicon은 이번 인증 변경에서 바꾸지 않았다.
+[기획 19](../planning/19-session-expiry-and-return.md)에 출처·계약을 기록한다.
+
+2026-11-03 직접 편집은 기존 Input/Button/Textarea/Popover/DropdownMenu와
+안전한 Markdown renderer를 조합한다. 공개 Editable registry를 확인했지만
+새 source를 편입하지 않았으며 draft·revision·유형 규칙은 Projects가 맡는다.
+`InlineEdit`는 텍스트·본문 편집, `TaskQuickProperties`는 값별 입력,
+`ProjectActions`는 프로젝트 메뉴, `PreferencesPage`는 기존 ThemeControls를
+전용 화면에 배치한다. 출처·변경 범위는 [기획 18](../planning/18-inline-editing-and-preferences.md)에 있다.
+
+기존 편입 PageHeader에는 편집 버튼을 포함한 제목의 접근 가능한 이름을
+보존하는 선택적 `titleLabel`을 추가했다. Kanban에는 `renderCardTitle`을
+추가하고 제목 preview 버튼만 native drag 시작을 허용한다. 입력·다른 버튼은
+기존 차단을 유지한다. 이때 정규화 LF SHA-256은 PageHeader
+`6d5b3a2dd706c922921485bf707b042d1bf814b0b1d97911bc832ea60a5b8fd2`,
+Kanban `03bfbc78626e9f8f9985dcda6c5c95f10ef332dbe9ac39e4f4cf60e7ad58eb9d`다.
+이 hash는 원본 출처를 덮어쓰는 값이 아니라 현재 Projects 수정본의 기록이다.
+테마·favicon·기존 컴포넌트 license·고지·의존성은 유지한다.
+
+2026-11-02 필드/보기 관리에는 기존 Button·Input·NativeSelect·Checkbox·
+Popover·DropdownMenu·Dialog를 조합했다. `TaskFields.tsx`는 표시/순서와
+타입별 편집, `TaskViewBar.tsx`는 이름 있는 개인 보기 관리를 맡는다.
+`task-management.css`는 목록의 열 정렬·수평 탐색과 모바일 속성 배치를,
+`task-fields.css`는 선택창 높이·내부 스크롤·작은 체크의 테마 대비를 담당한다.
+필드 값·revision/owner 검증과 저장 보기 계약은 Projects API가 소유한다.
+이번 추가에서 registry 원본·출처 hash·의존성을 변경하지 않았다.
+
 2026-10-21. Projects는 [ui.pydemia.ai](https://ui.pydemia.ai/)의 source-owned registry를 사용한다. `@pydemia/ui`는 해당 저장소의 private workspace 패키지이므로 공개 npm 의존성으로 선언하지 않았다. [pydemia/ui 소스](https://github.com/pydemia/ui/tree/eed2173e54bc82478dc9781ec4c0e67b0a480f54)를 고정해 필요한 파일만 `web/src/pydemia-ui/`에 편입했다.
 
 | 원본 항목 | 현재 적용 위치 | 역할 |
@@ -22,6 +52,25 @@ React 19와 Vite 8을 유지하고 Tailwind CSS 4/Vite plugin, `class-variance-a
 보드 상호작용에는 같은 고정 revision의 원본 `kanban.tsx` SHA-256 `0e034de80c33ef5b1933253efa577ac8c8ba07e954588f4b855671df275d6c58`, `dropdown-menu.tsx` `3769e00cfbfd6ff1e9dd59533ac5dc75cc132a9e6bdc62b4fb2e5e121c1e6ca4`, `popover.tsx` `2cef9a575fc7f1a063b3a32ebbf3903d9a42920d5bd7a9e45d854687624167c7`를 편입했다. `@radix-ui/react-dropdown-menu@2.1.22`, `@radix-ui/react-popover@1.1.23`을 추가했다. 편입 Kanban은 TypeScript 7의 엄격한 배열 인덱스 처리와 Projects에서 필요한 카드 핸들, 드롭 전후 위치, 자동 스크롤, 자동 정렬 중 열 안 이동 제한을 위해 수정했다. 업무 저장·완료 gate는 Projects API 계층에 두었다.
 
 P1에서는 이 편입 Kanban에 열 아래 빠른 생성용 `renderColumnFooter` hook을 추가했다. 제목 입력·상태 상속·취소 사유·서버 순서는 `TaskBoard.tsx`와 Projects API가 처리한다. 원본 hash는 위 편입 시점의 출처이며 현재 수정 파일의 hash라고 주장하지 않는다. 체크박스 선택과 저장 보기 컨트롤은 같은 편입 `pyd-checkbox`, `pyd-field`, `pyd-native-select`를 사용한다.
+
+2026-11-02 사용자 요청으로 편입 Kanban의 카드 제목·설명·여백에도 native
+drag를 연결했다. 기존 핸들·드롭/자동 스크롤·키보드 이동은 유지한다. 포인터
+시작 위치를 기록해 버튼·링크·체크박스·입력·편집 영역에서 시작한 drag를
+차단하고, 명시적 핸들만 예외로 둔다. 원본 revision·라이선스 고지는 동일하며
+카드 본문 drag 확장 당시 Projects 수정본의 정규화 LF SHA-256은
+`fc2544a50175dc7280eebffc1399aae1bbe589600c69af940fe75a966c42ddbe`다.
+
+같은 날 모바일 가로 칸반에서 열을 식별하도록 `data-kanban-column` 속성을
+추가했다. 현재 Kanban 수정본의 정규화 LF SHA-256은
+`ec36128e9547b0833798004b96b17d547961f95b9e2eeecb0434a11d17a315f5`다.
+기존 SegmentedControl을 모바일의 네 보기·두 밀도 선택에도 사용한다.
+가로 열 배치·터치 스크롤과 상태 버튼·기억은 Projects CSS/TaskBoard가 소유한다.
+
+2026-11-02 목록의 `Checkbox`는 registry 원본을 유지하고 Projects의 label
+wrapper로 44px 터치와 20px 표시를 분리했다. 체크/테두리의 테마 색은 앱
+CSS에서 지정한다. 구현 작업의 상태 선택은 기존 `NativeSelect`의 wrapper와
+화살표를 그대로 사용하고 앱의 고정 폭 컨테이너 안에 둔다. 저장·완료 gate·
+취소 사유는 TaskWorkspace와 기존 API 계약을 사용한다.
 
 추가 항목은 2026-10-21에 `https://ui.pydemia.ai/r/pyd-<item>.json`에서 받은 source이며, 당시 [원본 저장소 HEAD](https://github.com/pydemia/ui/tree/eed2173e54bc82478dc9781ec4c0e67b0a480f54)는 기존 편입 revision과 같았다. 설치한 로컬 source SHA-256은 `app-shell.tsx` `ec9a476527bf338d4b162c29c3872449a1ee5ff85d4162c22e8a110a5ba27c30`, `navigation.tsx` `b2ad196078c044221434b4345e747576ab0be9fe88b370d616dc75c442398e71`, `segmented-control.tsx` `52ffa1851cd9a52ff0ee24ab256ebd3f498f870faacebb483d39ee876a0a13d8`, `tabs.tsx` `c9563105b08f71ca697cff2ae2db7c7598142fdca380857cb4836470887b3aa9`, `card.tsx` `34b4553126fac83311c7fc227d4d4d83919be5824bb03f2faf07e3173dd01cb8`, `metric-card.tsx` `d8aed951fdf725b5df8019a4532d7b7270ee7ee60a7b3c47a3d81252045af432`, `bar-list.tsx` `ac5dcbe002f473c101bcd9e82865cdb22883478ae899279e9c7c102d29942169`, `search-input.tsx` `ac60181dfe58a32f400d2fbf701f3a8a993d016441e1a1c2a6e50a2a2fcaf518`, `native-select.tsx` `ff0af44ff5ee406b17dcaef390b571cd90b9516c04fd17debd3655930b310220`이다. 라이선스·접근성 상태는 같은 revision의 [provenance](https://github.com/pydemia/ui/blob/eed2173e54bc82478dc9781ec4c0e67b0a480f54/registry/provenance.json)와 [third-party notices](https://github.com/pydemia/ui/blob/eed2173e54bc82478dc9781ec4c0e67b0a480f54/THIRD_PARTY_NOTICES.md)를 따른다. 컴포넌트 카탈로그의 prototype/수동 접근성 검수 대기 상태를 제품의 접근성 통과로 해석하지 않는다.
 

@@ -256,7 +256,7 @@ def test_concurrent_save_has_one_winner(client, create_item):
 
 
 def test_cross_project_links_and_dependency_cycles(
-    client, project, create_item
+    app, client, project, create_item
 ):
     first = create_item("task", "작업 A")
     second = create_item("task", "작업 B")
@@ -273,7 +273,24 @@ def test_cross_project_links_and_dependency_cycles(
         f"/api/projects/{elsewhere['id']}/items",
         json={"kind": "idea", "title": "외부 프로젝트", "data": {}},
     ).json()
-    assert link(client, project, first, wrong).status_code == 422
+    assert link(client, project, first, wrong).status_code == 201
+    with TestClient(app) as other:
+        registered = other.post(
+            "/api/auth/register",
+            json={
+                "username": "cross-owner",
+                "password": "other-password-long",
+            },
+        ).json()
+        other.headers["X-CSRF-Token"] = registered["csrf_token"]
+        other_project = other.post(
+            "/api/projects", json={"name": "다른 소유자"}
+        ).json()
+        private = other.post(
+            f"/api/projects/{other_project['id']}/items",
+            json={"kind": "idea", "title": "비공개", "data": {}},
+        ).json()
+    assert link(client, project, first, private).status_code == 404
     assert (
         client.get(f"/api/projects/{project['id']}/trace").status_code == 200
     )

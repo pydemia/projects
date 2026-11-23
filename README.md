@@ -1,8 +1,11 @@
 # Projects
 
-skills.pydemia.ai의 원문 스킬로 아이디어를 요건화하고 기획·설계·구현 계획·검증을 연결하는 개인용 웹 앱입니다.
+2026-11-08: 엠블럼·제목 홈 링크와 앱 JS/API 응답 전 초기 로딩·프로젝트 스켈레톤을
+운영에 반영했습니다. [최신 배포](docs/implementation/deployment.md)를 확인합니다.
 
-현재 상태는 **로컬 MVP·GitHub CI 통과, [projects.pydemia.ai](https://projects.pydemia.ai) 배포와 Microsoft Entra 실제 로그인 확인 / 2026-10-21**입니다. React·FastAPI·PostgreSQL로 동작하며, 기본 LLM은 현재 Codex 로그인입니다. auth.json 경로 또는 inline 인증, OpenAI 호환 API를 YAML로 설정할 수 있습니다.
+skills.pydemia.ai의 원문 스킬로 아이디어를 요건화하고 기획·설계·구현 계획·검증을 연결하는 웹 앱입니다.
+
+현재 상태는 **프로젝트별 멤버·역할·동작 권한을 [projects.pydemia.ai](https://projects.pydemia.ai)에 배포 / 2026-11-07**입니다. pydemia.ai 조직 계정으로 로그인하고, 참여한 프로젝트마다 오너·에디터·뷰어 또는 사용자 지정 역할을 설정합니다. 프로젝트의 **프로젝트 설정 · 멤버·권한**에서 관리합니다. React·FastAPI·PostgreSQL로 동작하며 기본 LLM은 Codex 로그인입니다. auth.json 경로 또는 inline 인증, OpenAI 호환 API를 YAML로 설정할 수 있습니다. 이번 변경의 다른 Microsoft 실계정 승인 이후 조작은 미검증이며, 검사 범위는 아래 검증 기록을 따릅니다.
 
 - [설치·실행·검사·복구 안내](docs/implementation/README.md)
 - [LLM 설정](docs/implementation/llm-configuration.md) · [YAML 예시](projects.example.yaml)
@@ -14,7 +17,7 @@ skills.pydemia.ai의 원문 스킬로 아이디어를 요건화하고 기획·�
 
 로컬에서 `docker compose up -d db`, `uv sync --locked`, `uv run projects migrate`, `uv run projects serve`를 실행한 뒤, 별도 터미널에서 `npm --prefix web ci`, `npm --prefix web run dev`를 실행합니다. 웹 주소는 `http://127.0.0.1:5173`이며 첫 화면에서 개인 계정을 만듭니다.
 
-아이디어·기존 기능·요구사항, 필수 7종/참고 35종의 임시 문서, 구현 작업·테스트 이력, 관계·변경 영향·기준선, 스킬 실행·선택 적용과 반출을 제공합니다. 실제 Hub와 Codex 실행을 확인했으며 OpenAI 원격 API 호출은 키 미설정으로 미검증입니다. 팀 협업과 Note 실연동은 후속 범위입니다.
+아이디어·기존 기능·요구사항, 필수 7종/참고 35종의 임시 문서, 구현 작업·테스트 이력, 관계·변경 영향·기준선, 스킬 실행·선택 적용과 반출을 제공합니다. 프로젝트 공유 권한과 일회성 초대 수락을 지원합니다. 실제 Hub와 Codex 실행은 이전 구현에서 확인했으며 이번 권한 검사의 Hub·LLM은 mock입니다. OpenAI 원격 API와 Note 실연동은 미검증입니다.
 
 GitHub 저장소의 package 정보에서 목표 초안을 만들고 최근 commit·PR을 읽기 전용 이력으로 가져올 수 있습니다. 공개 저장소와 서버에서 허용한 비공개 저장소를 지원합니다.
 GitHub Download ZIP 또는 `git archive` ZIP에서도 package 정보를 분석해 프로젝트를 만들 수 있습니다. ZIP에는 commit·PR 이력이 없으므로 이력 확인은 원격 GitHub URL을 사용합니다. Projects 백업 ZIP은 별도의 `백업 ZIP 복원`에서 다룹니다.

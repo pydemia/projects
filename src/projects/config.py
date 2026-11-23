@@ -11,6 +11,8 @@ from urllib.parse import urlsplit
 
 import yaml
 
+from projects.entra_policy import EntraPolicy, load_entra_policy
+
 
 @dataclass(frozen=True)
 class Settings:
@@ -41,6 +43,7 @@ class Settings:
     proxy_auth_email: str = ""
     proxy_auth_username: str = "pydemia"
     proxy_auth_domain: str = ""
+    proxy_auth_policy: EntraPolicy | None = None
     web_dir: Path | None = None
     worker_enabled: bool = True
     session_seconds: int = 60 * 60 * 24 * 7
@@ -48,7 +51,11 @@ class Settings:
 
     @property
     def proxy_auth_enabled(self) -> bool:
-        return bool(self.proxy_auth_email or self.proxy_auth_domain)
+        return bool(
+            self.proxy_auth_email
+            or self.proxy_auth_domain
+            or self.proxy_auth_policy
+        )
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -65,6 +72,14 @@ class Settings:
         registration_enabled = (
             os.getenv("PROJECTS_REGISTRATION_ENABLED", "true") == "true"
         )
+        policy = None
+        if policy_path := os.getenv("PROJECTS_PROXY_AUTH_POLICY"):
+            try:
+                policy = load_entra_policy(Path(policy_path))
+            except ValueError:
+                raise ConfigurationError(
+                    "Invalid Entra tenant policy."
+                ) from None
         if proxy_email and (
             not valid_proxy_email(proxy_email) or not proxy_username
         ):
@@ -77,7 +92,7 @@ class Settings:
             or (proxy_email and proxy_email.rsplit("@", 1)[1] != proxy_domain)
         ):
             raise ConfigurationError("Invalid proxy authentication domain.")
-        if (proxy_email or proxy_domain) and (
+        if (proxy_email or proxy_domain or policy) and (
             registration_enabled or not secure_cookies
         ):
             raise ConfigurationError(
@@ -110,6 +125,7 @@ class Settings:
             proxy_auth_email=proxy_email,
             proxy_auth_username=proxy_username,
             proxy_auth_domain=proxy_domain,
+            proxy_auth_policy=policy,
             web_dir=Path(os.environ["PROJECTS_WEB_DIR"])
             if os.getenv("PROJECTS_WEB_DIR")
             else None,

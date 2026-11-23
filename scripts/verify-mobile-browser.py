@@ -4,6 +4,7 @@ import os
 import re
 import socket
 import subprocess
+import sys
 import tempfile
 import threading
 import time
@@ -43,6 +44,23 @@ def wait_for(url: str) -> None:
 
 
 def main() -> None:
+    scenario = (
+        sys.argv[1] if len(sys.argv) > 1 else "verify-mobile-browser.cjs"
+    )
+    if scenario not in {
+        "verify-mobile-browser.cjs",
+        "verify-task-discovery-browser.cjs",
+        "verify-task-management-browser.cjs",
+        "verify-overview-browser.cjs",
+        "verify-inline-browser.cjs",
+        "verify-reauth-browser.cjs",
+        "verify-datetime-browser.cjs",
+        "verify-task-title-browser.cjs",
+        "verify-project-access-browser.cjs",
+        "verify-startup-browser.cjs",
+        "verify-login-layout-browser.cjs",
+    }:
+        raise ValueError("Unknown browser verification scenario")
     api_port = free_port()
     web_port = free_port()
     schema = "projects_mobile_" + uuid4().hex
@@ -107,7 +125,7 @@ def main() -> None:
                     "QA Vite process exited before browser verification."
                 )
             subprocess.run(
-                ["node", "scripts/verify-mobile-browser.cjs"],
+                ["node", str(Path("scripts") / scenario)],
                 env=environment,
                 check=True,
             )

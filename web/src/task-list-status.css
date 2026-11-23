@@ -1,0 +1,20 @@
+:is(.projects-theme, [data-theme-portal]) .task-list-status {
+    display: inline-flex; flex: 0 0 44px; width: 44px; height: 44px; min-height: 44px;
+    justify-content: center; align-items: center; gap: 4px; padding: 4px;
+    border: 0; background: transparent; box-shadow: none; color: var(--muted);
+}
+:is(.projects-theme, [data-theme-portal]) .task-list-status:hover:not(:disabled),
+:is(.projects-theme, [data-theme-portal]) .task-list-status[data-state="open"] { background: var(--surface-subtle); }
+.task-status-dot { display: inline-block; flex: 0 0 14px; width: 14px; height: 14px; border: 2px solid var(--muted); border-radius: 50%; corner-shape: round; box-sizing: border-box; }
+.task-status-dot[data-state="todo"] { background: transparent; }
+.task-status-dot[data-state="in_progress"] { background: var(--accent); border-color: var(--accent); }
+.task-status-dot[data-state="in_review"] { background: var(--warning); border-color: var(--warning); }
+.task-status-dot[data-state="done"] { background: var(--success); border-color: var(--success); }
+.task-status-dot[data-state="cancelled"] { background: var(--muted); }
+.task-status-chevron { flex: 0 0 12px; }
+.task-list-status[data-state="open"] .task-status-chevron { transform: rotate(180deg); }
+.task-status-option { min-height: 44px; gap: 10px; }
+.task-status-current { margin-inline-start: auto; }
+@media (max-width: 760px) {
+    .projects-theme .task-workspace[data-mobile-selecting="true"] .task-list-status { display: none; }
+}

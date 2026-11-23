@@ -1,3 +1,4 @@
+import { ownerAccess } from "./permissions.test-support";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
@@ -12,7 +13,7 @@ const projects: Project[] = ["첫째", "둘째", "셋째"].map((name, index) => 
     created_at: `2026-10-21T00:00:0${index}Z`, sort_order: index,
     repository_url: null, repository_path: "", repository_branch: null,
     repository_sha: null, repository_kind: null, repository_manifest: null,
-    repository_imported_at: null,
+    repository_imported_at: null, access: ownerAccess(`ca673a01-4200-4b42-a1f4-614c78235c4${index}`),
 }));
 
 afterEach(() => {

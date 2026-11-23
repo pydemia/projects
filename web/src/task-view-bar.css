@@ -1,0 +1,26 @@
+.task-named-views { min-width: 0; margin-bottom: 12px; }
+.task-named-view-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; border-bottom: 1px solid var(--border); }
+.task-named-view-list { display: flex; align-items: center; gap: 5px; overflow-x: auto; min-width: 0; flex: 1; padding: 4px 2px 7px; }
+.task-named-view { display: flex; align-items: center; flex: 0 0 auto; border-radius: var(--field-radius); }
+.task-named-view[data-current="true"] { background: var(--surface-subtle); font-weight: 650; }
+.task-named-view[data-current="true"] .task-named-view-select { color: var(--accent); font-weight: 650; }
+.task-named-view-select { gap: 6px; padding-inline: 9px 5px; white-space: nowrap; }
+.task-named-view-select > span:first-of-type { max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+.task-named-view-layout { color: var(--muted); font-size: 11px; font-weight: 400; }
+.task-named-view-menu { width: 28px; min-width: 28px; }
+.task-named-view-add { flex: 0 0 auto; white-space: nowrap; }
+.task-named-view-empty, .task-named-view-status { color: var(--muted); font-size: 12px; white-space: nowrap; }
+.task-named-view-dirty { font-size: 18px; line-height: 1; }
+.task-named-view-save { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; padding-bottom: 6px; }
+.task-named-view-save > span { color: var(--muted); font-size: 11px; }
+.task-named-view-dialog form { display: grid; gap: 14px; }
+.task-named-view-dialog .field { margin: 0; }
+.task-named-view-dialog-actions { display: flex; justify-content: flex-end; gap: 7px; }
+@media (max-width: 760px) {
+    .task-named-view-toolbar { display: block; }
+    .task-named-view-list { width: 100%; }
+    .task-named-view-list button, .task-named-view-save button, .task-named-view-dialog-actions button, .task-named-view-menu-content [role="menuitem"] { min-height: 44px; }
+    .task-named-view-menu { min-width: 44px; width: 44px; }
+    .task-named-view-select > span:first-of-type { max-width: 160px; }
+    .task-named-view-save { padding: 4px 0 10px; }
+}

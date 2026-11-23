@@ -1,0 +1,75 @@
+.preferences-page {
+    width: 100%;
+    max-width: 780px;
+    min-width: 0;
+}
+
+.preferences-sections {
+    display: grid;
+    gap: 32px;
+    min-width: 0;
+}
+
+.preferences-sections > section { min-width: 0; }
+.preferences-sections h2 { margin: 0 0 12px; font-size: 15px; }
+.preferences-section-card { min-width: 0; }
+.preferences-section-card > div { padding: 24px; }
+.preferences-account { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.preferences-account-details { min-width: 0; margin: 0; }
+.preferences-account-details dt { color: var(--muted); font-size: 13px; }
+.preferences-account-details dd { margin: 5px 0 0; font-size: 15px; overflow-wrap: anywhere; }
+.preferences-logout { flex-shrink: 0; min-height: 44px; }
+
+.projects-theme .preferences-page .theme-controls {
+    display: grid;
+    grid-template-columns: minmax(100px, 140px) minmax(0, 1fr);
+    gap: 20px 24px;
+    width: 100%;
+    min-width: 0;
+    align-items: center;
+}
+
+.preferences-page .theme-controls > label {
+    position: static;
+    width: auto;
+    height: auto;
+    padding: 0;
+    margin: 0;
+    overflow: visible;
+    clip: auto;
+    clip-path: none;
+    white-space: normal;
+    font-size: 14px;
+}
+
+.preferences-page .theme-controls > div { min-width: 0; width: 100%; }
+.projects-theme .preferences-page .theme-controls select,
+.projects-theme .preferences-page .theme-controls select:first-of-type {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    min-height: 44px;
+    height: auto;
+    padding: 10px 36px 10px 12px;
+    font-size: 14px;
+}
+
+.preferences-storage-hint { margin: 20px 0 0; color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
+.preferences-datetime-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.preferences-datetime-grid > div { min-width: 0; }
+.preferences-datetime select, .preferences-datetime input { min-width: 0; width: 100%; }
+.preferences-datetime-preview { margin: 16px 0 24px; }
+.preferences-datetime-preview h3 { margin: 0 0 12px; font-size: 14px; }
+.preferences-datetime-preview dl { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px 20px; margin: 0; }
+.preferences-datetime-preview dt { color: var(--muted); }
+.preferences-datetime-preview dd { margin: 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.preferences-format-error { color: var(--danger); font-size: 13px; }
+
+@media (max-width: 600px) {
+    .preferences-datetime-grid { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+    .preferences-section-card > div { padding: 16px; }
+    .preferences-account { align-items: stretch; flex-direction: column; gap: 16px; }
+    .preferences-logout { width: 100%; }
+    .projects-theme .preferences-page .theme-controls { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+    .preferences-page .theme-controls > label:nth-of-type(2) { margin-top: 12px; }
+}

@@ -1,0 +1,53 @@
+.inline-edit {
+    display: block;
+    min-width: 0;
+}
+.inline-edit-preview { display: flex; align-items: center; gap: 4px; }
+.inline-edit-preview > .inline-edit-trigger { flex: 0 0 auto; width: 32px; min-height: 32px; height: 32px; padding: 0; }
+
+.inline-edit-value {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    padding: 3px 5px;
+    margin: -3px -5px;
+    border: 0;
+    border-radius: 3px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    overflow-wrap: anywhere;
+    cursor: text;
+}
+
+.inline-edit-value:hover:not(:disabled),
+.inline-body-preview:hover:not(.is-disabled) {
+    background: var(--surface-subtle);
+}
+
+.inline-edit-value:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+}
+
+.inline-edit-value:disabled { cursor: default; }
+.inline-edit-title .inline-edit-value { white-space: normal; word-break: keep-all; }
+.inline-edit-title > input { font: inherit; height: auto; line-height: inherit; }
+.inline-edit-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; }
+.inline-edit-actions > button { font-size: 13px; }
+.inline-edit-error { display: block; margin: 8px 0 0; color: var(--danger); font-size: 14px; font-weight: 400; }
+.inline-edit-placeholder, .inline-edit-hint { color: var(--muted); font-size: 14px; font-weight: 400; }
+.task-title-edit { display: block; width: 100%; min-width: 0; font-weight: 650; }
+.task-title-edit .inline-edit-value { word-break: keep-all; overflow-wrap: anywhere; white-space: normal; }
+.task-title-edit > button { font-weight: 400; font-size: 12px; }
+.project-name-edit { display: block; min-width: 0; }
+@media (max-width: 760px) {
+    .inline-edit-value { min-height: 44px; }
+    .inline-edit-preview > .inline-edit-trigger { min-width: 44px; min-height: 44px; }
+}
+.inline-body-preview { min-height: 100px; cursor: text; border-radius: 3px; }
+.inline-body-preview.is-disabled { cursor: default; }
+.inline-body-preview .markdown { min-height: 100px; }
+.inline-body-edit-trigger { margin-top: 6px; font-size: 13px; }
+.inline-body-edit > textarea { min-height: 280px; resize: vertical; line-height: 1.7; }

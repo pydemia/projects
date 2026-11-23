@@ -1,4 +1,5 @@
 from typing import Literal, Self
+from uuid import UUID
 
 from pydantic import (
     BaseModel,
@@ -8,7 +9,77 @@ from pydantic import (
     model_validator,
 )
 
-from projects.domain import ItemKind, Relation
+from projects.domain import ItemKind, Relation, StrictData
+
+TASK_PROPERTY_KEYS = {
+    "list_name",
+    "planned_date",
+    "due_date",
+    "estimated_minutes",
+    "abc_priority",
+    "context",
+    "goal",
+    "github_issue_url",
+    "state",
+    "energy",
+    "next_action",
+    "abc_order",
+    "requires_test",
+    "cancellation_reason",
+    "acceptance_criteria",
+    "result_url",
+    "target_sha",
+}
+
+
+def validate_task_field_key(value: str) -> str:
+    if value in TASK_PROPERTY_KEYS:
+        return value
+    if value.startswith("custom:") and str(UUID(value[7:])) == value[7:]:
+        return value
+    raise ValueError("Unknown task field")
+
+
+class TaskFieldInput(StrictData):
+    project_id: str | None = Field(default=None, min_length=1, max_length=36)
+    name: str = Field(min_length=1, max_length=80)
+    type: Literal["text", "number", "date", "select", "checkbox"]
+    options: list[str] = Field(default_factory=list, max_length=100)
+
+    @model_validator(mode="after")
+    def valid_definition(self) -> Self:
+        self.name = self.name.strip()
+        if not self.name:
+            raise ValueError("Field name must not be blank")
+        if self.type == "select":
+            if (
+                not self.options
+                or any(
+                    not option.strip() or len(option) > 200
+                    for option in self.options
+                )
+                or len(set(self.options)) != len(self.options)
+            ):
+                raise ValueError("Provide unique nonblank select options")
+        elif self.options:
+            raise ValueError("Only select fields have options")
+        return self
+
+
+class TaskPropertiesUpdate(StrictData):
+    expected_revision: int = Field(ge=1)
+    values: dict[str, str | int | float | bool | list[str] | None] = Field(
+        min_length=1, max_length=32
+    )
+
+    @field_validator("values")
+    @classmethod
+    def valid_keys(cls, values: dict) -> dict:
+        for key, value in values.items():
+            validate_task_field_key(key)
+            if isinstance(value, list) and key != "acceptance_criteria":
+                raise ValueError("Only acceptance criteria accept a list")
+        return values
 
 
 class RequestModel(BaseModel):
@@ -28,6 +99,11 @@ class ProjectInput(RequestModel):
 
 class ProjectOrderInput(RequestModel):
     project_ids: list[str] = Field(min_length=1)
+
+
+class ProjectRename(RequestModel):
+    expected_version: int = Field(ge=1)
+    name: str = Field(min_length=1, max_length=200)
 
 
 class GitPreviewInput(RequestModel):
@@ -73,6 +149,11 @@ class ExpectedRevision(RequestModel):
     expected_revision: int = Field(ge=1)
 
 
+class TaskTypeUpdate(StrictData):
+    expected_revision: int = Field(ge=1)
+    workflow: Literal["personal", "delivery"]
+
+
 class TaskMove(RequestModel):
     expected_revision: int = Field(ge=1)
     source_state: Literal[
@@ -107,6 +188,12 @@ class TaskBulkChange(RequestModel):
 
 
 class TaskViewSettings(RequestModel):
+    schema_version: Literal[1, 2] = 1
+    task_scope: Literal["all", "today", "inbox", "upcoming"] | None = None
+    calendar_date_field: Literal["planned", "due"] = "planned"
+    layout_sorts: dict[
+        Literal["list", "board"], Literal["manual", "gtd", "abc", "due_date"]
+    ] = Field(default_factory=dict)
     mode: Literal["simple", "complex"]
     view: Literal[
         "today", "inbox", "upcoming", "list", "board", "calendar", "insights"
@@ -121,24 +208,29 @@ class TaskViewSettings(RequestModel):
     energy: Literal["any", "low", "medium", "high"] = "any"
     grouping: Literal["state", "list", "none"] = "state"
     sort: Literal["manual", "gtd", "abc", "due_date"] = "manual"
-    card_fields: list[
-        Literal[
-            "list_name",
-            "planned_date",
-            "due_date",
-            "estimated_minutes",
-            "abc_priority",
-            "context",
-            "goal",
-            "github_issue_url",
-        ]
-    ] = Field(default_factory=list, max_length=8)
+    card_fields: list[str] = Field(default_factory=list, max_length=32)
+    list_fields: list[str] | None = Field(default=None, max_length=32)
+
+    @field_validator("card_fields", "list_fields")
+    @classmethod
+    def valid_fields(cls, values: list[str] | None) -> list[str] | None:
+        if values is not None:
+            if len(values) != len(set(values)):
+                raise ValueError("Fields must be unique")
+            for key in values:
+                validate_task_field_key(key)
+        return values
 
     @model_validator(mode="after")
     def compatible_view(self) -> Self:
         simple = {"today", "inbox", "upcoming"}
-        if (self.view in simple) != (self.mode == "simple"):
+        if self.schema_version == 1 and (self.view in simple) != (
+            self.mode == "simple"
+        ):
             raise ValueError("View and mode must match")
+        if self.schema_version == 2:
+            if self.view in simple or self.task_scope is None:
+                raise ValueError("Version 2 requires layout and task scope")
         if len(self.card_fields) != len(set(self.card_fields)):
             raise ValueError("Card fields must be unique")
         if self.view == "board" and self.grouping != "state":

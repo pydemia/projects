@@ -1,5 +1,85 @@
 # 실제 앱 실행
 
+2026-11-09 로그인 화면의 상단 여백과 전체 너비 활용을 보완해 운영에 반영했다.
+로고/테마 헤더 아래에 desktop 두 열·모바일 한 열로 배치하고 짧은 화면의
+스크롤·기존 로그인/테마·권한을 유지한다. [검증](verification.md)과 [배포](deployment.md)의 최신 절을 따른다.
+
+2026-11-08 SNB 위 엠블럼과 Projects 제목을 홈 링크로 연결하고 HTML 초기 로딩과
+세션·프로젝트 요청 중 프런트엔드 스켈레톤을 추가했다. 홈은 프로젝트 목록이다.
+현재 운영에는 별도 assistant rollout의 schema 0013·integration 설정이 있으므로
+배포 시 이전 owner/ACL 전체 이미지로 교체하지 않는다. 현재 container의
+compose 설정·runtime base를 보존하는 frontend layer 전환과 검증 범위는
+[최신 배포](deployment.md)·[검증](verification.md)을 따른다.
+
+2026-11-07 후속 결정으로 업무 테넌시와 권한 설정을 프로젝트 단위로 구현·배포했다.
+pydemia.ai 조직 계정이 프로젝트마다 다른 역할을 갖고, 접근 가능한 프로젝트만
+목록·검색·집계에서 본다. 프로젝트의 **프로젝트 설정 · 멤버·권한**에서
+기본 역할·사용자 지정 역할·동작 권한·일회성 초대·명시적 오너 이전을 관리한다.
+서버는 매 요청의 현재 권한을 검사하고, 화면은 focus/권한 오류/15초 주기로 갱신한다.
+기존 자료와 소유권을 보존한 schema 0012·운영 `986e0a1af12655bb`다.
+[실행 기준표](project-access-goal.md)와 아래 검증·배포 기록을 따른다.
+
+2026-11-07 로그인 500 조사·인증 멀티테넌시 변경과 프로젝트 권한 구현은
+[기획·설계](../planning/20-tenancy-and-project-permissions.md), [검증](verification.md),
+[배포](deployment.md)를 따른다. 공통 정책 수정 후 `uv run python scripts/render-entra-proxy.py`로
+공개 프록시 설정을 생성한다. 실제 고정 프록시의 합성 토큰 검사는
+`uv run --with cryptography python scripts/verify-entra-proxy.py`다. runtime 의존성은 늘리지 않는다.
+
+2026-11-03 데스크톱 작업 제목이 열 전체를 사용하도록 하고 최소 제목 폭과
+자연스러운 줄바꿈을 보완해 운영에 반영했다. [계약](../planning/18-inline-editing-and-preferences.md),
+[검증](verification.md), [배포](deployment.md)를 따른다. 실제 브라우저 검사는
+`uv run python scripts/verify-mobile-browser.py verify-task-title-browser.cjs`다.
+
+2026-11-03 시간대 선택과 UTC 시각 변환, T/offset 없이 날짜/시간을 별도 UI 요소와
+gap으로 구분하는 표시를 운영에 반영했다. 날짜 전용 값은 변환하지 않는다.
+재인증 직후 가시성 경쟁도 응답 전 DB commit으로 보완했다. [최신 계약](../planning/18-inline-editing-and-preferences.md),
+[검증](verification.md), [배포](deployment.md)를 따른다.
+
+2026-11-03 사용자 설정에 날짜·시간 형식 선택/직접 입력·미리보기·적용을
+추가하고 운영에 배포했다. 브라우저에 저장하고 목록/보드/상세·이력에 반영하며
+날짜 전용 값과 ISO 저장은 유지한다. [계약](../planning/18-inline-editing-and-preferences.md),
+[검증](verification.md), [배포](deployment.md)를 따른다. 실제 브라우저 QA는
+`uv run python scripts/verify-mobile-browser.py verify-datetime-browser.cjs`다.
+
+2026-11-03 로그인 만료의 재인증·원래 프로젝트/작업/보기 경로 복귀를 추가했다.
+초안 checkpoint, 저장 요청 자동 재전송 방지와 60초 반복 이동 방지를 적용한다.
+[동작·검증 경계](../planning/19-session-expiry-and-return.md), [검증](verification.md),
+[운영 배포](deployment.md)를 따른다. 브라우저 QA는
+`uv run python scripts/verify-mobile-browser.py verify-reauth-browser.cjs`다.
+
+2026-11-03 프로젝트명과 작업 제목/본문/속성/유형의 직접 편집, 설정·환경설정
+화면과 좁은 GNB·검색 여백, 프로젝트 메뉴의 ZIP을 운영에 반영했다.
+[적용 계약](../planning/18-inline-editing-and-preferences.md), [검증](verification.md),
+[배포](deployment.md), [QA](task-workspace-v2-qa.md)를 따른다.
+
+2026-11-02 개요 제목/부가 정보의 간격과 모바일 줄바꿈을 수정하고, 테스트
+케이스가 없는 프로젝트의 테스트 지표를 숨겨 운영에 반영했다.
+[검증·화면](verification.md)과 [배포](deployment.md)를 따른다.
+
+2026-11-02 제목 한 줄 생성과 작업 목록의 속성 편집·필드 추가/숨김/순서,
+이름 있는 보기 관리를 운영에 배포했다. [기획·범위](../planning/17-clickup-task-management.md),
+[검증](verification.md), [배포](deployment.md), [QA 순서](task-workspace-v2-qa.md)를 따른다.
+
+2026-11-02 목록의 개인 완료 체크·구현 상태 선택을 분명히 구분해 추가 배포했다.
+체크 20px·터치 44px, 상태 저장의 완료 gate·취소 사유를 유지한다.
+[화면·검증](verification.md)과 [배포 기록](deployment.md)을 따른다.
+
+2026-11-02 모바일 네 보기·간단/상세 직접 선택과 가로 칸반을 추가 배포했다.
+목록 기본값·기존 데이터는 유지한다. [검증·터치 재현](verification.md)과
+[배포 기록](deployment.md)을 따른다.
+
+2026-11-02 카드 제목·설명·여백에서도 드래그할 수 있도록 추가 배포했다.
+핸들·조작 영역을 보존하며 [브라우저 회귀](verification.md)와 [배포 기록](deployment.md)을 따른다.
+
+2026-11-02 운영에 P-02를 배포하고 [QA 샘플 4개 프로젝트·24개 태스크](task-workspace-v2-qa.md)를
+생성했다. 배포·백업과 운영 API 검증은 [배포 기록](deployment.md)에 있다.
+같은 날 사용자 제보에 따라 네 보기의 전역 제한을 해제하고 프로젝트 선택
+유지·계정별 복원, `보기 모드 · 간단/상세`를 수정해 추가 배포했다.
+
+2026-11-02 [작업 탐색·보기 전환·프로젝트 이동](task-workspace-v2-goal.md)은
+로컬 구현·검증을 완료했다. 전역 `내 작업`, 보기 전환과 프로젝트 이동,
+Note 문서 참조를 제공하며 실서비스 Note 본문/권한 위임·운영 배포는 별도다.
+
 Python 3.12 이상, Node.js 24, uv, Docker Compose를 사용합니다.
 구현 DB는 PostgreSQL 17.11입니다. 아래 명령은 저장소 루트에서 실행합니다.
 

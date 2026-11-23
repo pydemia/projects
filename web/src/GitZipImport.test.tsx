@@ -1,3 +1,4 @@
+import { ownerAccess } from "./permissions.test-support";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { expect, it, vi } from "vitest";
 import { api } from "./api";
@@ -18,7 +19,7 @@ it("analyzes a Git ZIP, shows absent history, then creates a project", async () 
         profile: "simple", version: 1, created_at: "2026-10-21T00:00:00Z",
         repository_url: null, repository_path: "", repository_branch: null, repository_sha: null,
         repository_kind: "browser_extension", repository_manifest: "manifest.json",
-        repository_imported_at: "2026-10-21T00:00:00Z",
+        repository_imported_at: "2026-10-21T00:00:00Z", access: ownerAccess("00000000-0000-4000-8000-000000000001"),
     });
     const inspect = vi.spyOn(api, "previewGitZip").mockResolvedValue(preview);
     const create = vi.spyOn(api, "importGitZip").mockResolvedValue(project);

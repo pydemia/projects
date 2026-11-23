@@ -11,9 +11,19 @@
     <link rel="icon" type="image/svg+xml" href="%BASE_URL%favicon.svg" />
     <meta name="description" content="아이디어, 문서, 작업과 검증 근거를 이어가는 개인 프로젝트 작업공간" />
     <title>Projects · 프로젝트 작업공간</title>
+    <link rel="stylesheet" href="/src/startup.css" />
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <main class="startup-screen">
+        <a class="brand brand-home" href="?view=projects" aria-label="Projects 홈"><img class="brandmark" src="%BASE_URL%favicon.svg" alt="" aria-hidden="true" /><span>Projects</span></a>
+        <section class="workspace-loading" aria-busy="true" aria-label="프로젝트 작업공간을 불러오는 중…">
+          <p class="workspace-loading-status" role="status"><span class="workspace-loading-dot" aria-hidden="true"></span>프로젝트 작업공간을 불러오는 중…</p>
+          <div class="workspace-loading-lines" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+        </section>
+        <noscript>Projects를 사용하려면 브라우저에서 JavaScript를 허용해 주세요.</noscript>
+      </main>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

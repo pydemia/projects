@@ -1,4 +1,5 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { renderWithOwnerPermissions as render } from "./permissions.test-support";
+import { fireEvent, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { api } from "./api";
 import { idea, projectId } from "./fixtures.test-data";

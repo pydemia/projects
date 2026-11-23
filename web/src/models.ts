@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { projectAccessSchema } from "./project-permission-models";
 
 const id = z.string().uuid();
 const text = z.string();
@@ -18,6 +19,9 @@ export const dataSchemas = {
         target_sha: text.default(""),
     }).passthrough(),
     requirement: z.object({
+        problem: text.default(""), expected_outcome: text.default(""),
+        scope: text.default(""), exclusions: text.default(""),
+        processing_state: z.enum(["raised", "reviewing", "planned", "in_progress", "verifying", "fulfilled", "on_hold", "excluded"]).nullable().default(null),
         category: z.enum(["functional", "nonfunctional"]).default("functional"),
         acceptance_criteria: textList.default([]),
         priority: z.enum(["low", "medium", "high"]).default("medium"),
@@ -33,6 +37,7 @@ export const dataSchemas = {
         project_source_refs: textList.default([]),
     }).passthrough(),
     task: z.object({
+        custom_fields: z.record(id, z.union([z.string(), z.number().finite(), z.boolean(), z.null()])).default({}),
         workflow: z.enum(["delivery", "personal"]).default("delivery"),
         state: z.enum([
             "todo", "in_progress", "in_review", "done", "cancelled",
@@ -61,7 +66,7 @@ export const dataSchemas = {
 };
 
 const itemShape = {
-    id, project_id: id, title: text, body: text,
+    id, project_id: id, project_name: text.optional(), title: text, body: text,
     board_order: z.number().int().nonnegative().optional(),
     revision: z.number().int().positive(),
     status: z.enum(["draft", "confirmed", "archived"]),
@@ -77,7 +82,16 @@ export const itemSchema = z.discriminatedUnion("kind", [
     z.object({ ...itemShape, kind: z.literal("decision"), data: dataSchemas.decision }),
 ]);
 export type Item = z.infer<typeof itemSchema>;
+export const taskFieldDefinitionSchema = z.object({
+    project_id: id.nullish(),
+    id, name: text, type: z.enum(["text", "number", "date", "select", "checkbox"]),
+    options: textList, revision: z.number().int().positive(), created_at: text,
+});
+export type TaskFieldDefinition = z.infer<typeof taskFieldDefinitionSchema>;
 export const taskViewSettingsSchema = z.object({
+    schema_version: z.union([z.literal(1), z.literal(2)]).optional(),
+    task_scope: z.enum(["all", "today", "inbox", "upcoming"]).nullish(),
+    calendar_date_field: z.enum(["planned", "due"]).optional(),
     mode: z.enum(["simple", "complex"]),
     view: z.enum(["today", "inbox", "upcoming", "list", "board", "calendar", "insights"]),
     query: text, status: text, lens: z.enum(["gtd", "abc"]),
@@ -85,14 +99,13 @@ export const taskViewSettingsSchema = z.object({
     energy: z.enum(["any", "low", "medium", "high"]),
     grouping: z.enum(["state", "list", "none"]),
     sort: z.enum(["manual", "gtd", "abc", "due_date"]),
-    card_fields: z.array(z.enum([
-        "list_name", "planned_date", "due_date", "estimated_minutes",
-        "abc_priority", "context", "goal", "github_issue_url",
-    ])),
+    layout_sorts: z.object({list: z.enum(["manual", "gtd", "abc", "due_date"]), board: z.enum(["manual", "gtd", "abc", "due_date"])}).partial().optional(),
+    card_fields: z.array(text).max(32),
+    list_fields: z.array(text).max(32).nullish(),
 });
 export type TaskViewSettings = z.infer<typeof taskViewSettingsSchema>;
 export const taskViewSchema = z.object({
-    id, project_id: id, owner_id: id, name: text,
+    id, project_id: id.nullable(), scope_type: z.enum(["global", "project"]).optional(), owner_id: id, name: text,
     scope: z.literal("personal"), settings: taskViewSettingsSchema,
     is_default: z.boolean(), revision: z.number().int().positive(),
 });
@@ -106,10 +119,12 @@ export type Revision = z.infer<typeof revisionSchema>;
 
 export const sessionSchema = z.object({
     user: z.object({ id, username: text }), csrf_token: text.min(1),
+    auth_mode: z.enum(["microsoft", "password"]).optional(),
 });
 export type Session = z.infer<typeof sessionSchema>;
 export const projectSchema = z.object({
     id, name: text, goal: text, profile: text,
+    access: projectAccessSchema.optional(),
     version: z.number().int(), created_at: text,
     sort_order: z.number().int().nullable().default(null),
     repository_url: text.nullable(), repository_path: text,
@@ -281,11 +296,4 @@ export function defaultData(kind: Kind): Record<string, unknown> {
 }
 export function shortId(value: string): string {
     return value.slice(0, 8);
-}
-export function dateLabel(value: string): string {
-    const date = new Date(value);
-    return Number.isNaN(date.valueOf()) ? value : date.toLocaleString("ko-KR", {
-        year: "numeric", month: "short", day: "numeric",
-        hour: "2-digit", minute: "2-digit",
-    });
 }

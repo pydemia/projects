@@ -1,0 +1,11 @@
+.date-time-value {
+    display: inline-flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: .15em .65em;
+    max-width: 100%;
+    vertical-align: baseline;
+    font-variant-numeric: tabular-nums;
+}
+.date-time-date, .date-time-clock { min-width: 0; overflow-wrap: anywhere; }
+.baseline-timestamp { display: flex; flex-wrap: wrap; align-items: baseline; gap: .4em .75em; }

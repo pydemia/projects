@@ -1,0 +1,81 @@
+{
+  "date": "2026-11-02",
+  "planning_revision": "P-02",
+  "retrieval": "pydemia-skills read_content (read-only MCP)",
+  "skills": [
+    {
+      "id": "product-ui-ux-design",
+      "url": "https://skills.pydemia.ai/skills/product-ui-ux-design",
+      "source_revision": "0e701b6ba104a846354b3d69a65fc51bf6082960",
+      "sha256": "7a0505f52e5991f2d18be9af5c5ed93ea4f8d4d2b5a1a6e57bf87fbc8905d69c",
+      "surface": "skills",
+      "workspace": "library"
+    },
+    {
+      "id": "product-planning-with-ui",
+      "url": "https://skills.pydemia.ai/skills/product-planning-with-ui",
+      "source_revision": "0e701b6ba104a846354b3d69a65fc51bf6082960",
+      "sha256": "02776675dd59de6c14539c7e0cc647a6684578bfce8d75f95d4f03faeafb48f9",
+      "surface": "skills",
+      "workspace": "library"
+    },
+    {
+      "id": "reverse-engineer-anything",
+      "url": "https://skills.pydemia.ai/skills/reverse-engineer-anything",
+      "source_revision": "0e701b6ba104a846354b3d69a65fc51bf6082960",
+      "sha256": "19be9b6550f25ae2d30b4a7b9d22451379616a4e63f94ba60e98ff41cd17c179",
+      "surface": "skills",
+      "workspace": "library"
+    },
+    {
+      "id": "requirements-authoring",
+      "url": "https://skills.pydemia.ai/skills/requirements-authoring",
+      "source_revision": "0e701b6ba104a846354b3d69a65fc51bf6082960",
+      "sha256": "98c10f542637a1d0cd97e5f6200d04637a4a6b083cd90ee32d321c8409c57331",
+      "surface": "skills",
+      "workspace": "library"
+    },
+    {
+      "id": "requirements-verification",
+      "url": "https://skills.pydemia.ai/skills/requirements-verification",
+      "source_revision": "0e701b6ba104a846354b3d69a65fc51bf6082960",
+      "sha256": "dcbe972e6056109ba9e486e91a538c53213c280102cb06a5dd05062f2602eb92",
+      "surface": "skills",
+      "workspace": "library"
+    },
+    {
+      "id": "persona-cross-review",
+      "url": "https://skills.pydemia.ai/skills/persona-cross-review",
+      "source_revision": "0e701b6ba104a846354b3d69a65fc51bf6082960",
+      "sha256": "3126e1efb93112d57952f1f4df4abe4ea54d4f20da7f28298ab6549f91c026ee",
+      "surface": "skills",
+      "workspace": "library"
+    },
+    {
+      "id": "visual-grouping",
+      "url": "https://skills.pydemia.ai/skills/visual-grouping",
+      "source_revision": "0e701b6ba104a846354b3d69a65fc51bf6082960",
+      "sha256": "36a9732257ada067f43d132260e0aa004b0dc5c86c658144125ce389b780344c",
+      "surface": "skills",
+      "workspace": "library"
+    }
+  ],
+  "notes": [
+    "Skill instructions and paired Prompts were not mixed.",
+    "Skill content was read; this record does not claim local installation.",
+    "Persona responsibilities were checked sequentially by the primary agent, not independent subagents.",
+    "REA evidence from 2026-10-21 and browser observations from 2026-11-01 are reused; no new REA engine run."
+  ],
+  "verified_local_references": [
+    {
+      "skill": "visual-grouping",
+      "path": "references/core.md",
+      "sha256": "293ef7b16bc286249ce6cb8d376b7e6425682271e5946e68add81eca2668099d"
+    },
+    {
+      "skill": "visual-grouping",
+      "path": "references/ui-workflow.md",
+      "sha256": "e8553d59afbb4e0b25af1a479bb0d72a89b0b2cd693c43d2bf04e0d763b7ef27"
+    }
+  ]
+}

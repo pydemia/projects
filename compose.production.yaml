@@ -41,11 +41,13 @@ services:
             PROJECTS_PROXY_AUTH_EMAIL: pydemia@pydemia.ai
             PROJECTS_PROXY_AUTH_USERNAME: pydemia
             PROJECTS_PROXY_AUTH_DOMAIN: pydemia.ai
+            PROJECTS_PROXY_AUTH_POLICY: /run/projects/entra-policy.json
             PROJECTS_CONFIG: /run/secrets/projects.local.yaml
         volumes:
             - ./state:/app/.projects
             - ./.secrets/projects.local.yaml:/run/secrets/projects.local.yaml:ro
             - ./.secrets/auth.json:/run/secrets/auth.json:ro
+            - ./deploy/entra-policy.json:/run/projects/entra-policy.json:ro
         read_only: true
         tmpfs:
             - /tmp:rw,nosuid,nodev,size=256m,uid=0,gid=0,mode=0700
@@ -72,16 +74,10 @@ services:
         env_file:
             - ./.secrets/oauth.env
         command:
-            - --provider=entra-id
-            - --http-address=0.0.0.0:4180
-            - --upstream=http://app:8000/
+            - --alpha-config=/etc/projects/entra-proxy.json
             - --redirect-url=https://projects.pydemia.ai/oauth2/callback
-            - --scope=openid profile email
-            - --prompt=select_account
-            - --email-domain=pydemia.ai
-            - --entra-id-allowed-tenant=fb44f64f-973f-480d-ab48-f30f3bababb6
-            - --code-challenge-method=S256
-            - --insecure-oidc-skip-nonce=false
+            # The shared policy checks tenant-specific domains in the app.
+            - --email-domain=*
             - --cookie-name=__Host-projects
             - --cookie-secure=true
             - --cookie-httponly=true
@@ -90,18 +86,16 @@ services:
             - --cookie-expire=8h
             - --reverse-proxy=true
             - --api-route=^/api
-            - --pass-host-header=true
-            - --pass-access-token=false
-            - --pass-authorization-header=false
-            - --pass-basic-auth=false
-            - --pass-user-headers=true
-            - --skip-auth-strip-headers=true
-            - --set-authorization-header=false
-            - --set-xauthrequest=false
+            # The app must checkpoint invitation fragments before Microsoft sign-in.
+            # Only the empty shell, flat build assets and non-sensitive login metadata
+            # are anonymous. No project/session or other data API matches this route.
+            - --skip-auth-route=GET=^/(?:$|assets/[A-Za-z0-9_-]+\.(?:js|css)$|favicon(?:-[a-z0-9]+)*\.(?:svg|ico|png)$|api/auth/options$|health$)
             - --request-logging=false
             - --auth-logging=false
         ports:
             - "127.0.0.1:14323:4180"
+        volumes:
+            - ./deploy/entra-proxy.json:/etc/projects/entra-proxy.json:ro
         depends_on:
             app:
                 condition: service_healthy

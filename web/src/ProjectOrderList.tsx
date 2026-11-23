@@ -1,8 +1,9 @@
+import { DateTimeValue } from "./date-time-settings";
 import { useRef, useState, type DragEvent } from "react";
 import type { Project } from "./models";
-import { dateLabel } from "./models";
 import { Button } from "./pydemia-ui/button";
 import { RouteLink } from "./ui";
+import { ProjectActions } from "./ProjectActions";
 
 export function movedProjectIds(
     projects: readonly Project[], draggedId: string, targetId: string, after = false,
@@ -16,13 +17,15 @@ export function movedProjectIds(
     return ids.every((id, index) => id === projects[index]?.id) ? null : ids;
 }
 
-export function ProjectOrderList({ projects, currentId, compact = false, busy, onReorder, onSelect }: {
+export function ProjectOrderList({ projects, currentId, compact = false, busy, onReorder, onSelect, onRenamed, recoverySurface = "main" }: {
     projects: readonly Project[];
     currentId: string;
     compact?: boolean;
     busy: boolean;
     onReorder: (ids: string[]) => Promise<void>;
     onSelect?: () => void;
+    onRenamed?: (project: Project) => void;
+    recoverySurface?: "sidebar" | "main" | "mobile-picker";
 }) {
     const dragging = useRef<string | null>(null);
     const [dropTarget, setDropTarget] = useState<{ id: string; after: boolean } | null>(null);
@@ -63,9 +66,10 @@ export function ProjectOrderList({ projects, currentId, compact = false, busy, o
                 className="project-order-link" current={currentId === project.id} onNavigate={onSelect}>
                 {!compact && <span className="project-order-number">{String(index + 1).padStart(2, "0")}</span>}
                 <span className="project-order-copy"><strong>{project.name}</strong>{!compact && <small>{project.goal || "아직 작성한 목표가 없습니다."}</small>}</span>
-                {!compact && <span className="project-order-meta">{project.profile === "simple" ? "간편" : "표준"}<small>{dateLabel(project.created_at)}</small></span>}
+                {!compact && <span className="project-order-meta">{project.profile === "simple" ? "간편" : "표준"}<small><DateTimeValue value={project.created_at} /></small></span>}
             </RouteLink>
             <div className="project-order-actions">
+                <ProjectActions project={project} disabled={busy} onRenamed={onRenamed} recoverySurface={recoverySurface} />
                 <Button type="button" variant="ghost" disabled={busy || index === 0} aria-label={`${project.name} 위로 이동`}
                     onClick={() => reorder(project.id, projects[index - 1]!.id)}>↑</Button>
                 <Button type="button" variant="ghost" disabled={busy || index === projects.length - 1} aria-label={`${project.name} 아래로 이동`}

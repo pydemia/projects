@@ -1,6 +1,7 @@
 from alembic import context
 from sqlalchemy import create_engine, pool
 
+from projects import planning_models, schedule_models, story_models  # noqa: F401
 from projects.config import Settings
 from projects.database import Base
 

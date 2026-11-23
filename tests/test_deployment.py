@@ -1,3 +1,4 @@
+import json
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from pathlib import Path
@@ -12,6 +13,7 @@ from projects.api import create_app
 from projects.auth import LoginLimiter
 from projects.config import ConfigurationError, Settings
 from projects.database import Account
+from projects.entra_policy import load_entra_policy, proxy_configuration
 
 
 @pytest.fixture
@@ -356,18 +358,50 @@ def test_production_proxy_is_the_only_host_port():
         == "pydemia.ai"
     )
     command = services["oauth2-proxy"]["command"]
-    assert "--email-domain=pydemia.ai" in command
-    assert "--prompt=select_account" in command
+    assert "--alpha-config=/etc/projects/entra-proxy.json" in command
+    public_routes = [
+        value for value in command if value.startswith("--skip-auth-route=")
+    ]
+    assert len(public_routes) == 1
+    assert public_routes[0].startswith("--skip-auth-route=GET=^/(?:$")
+    assert "api/auth/options$" in public_routes[0]
     assert (
-        "--entra-id-allowed-tenant=fb44f64f-973f-480d-ab48-f30f3bababb6"
-        in command
+        "api/projects" not in public_routes[0]
+        and "api/session" not in public_routes[0]
     )
+    policy = load_entra_policy(Path("deploy/entra-policy.json"))
+    config = json.loads(Path("deploy/entra-proxy.json").read_text())
+    assert config == proxy_configuration(policy)
+    provider = config["providers"][0]
+    assert provider["provider"] == "entra-id"
+    assert provider["oidcConfig"]["emailClaim"] == "preferred_username"
+    assert provider["oidcConfig"]["userIDClaim"] == "sub"
+    assert provider["oidcConfig"]["insecureSkipNonce"] is False
+    assert provider["oidcConfig"]["insecureSkipIssuerVerification"] is False
+    assert provider["microsoftEntraIDConfig"]["allowedTenants"] == [
+        "fb44f64f-973f-480d-ab48-f30f3bababb6"
+    ]
+    assert policy.tenants[0].email_domains == ("pydemia.ai",)
+    assert provider["loginURLParameters"] == [
+        {"name": "prompt", "default": ["select_account"]}
+    ]
+    headers = config["injectRequestHeaders"]
+    assert all(header["preserveRequestValue"] is False for header in headers)
+    assert {
+        value["claimSource"]["claim"]
+        for header in headers
+        for value in header["values"]
+    } == {
+        "user",
+        "email",
+        "preferred_username",
+        "tid",
+        "iss",
+    }
     assert not any(
         value.startswith("--authenticated-emails-file=") for value in command
     )
     assert "--insecure-oidc-skip-issuer-verification=true" not in command
-    assert "--skip-auth-strip-headers=true" in command
-    assert "--pass-user-headers=true" in command
     assert "139.59.246.134" not in Path("deploy/projects.caddy").read_text()
 
 
@@ -386,6 +420,8 @@ def test_onprem_edge_is_loopback_only_and_preserves_proxy_guards():
         "Authorization",
         "X-Forwarded-Email",
         "X-Forwarded-User",
+        "X-Projects-Entra-Tenant",
+        "X-Projects-Entra-Issuer",
         "X-Forwarded-Preferred-Username",
         "X-Forwarded-Access-Token",
         "X-Auth-Request-Access-Token",

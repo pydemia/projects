@@ -19,6 +19,9 @@
 .projects-theme .metrics { gap: 14px; margin: 22px 0 30px; }
 .projects-theme .metrics [data-ui="card"] { min-height: 128px; }
 .projects-theme .metrics [data-ui="card"] p { margin-bottom: 0; }
+@media (min-width: 761px) {
+  .projects-theme .overview-metrics { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+}
 .projects-theme .scope-note { margin-bottom: 22px; padding: 0; background: var(--surface-subtle); }
 .projects-theme .scope-note [data-ui="card"] { border: 0; }
 .projects-theme .scope-note p { margin-bottom: 0; }

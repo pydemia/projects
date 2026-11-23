@@ -3,7 +3,7 @@ import {
     baselineSchema, catalogSchema, gitPreviewSchema, gitZipPreviewSchema, itemSchema, linkSchema, projectSchema,
     repositoryActivitySchema,
     reconnectSchema, resolveSchema, revisionSchema, runSchema, runtimeSchema,
-    sessionSchema, summarySchema, taskViewSchema, testRunSchema, traceSchema,
+    sessionSchema, summarySchema, taskFieldDefinitionSchema, taskViewSchema, testRunSchema, traceSchema,
 } from "./models";
 
 let csrfToken = "";
@@ -19,7 +19,7 @@ export function setCsrf(token: string): void {
     csrfToken = token;
 }
 
-async function responseError(response: Response): Promise<ApiError> {
+async function responseError(response: Response, path: string): Promise<ApiError> {
     let message = `서버 요청에 실패했습니다. (HTTP ${response.status})`;
     try {
         const body: unknown = await response.json();
@@ -28,8 +28,11 @@ async function responseError(response: Response): Promise<ApiError> {
     } catch {
         // A proxy failure or HTML error page is still a failed API request.
     }
-    if (response.status === 401) {
+    if (response.status === 401 && !/^\/api\/auth\/(?:login|register)(?:\?|$)/.test(path)) {
         window.dispatchEvent(new Event("projects:unauthorized"));
+    }
+    if (response.status === 403 || response.status === 404 && /\/api\/(?:projects|items|skill-runs|task-transfers)/.test(path)) {
+        window.dispatchEvent(new Event("projects:access-changed"));
     }
     return new ApiError(message, response.status);
 }
@@ -53,7 +56,7 @@ export async function request<T>(
         if (error instanceof DOMException && error.name === "AbortError") throw error;
         throw new ApiError("서버에 연결할 수 없습니다. API 실행 상태와 네트워크를 확인한 뒤 다시 시도해 주세요.");
     }
-    if (!response.ok) throw await responseError(response);
+    if (!response.ok) throw await responseError(response, path);
     let raw: unknown;
     try {
         raw = await response.json();
@@ -78,12 +81,20 @@ const taskMoveResponseSchema = itemSchema.and(z.object({ undo_move: z.object({
     before_id: z.string().nullable(), after_id: z.string().nullable(),
 }) }));
 
+const transferResultSchema = z.object({transfer_id: z.string(), operation_id: z.string(), undo_of: z.string().nullable(), tasks: z.array(itemSchema), projects: z.array(z.object({id: z.string(), version: z.number()}))});
+const transferPreviewSchema = z.object({audience_changes: z.array(z.object({id: z.string(), audience_changed: z.boolean(), new_reader_count: z.number().int().nonnegative(), removed_reader_count: z.number().int().nonnegative()})).default([]), preview_token: z.string(), tasks: z.array(itemSchema), target_project_id: z.string(), blockers: z.array(z.object({id: z.string(), reason: z.string()})), impact: z.object({tasks: z.number(), links: z.number(), baselines: z.number(), skill_runs: z.number()})});
 export const api = {
+    taskFields: (signal?: AbortSignal, projectId?: string) => request(`/api/task-fields${projectId ? `?project_id=${encodeURIComponent(projectId)}` : ""}`, z.array(taskFieldDefinitionSchema), { signal }),
+    createTaskField: (body: unknown) => request("/api/task-fields", taskFieldDefinitionSchema, { method: "POST", body }),
+    updateTaskProperties: (iid: string, body: unknown) => request(`${itemPath(iid)}/task-properties`, itemSchema, { method: "PATCH", body }),
+    updateTaskType: (iid: string, body: { expected_revision: number; workflow: "personal" | "delivery" }) => request(`${itemPath(iid)}/task-type`, itemSchema, { method: "PATCH", body }),
     authOptions: (signal?: AbortSignal) => request("/api/auth/options", z.object({ registration_enabled: z.boolean(), auth_mode: z.enum(["password", "microsoft"]) }), { signal }),
     session: (signal?: AbortSignal) => request("/api/session", sessionSchema, { signal }),
     auth: (mode: "login" | "register", body: unknown) => request(`/api/auth/${mode}`, sessionSchema, { method: "POST", body }),
     logout: () => request("/api/auth/logout", okSchema.extend({ auth_mode: z.enum(["password", "microsoft"]) }), { method: "POST" }),
     projects: (signal?: AbortSignal) => request("/api/projects", z.array(projectSchema), { signal }),
+    project: (pid: string, signal?: AbortSignal) => request(projectPath(pid), projectSchema, { signal }),
+    renameProject: (pid: string, body: { expected_version: number; name: string }) => request(projectPath(pid), projectSchema, { method: "PATCH", body }),
     reorderProjects: (project_ids: string[]) => request("/api/projects/order", z.array(projectSchema), { method: "PUT", body: { project_ids } }),
     createProject: (body: unknown) => request("/api/projects", projectSchema, { method: "POST", body }),
     importProject: (archive: string) => request("/api/projects/import", projectSchema, { method: "POST", body: { archive_base64: archive } }),
@@ -98,8 +109,14 @@ export const api = {
     createItem: (pid: string, body: unknown) => request(`${projectPath(pid)}/items`, itemSchema, { method: "POST", body }),
     quickTask: (pid: string, body: unknown) => request(`${projectPath(pid)}/tasks/quick`, itemSchema, { method: "POST", body }),
     bulkTasks: (pid: string, body: unknown) => request(`${projectPath(pid)}/tasks/bulk`, z.array(itemSchema), { method: "POST", body }),
-    taskViews: (pid: string, signal?: AbortSignal) => request(`${projectPath(pid)}/task-views`, z.array(taskViewSchema), { signal }),
-    createTaskView: (pid: string, body: unknown) => request(`${projectPath(pid)}/task-views`, taskViewSchema, { method: "POST", body }),
+    previewTransfer: (body: unknown) => request("/api/task-transfers/preview", transferPreviewSchema, {method: "POST", body}),
+    transferTasks: (body: unknown) => request("/api/task-transfers", transferResultSchema, {method: "POST", body}),
+    transferOperation: (operation: string) => request(`/api/task-transfers/by-operation/${encodeURIComponent(operation)}`, transferResultSchema),
+    undoTransfer: (id: string, operation_id: string) => request(`/api/task-transfers/${encodeURIComponent(id)}/undo`, transferResultSchema, {method: "POST", body: {operation_id}}),
+    taskContext: (iid: string, signal?: AbortSignal) => request(`${itemPath(iid)}/task-context`, z.object({transfers: z.array(z.object({id: z.string(), created_at: z.string(), source_project_id: z.string(), target_project_id: z.string(), source_project_name: z.string(), target_project_name: z.string(), before_revision: z.number(), after_revision: z.number()})), origin_runs: z.array(z.object({id: z.string(), project_id: z.string(), project_name: z.string(), status: z.string(), operation: z.string()})), baselines: z.array(z.object({id: z.string(), project_id: z.string(), project_name: z.string(), name: z.string(), revision: z.number()})), missing_item_ids: z.array(z.string())}), {signal}),
+    tasks: (params: Record<string, string>, signal?: AbortSignal) => request(`/api/tasks?${new URLSearchParams(params)}`, z.object({items: z.array(itemSchema), total: z.number(), scope_counts: z.object({all: z.number(), today: z.number(), inbox: z.number(), upcoming: z.number()}), next_cursor: z.string().nullable(), as_of: z.string()}), {signal}),
+    taskViews: (pid: string, signal?: AbortSignal) => request(pid ? `${projectPath(pid)}/task-views` : "/api/task-views", z.array(taskViewSchema), { signal }),
+    createTaskView: (pid: string, body: unknown) => request(pid ? `${projectPath(pid)}/task-views` : "/api/task-views", taskViewSchema, { method: "POST", body }),
     updateTaskView: (vid: string, body: unknown) => request(`/api/task-views/${encodeURIComponent(vid)}`, taskViewSchema, { method: "PUT", body }),
     deleteTaskView: (vid: string) => request(`/api/task-views/${encodeURIComponent(vid)}`, okSchema, { method: "DELETE" }),
     saveItem: (iid: string, body: unknown) => request(itemPath(iid), itemSchema, { method: "PUT", body }),
@@ -135,7 +152,7 @@ export async function downloadArchive(path: string, fallbackName: string): Promi
     } catch {
         throw new ApiError("다운로드 서버에 연결할 수 없습니다. 다시 시도해 주세요.");
     }
-    if (!response.ok) throw await responseError(response);
+    if (!response.ok) throw await responseError(response, path);
     const type = response.headers.get("Content-Type") ?? "";
     if (!type.includes("zip") && !type.includes("octet-stream")) {
         throw new ApiError("서버가 ZIP 파일을 반환하지 않았습니다.");

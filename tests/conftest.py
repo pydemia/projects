@@ -31,17 +31,21 @@ def engine():
     isolated = create_engine(
         url, connect_args={"options": f"-csearch_path={schema}"}
     )
-    with isolated.begin() as connection:
-        config = Config("alembic.ini")
-        config.attributes["connection"] = connection
-        command.upgrade(config, "head")
-    yield isolated
-    isolated.dispose()
-    # This schema name was created by this fixture; no user database is dropped.
-    assert schema.startswith("projects_test_") and len(schema) == 46
-    with control.begin() as connection:
-        connection.execute(text(f'DROP SCHEMA "{schema}" CASCADE'))
-    control.dispose()
+    try:
+        with isolated.begin() as connection:
+            config = Config("alembic.ini")
+            config.attributes["connection"] = connection
+            command.upgrade(config, "head")
+        yield isolated
+    finally:
+        isolated.dispose()
+        # This schema belongs to this invocation, including failed migrations.
+        assert schema.startswith("projects_test_") and len(schema) == 46
+        try:
+            with control.begin() as connection:
+                connection.execute(text(f'DROP SCHEMA "{schema}" CASCADE'))
+        finally:
+            control.dispose()
 
 
 class ResultRunner:

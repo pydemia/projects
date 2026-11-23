@@ -1,5 +1,6 @@
 import { cloneElement, lazy, Suspense, useEffect, useState } from "react";
 import type { CSSProperties, ReactElement, ReactNode } from "react";
+import { api, ApiError } from "./api";
 import { statusLabels } from "./models";
 import { navigate, routeUrl } from "./hooks";
 import type { Route } from "./hooks";
@@ -13,7 +14,17 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { PageHeader } from "./pydemia-ui/page-header";
 import { SideNavLink } from "./pydemia-ui/navigation";
 
-const MarkdownContent = lazy(() => import("./MarkdownContent"));
+const MarkdownContent = lazy(() => import("./MarkdownContent").catch(async cause => {
+    // The auth proxy can reject a not-yet-loaded chunk after expiry. Keep editors
+    // mounted while the normal session-401 path checkpoints their drafts.
+    try { await api.session(); }
+    catch (error) {
+        if (error instanceof ApiError && error.status === 401) {
+            return {default: () => <p role="status">로그인 상태를 확인하고 있습니다…</p>};
+        }
+    }
+    throw cause;
+}));
 
 /** Preserve native form-submit defaults while using the shared pydemia button. */
 export function ActionButton({ className = "", variant, type = "submit", ...props }: ButtonProps) {
@@ -52,10 +63,10 @@ export function Field({ label, hint, children }: {
         })}
     </PydField>;
 }
-export function PageHead({ title, description, children, eyebrow }: {
-    title: string; description?: string; children?: ReactNode; eyebrow?: string;
+export function PageHead({ title, titleLabel, description, children, eyebrow }: {
+    title: ReactNode; titleLabel?: string; description?: string; children?: ReactNode; eyebrow?: string;
 }) {
-    return <PageHeader className="pagehead" title={title} subtitle={description}
+    return <PageHeader className="pagehead" title={title} titleLabel={titleLabel} subtitle={description}
         eyebrow={eyebrow ?? "PROJECT WORKSPACE"} actions={<div className="actions">{children}</div>} />;
 }
 export function RouteLink({ patch, children, className = "", current, appearance = "inline", onNavigate }: {

@@ -31,8 +31,10 @@ type KanbanProps = Omit<ComponentProps<"div">, "children"> & {
         columns: KanbanColumn[], move: KanbanMove,
     ) => void;
     renderCard?: (card: KanbanCard) => ReactNode;
+    renderCardTitle?: (card: KanbanCard) => ReactNode;
     renderColumnFooter?: (column: KanbanColumn) => ReactNode;
     canReorder?: boolean;
+    canMoveCard?: (card: KanbanCard) => boolean;
     canMove?: (move: KanbanMove) => boolean;
 };
 
@@ -42,6 +44,17 @@ const actionLabels = {
     up: "위로",
     down: "아래로",
 } as const;
+
+function isDragControl(target: EventTarget | null): boolean {
+    if (!(target instanceof Element)) return false;
+    if (target.closest("[data-kanban-drag-handle]")) return false;
+    if (target.closest('[data-kanban-title-edit="true"]')) return false;
+    return !!target.closest(
+        "a, button, input, select, textarea, label, summary, " +
+        '[role="button"], [role="checkbox"], [role="link"], [role="combobox"], ' +
+        '[contenteditable]:not([contenteditable="false"]), [draggable="false"], [data-kanban-no-drag]',
+    );
+}
 
 function validateColumns(columns: readonly KanbanColumn[]) {
     if (columns.length === 0) {
@@ -116,9 +129,11 @@ function Kanban({
     columns,
     onColumnsChange,
     renderCard,
+    renderCardTitle,
     renderColumnFooter,
     canReorder = true,
     canMove,
+    canMoveCard,
     className,
     ...props
 }: KanbanProps) {
@@ -127,6 +142,7 @@ function Kanban({
     const id = useId();
     const boardRef = useRef<HTMLDivElement>(null);
     const draggedCard = useRef<string | null>(null);
+    const pointerStart = useRef<{ cardId: string; blocked: boolean } | null>(null);
     const pendingFocus = useRef<string | null>(null);
     const [dragging, setDragging] = useState<string | null>(null);
     const [dropTarget, setDropTarget] = useState<{ column: string; before: string | null } | null>(null);
@@ -155,6 +171,7 @@ function Kanban({
             columns, card.id, toColumn.id, beforeCardId,
         );
         if (!result) return;
+        if (canMoveCard && !canMoveCard(card)) return;
         if (canMove && !canMove(result.move)) return;
         if (restoreFocus) pendingFocus.current = card.id;
         onColumnsChange(result.columns, result.move);
@@ -163,6 +180,16 @@ function Kanban({
     }
 
     function beginDrag(event: DragEvent, cardId: string) {
+        const sourceCard = columns.flatMap(column => column.cards).find(card => card.id === cardId);
+        if (!sourceCard || canMoveCard && !canMoveCard(sourceCard)) {event.preventDefault(); return;}
+        // Native dragstart can target the draggable card even when the pointer
+        // started on a nested control. Keep that original target for the guard.
+        if (isDragControl(event.target) ||
+            pointerStart.current?.cardId === cardId && pointerStart.current.blocked) {
+            event.preventDefault();
+            event.stopPropagation();
+            return;
+        }
         draggedCard.current = cardId;
         setDragging(cardId);
         event.dataTransfer.effectAllowed = "move";
@@ -173,6 +200,7 @@ function Kanban({
 
     function endDrag() {
         draggedCard.current = null;
+        pointerStart.current = null;
         setDragging(null);
         setDropTarget(null);
     }
@@ -241,6 +269,7 @@ function Kanban({
                     <section
                         key={column.id}
                         data-ui="kanban-column"
+                        data-kanban-column={column.id}
                         data-surface="panel"
                         aria-labelledby={`${id}-column-${columnIndex}`}
                         className={cn(
@@ -282,6 +311,13 @@ function Kanban({
                                         key={card.id}
                                         data-kanban-card={card.id}
                                         data-surface="row"
+                                        draggable={!canMoveCard || canMoveCard(card)}
+                                        onPointerDownCapture={event => {
+                                            pointerStart.current = {cardId: card.id, blocked: isDragControl(event.target)};
+                                        }}
+                                        onPointerUpCapture={() => { if (!draggedCard.current) pointerStart.current = null; }}
+                                        onDragStart={event => beginDrag(event, card.id)}
+                                        onDragEnd={endDrag}
                                         onDragOver={(event) => {
                                             event.stopPropagation();
                                             allowDrop(event);
@@ -295,16 +331,16 @@ function Kanban({
                                         className={cn(
                                             "rounded-sm border border-border " +
                                             "bg-surface p-[var(--space-3)] " +
-                                            "shadow-[var(--shadow-float)]",
+                                            "shadow-[var(--shadow-float)] cursor-grab active:cursor-grabbing",
                                             dragging === card.id && "opacity-50",
                                             dropTarget?.column === column.id && dropTarget.before === card.id && "border-t-4 border-t-accent",
                                         )}
                                     >
-                                        <button type="button" draggable onDragStart={(event) => beginDrag(event, card.id)}
-                                            onDragEnd={endDrag} aria-label={`${card.title} 끌어서 이동`}
+                                        <button type="button" draggable={!canMoveCard || canMoveCard(card)} disabled={!!canMoveCard && !canMoveCard(card)} data-kanban-drag-handle
+                                            aria-label={`${card.title} 끌어서 이동`}
                                             className="mb-2 cursor-grab rounded-sm border border-border px-2 text-xs text-muted active:cursor-grabbing">⋮⋮</button>
                                         <p className="m-0 text-sm font-medium">
-                                            {card.title}
+                                            {renderCardTitle?.(card) ?? card.title}
                                         </p>
                                         {card.description && (
                                             <p className="mb-0 mt-1 text-xs text-muted">
@@ -329,7 +365,7 @@ function Kanban({
                                                     aria-label={
                                                         `${card.title} ${actionLabels[direction]} 이동`
                                                     }
-                                                    disabled={!enabled}
+                                                    disabled={!enabled || !!canMoveCard && !canMoveCard(card)}
                                                     className={
                                                         "grid size-7 place-items-center rounded-sm " +
                                                         "border border-border text-xs " +

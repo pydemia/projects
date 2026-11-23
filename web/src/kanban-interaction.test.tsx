@@ -30,3 +30,49 @@ it("scrolls a long column during a drag and leaves an invalid self-drop unchange
     fireEvent(card, drop);
     expect(changed).not.toHaveBeenCalled();
 });
+
+it("moves a card by its title or description, keeping the handle available", () => {
+    const changed = vi.fn();
+    render(<Kanban label="본문 드래그" columns={[
+        {id: "todo", title: "할 일", cards: [{id: "one", title: "본문 작업", description: "카드 설명"}]},
+        {id: "doing", title: "진행 중", cards: []},
+    ]} onColumnsChange={changed} />);
+    const card = screen.getByText("본문 작업").closest("li")!;
+    const target = screen.getByRole("heading", {name: /진행 중\s*0/}).closest("section")!;
+    expect(card.draggable).toBe(true);
+    for (const source of [screen.getByText("본문 작업"), screen.getByText("카드 설명"), screen.getByRole("button", {name: "본문 작업 끌어서 이동"})]) {
+        const dataTransfer = {setData: vi.fn(), setDragImage: vi.fn()};
+        fireEvent.pointerDown(source);
+        fireEvent.dragStart(source, {dataTransfer});
+        fireEvent.drop(target, {dataTransfer});
+        expect(changed).toHaveBeenLastCalledWith(expect.any(Array), expect.objectContaining({cardId: "one", fromColumnId: "todo", toColumnId: "doing"}));
+        fireEvent.dragEnd(source);
+    }
+    expect(changed).toHaveBeenCalledTimes(3);
+});
+
+it("does not start card drags from controls even when the browser targets the draggable ancestor", () => {
+    const changed = vi.fn();
+    const clicked = vi.fn();
+    render(<Kanban label="조작 보호" columns={[
+        {id: "todo", title: "할 일", cards: [{id: "one", title: "작업"}]},
+        {id: "doing", title: "진행 중", cards: []},
+    ]} onColumnsChange={changed} renderCard={() => <>
+        <button onClick={clicked}>상태 메뉴</button><a href="#detail">상세</a>
+        <label>선택<input type="checkbox" /></label><input aria-label="입력" />
+        <span contentEditable suppressContentEditableWarning>메모 편집</span>
+    </>} />);
+    const card = screen.getByText("작업").closest("li")!;
+    const target = screen.getByRole("heading", {name: /진행 중\s*0/}).closest("section")!;
+    for (const control of [screen.getByText("상태 메뉴"), screen.getByText("상세"), screen.getByText("선택"), screen.getByRole("checkbox"), screen.getByLabelText("입력"), screen.getByText("메모 편집")]) {
+        const dataTransfer = {setData: vi.fn(), setDragImage: vi.fn()};
+        fireEvent.pointerDown(control);
+        expect(fireEvent.dragStart(card, {dataTransfer})).toBe(false);
+        fireEvent.drop(target, {dataTransfer});
+        fireEvent.pointerUp(control);
+        expect(dataTransfer.setData).not.toHaveBeenCalled();
+    }
+    fireEvent.click(screen.getByText("상태 메뉴"));
+    expect(clicked).toHaveBeenCalledOnce();
+    expect(changed).not.toHaveBeenCalled();
+});

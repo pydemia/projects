@@ -1,4 +1,6 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { renderWithOwnerPermissions as renderUi } from "./permissions.test-support";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError, api } from "./api";
 import { idea, projectId, userId } from "./fixtures.test-data";
@@ -6,6 +8,13 @@ import type { Route } from "./hooks";
 import { itemSchema } from "./models";
 import { TaskWorkspace } from "./TaskWorkspace";
 
+// These existing control tests exercise the advanced settings after opening them.
+const render = (ui: React.ReactNode) => {
+    const rendered = renderUi(ui);
+    const advanced = document.querySelector<HTMLDetailsElement>(".task-advanced-settings");
+    if (advanced) advanced.open = true;
+    return rendered;
+};
 const today = (() => {
     const date = new Date();
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
@@ -82,7 +91,7 @@ describe("task workspace", () => {
         expect(screen.getByRole("checkbox", { name: "progress 일괄 선택" }).getAttribute("data-state")).toBe("checked");
     });
 
-    it("shows grouping only where it changes the view and keeps simple tasks ungrouped", () => {
+    it("shows grouping only where it changes the view and uses today groups in simple tasks", () => {
         const complex = { ...route, taskMode: "complex", taskView: "list" };
         const view = render(<TaskWorkspace projectId={projectId} userId={userId}
             route={complex} items={[task]} onChanged={vi.fn()} />);
@@ -90,7 +99,7 @@ describe("task workspace", () => {
         expect(document.querySelector(".task-group-label")).toBeTruthy();
         view.rerender(<TaskWorkspace projectId={projectId} userId={userId}
             route={{ ...route, taskMode: "simple", taskView: "today" }} items={[task]} onChanged={vi.fn()} />);
-        expect(document.querySelector(".task-group-label")).toBeNull();
+        expect(document.querySelector(".task-group-label")?.textContent).toBe("오늘");
         view.rerender(<TaskWorkspace projectId={projectId} userId={userId}
             route={{ ...complex, taskView: "calendar" }} items={[task]} onChanged={vi.fn()} />);
         expect(screen.queryByRole("combobox", { name: "그룹" })).toBeNull();
@@ -153,7 +162,7 @@ describe("task workspace", () => {
         fireEvent.click(screen.getByRole("button", { name: "+ 추가" }));
         await waitFor(() => expect(create).toHaveBeenCalledWith(projectId, expect.objectContaining({
             title: "오늘 처리할 일",
-            data: expect.objectContaining({ workflow: "personal", planned_date: today, requires_test: false }),
+            data: expect.objectContaining({ workflow: "personal", planned_date: "", requires_test: false }),
         })));
         await waitFor(() => expect(changed).toHaveBeenCalledOnce());
     });
@@ -169,10 +178,11 @@ describe("task workspace", () => {
         })));
     });
 
-    it("quickly completes a personal task with revision control", async () => {
+    it("completes a personal task through the status menu with revision control", async () => {
         const save = vi.spyOn(api, "saveItem").mockResolvedValue({ ...task, data: { ...task.data, state: "done" } });
         render(<TaskWorkspace projectId={projectId} userId={userId} route={route} items={[task]} onChanged={vi.fn()} />);
-        fireEvent.click(screen.getByRole("checkbox", { name: "짧은 작업 완료" }));
+        await userEvent.click(screen.getByRole("button", {name: /짧은 작업 상태:.*변경/}));
+        await userEvent.click(screen.getByRole("menuitem", {name: "완료"}));
         await waitFor(() => expect(save).toHaveBeenCalledWith(task.id, expect.objectContaining({
             expected_revision: task.revision, data: expect.objectContaining({ state: "done", workflow: "personal" }),
         })));
@@ -260,7 +270,7 @@ describe("task workspace", () => {
         expect(screen.getByRole("tab", { name: "목록" }).getAttribute("aria-selected")).toBe("true");
         expect(screen.getByRole("searchbox", { name: "작업 검색" }).getAttribute("data-ui")).toBe("input");
         expect(screen.getByRole("combobox", { name: "우선순위 기준" }).getAttribute("data-ui")).toBe("native-select");
-        expect(screen.getByRole("group", { name: "오늘 처리할 일" }).getAttribute("data-ui")).toBe("card");
+        expect(screen.getByRole("group", { name: "작업 범위" })).toBeTruthy();
     });
 
     it("switches between GTD available-time and ABC value ordering without changing tasks", () => {
@@ -280,6 +290,7 @@ describe("task workspace", () => {
         render(<TaskWorkspace projectId={projectId} userId={userId}
             route={{ ...route, taskMode: "complex", taskView: "calendar" }} items={[task]} onChanged={vi.fn()} />);
         expect(screen.getByRole("link", { name: "짧은 작업" })).toBeTruthy();
-        expect(screen.getByText(/실행 예정일과 마감일/)).toBeTruthy();
+        expect(screen.getByRole("combobox", {name: "캘린더 날짜 기준"})).toBeTruthy();
+        expect(screen.getByRole("heading", {name: /날짜 없는 작업/})).toBeTruthy();
     });
 });

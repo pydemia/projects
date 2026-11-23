@@ -3,19 +3,33 @@
 import copy
 from collections import Counter
 
-from sqlalchemy import or_, select
-from sqlalchemy.orm import Session
+from sqlalchemy import cast, or_, select, text
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import Session, object_session
+from sqlalchemy.sql.elements import ColumnElement
 
 from projects.database import (
     Baseline,
     Item,
     Link,
     Project,
+    ProjectArchiveReferences,
     Revision,
+    TaskTransfer,
     TestRun,
     utcnow,
 )
-from projects.domain import Problem, check_dependency_cycle, validate_item_data
+from projects.domain import (
+    Problem,
+    check_dependency_cycle,
+    validate_item_data,
+)
+from projects.project_access import (
+    accessible_project_ids,
+    lock_project_access,
+    require_project_access,
+)
+from projects.task_fields import validate_custom_values
 
 
 def serialize(row: object) -> dict:
@@ -28,29 +42,45 @@ def serialize(row: object) -> dict:
     }
 
 
-def project_for_user(db: Session, project_id: str, user_id: str) -> Project:
-    project = db.get(Project, project_id)
-    if project is None or project.owner_id != user_id:
-        raise Problem(404, "프로젝트를 찾을 수 없습니다.")
-    return project
+def project_for_user(
+    db: Session,
+    project_id: str,
+    user_id: str,
+    permission: str = "project.read",
+    *,
+    lock: bool = False,
+) -> Project:
+    return require_project_access(
+        db, project_id, user_id, permission, lock=lock
+    )
 
 
 def item_for_user(
     db: Session,
     item_id: str,
     user_id: str,
+    permission: str = "project.read",
     *,
     lock: bool = False,
 ) -> Item:
     statement = select(Item).where(Item.id == item_id)
     if lock:
+        current = db.scalar(statement)
+        if current is None:
+            raise Problem(404, "항목을 찾을 수 없습니다.")
+        original_project_id = current.project_id
+        project_for_user(
+            db, original_project_id, user_id, permission, lock=True
+        )
         statement = statement.with_for_update().execution_options(
             populate_existing=True,
         )
     item = db.scalar(statement)
     if item is None:
         raise Problem(404, "항목을 찾을 수 없습니다.")
-    project_for_user(db, item.project_id, user_id)
+    if lock and item.project_id != original_project_id:
+        raise Problem(409, "항목 소속이 변경되었습니다. 다시 확인해 주세요.")
+    project_for_user(db, item.project_id, user_id, permission)
     return item
 
 
@@ -89,12 +119,29 @@ def create_item(
         raise Problem(422, "제목을 입력해 주세요.")
     if len(title) > 300 or len(body) > 500000:
         raise Problem(422, "제목 또는 본문 크기가 저장 한도를 초과했습니다.")
+    validated = validate_item_data(kind, data)
+    if kind == "requirement":
+        if validated["processing_state"] == "fulfilled":
+            raise Problem(
+                422, "Story 충족은 수용 조건 검증으로 기록해 주세요."
+            )
+        if "processing_state" not in data:
+            validated["processing_state"] = "raised"
+    if kind == "task":
+        project = db.get(Project, project_id)
+        assert project is not None
+        validate_custom_values(
+            db,
+            project.owner_id,
+            validated["custom_fields"],
+            project_id=project_id,
+        )
     item = Item(
         project_id=project_id,
         kind=kind,
         title=title.strip(),
         body=body,
-        data=validate_item_data(kind, data),
+        data=validated,
     )
     db.add(item)
     store_revision(db, item)
@@ -111,6 +158,8 @@ def revise_item(
     *,
     status: str = "draft",
     completion_states: dict[str, str] | None = None,
+    allow_workflow_change: bool = False,
+    actor_id: str | None = None,
 ) -> Item:
     require_revision(item, expected)
     if not title.strip():
@@ -118,12 +167,31 @@ def revise_item(
     if len(title) > 300 or len(body) > 500000:
         raise Problem(422, "제목 또는 본문 크기가 저장 한도를 초과했습니다.")
     validated = validate_item_data(item.kind, data)
-    if item.kind == "task" and (
-        item.data.get("workflow", "delivery") != validated["workflow"]
+    if (
+        item.kind == "requirement"
+        and validated["processing_state"] == "fulfilled"
+        and item.data.get("processing_state") != "fulfilled"
     ):
-        raise Problem(409, "작업 유형은 생성 후 변경할 수 없습니다.")
+        raise Problem(422, "Story 충족은 수용 조건 검증으로 기록해 주세요.")
+    if item.kind == "task":
+        project = db.get(Project, item.project_id)
+        assert project is not None
+        validate_custom_values(
+            db,
+            project.owner_id,
+            validated["custom_fields"],
+            project_id=item.project_id,
+        )
+    if (
+        item.kind == "task"
+        and (item.data.get("workflow", "delivery") != validated["workflow"])
+        and not allow_workflow_change
+    ):
+        raise Problem(409, "작업 유형은 별도의 유형 변경으로 수정해 주세요.")
     if item.kind == "task" and validated["state"] == "done":
-        check_task_completion(db, item, validated, completion_states)
+        check_task_completion(
+            db, item, validated, completion_states, actor_id=actor_id
+        )
     item.title = title.strip()
     item.body = body
     item.data = validated
@@ -148,7 +216,17 @@ def project_links(db: Session, project_id: str) -> list[Link]:
     return list(
         db.scalars(
             select(Link)
-            .where(Link.project_id == project_id)
+            .where(
+                or_(
+                    Link.project_id == project_id,
+                    Link.source_id.in_(
+                        select(Item.id).where(Item.project_id == project_id)
+                    ),
+                    Link.target_id.in_(
+                        select(Item.id).where(Item.project_id == project_id)
+                    ),
+                )
+            )
             .order_by(Link.id),
         )
     )
@@ -160,30 +238,61 @@ def add_link(
     source: Item,
     target: Item,
     relation: str,
+    *,
+    actor_id: str | None = None,
 ) -> Link:
-    # Project row serializes concurrent dependency inserts, including inverse edges.
-    db.scalar(
-        select(Project).where(Project.id == project_id).with_for_update()
-    )
-    if source.project_id != project_id or target.project_id != project_id:
-        raise Problem(422, "같은 프로젝트의 항목만 연결할 수 있습니다.")
-    existing = db.scalar(
-        select(Link).where(
-            Link.source_id == source.id,
-            Link.target_id == target.id,
-            Link.relation == relation,
+    owner = db.get(Project, project_id)
+    assert owner is not None
+    actor_id = actor_id or owner.owner_id
+    # Different actors may write the same dependency graph. Project locks
+    # protect ACL changes; the graph lock also serializes disjoint inserts
+    # that together would close a cross-project cycle.
+    project_ids = {project_id, source.project_id, target.project_id}
+    lock_project_access(db, project_ids)
+    for item in (source, target):
+        db.refresh(item)
+        if item.project_id not in project_ids:
+            raise Problem(
+                409, "항목 소속이 변경되었습니다. 다시 확인해 주세요."
+            )
+    if relation == "depends_on":
+        db.execute(
+            text(
+                "SELECT pg_advisory_xact_lock(hashtext('projects.dependency_graph'))"
+            )
         )
-    )
-    if existing:
-        return existing
+    project_for_user(db, project_id, actor_id, "relation.write")
+    for item in (source, target):
+        project_for_user(db, item.project_id, actor_id, "relation.write")
     if source.id == target.id:
         raise Problem(422, "자기 자신을 연결할 수 없습니다.")
+    endpoints: ColumnElement[bool] = (Link.source_id == source.id) & (
+        Link.target_id == target.id
+    )
+    if relation == "relates_to":
+        endpoints = or_(
+            endpoints,
+            (Link.source_id == target.id) & (Link.target_id == source.id),
+        )
+    existing = db.scalar(
+        select(Link)
+        .where(
+            endpoints,
+            Link.relation == relation,
+        )
+        .order_by(Link.id)
+    )
+    if existing:
+        project_for_user(db, existing.project_id, actor_id, "relation.write")
+        return existing
     if relation == "depends_on":
         if source.kind != "task" or target.kind != "task":
             raise Problem(422, "선행 관계는 작업끼리 연결합니다.")
         edges = [
             (x.source_id, x.target_id)
-            for x in project_links(db, project_id)
+            for x in db.scalars(
+                select(Link).where(Link.relation == "depends_on")
+            )
             if x.relation == "depends_on"
         ]
         check_dependency_cycle(source.id, target.id, edges)
@@ -206,10 +315,47 @@ def is_stale(link: Link, items: dict[str, Item]) -> bool:
     return (
         link.source_id not in items
         or link.target_id not in items
-        or items[link.source_id].revision != link.source_revision
-        or items[link.target_id].revision != link.target_revision
+        or not equivalent_revision(items[link.source_id], link.source_revision)
+        or not equivalent_revision(items[link.target_id], link.target_revision)
         or link.review.get("impact") == "action_required"
     )
+
+
+def equivalent_revision(item: Item, revision: int) -> bool:
+    if item.revision == revision:
+        return True
+    db = object_session(item)
+    if db is None or revision > item.revision:
+        return False
+    original = db.get(Revision, (item.id, revision))
+    if original is None or any(
+        getattr(original, key) != getattr(item, key)
+        for key in ("title", "body", "data", "status")
+    ):
+        return False
+    # Read only receipts that can explain this item's revision chain.
+    transfers = db.scalars(
+        select(TaskTransfer).where(
+            cast(TaskTransfer.changes, JSONB).contains([{"id": item.id}])
+        )
+    )
+    changes = {
+        change["before_revision"]
+        for transfer in transfers
+        for change in transfer.changes
+        if change["id"] == item.id
+        and change["after_revision"] == change["before_revision"] + 1
+    }
+    for number in range(revision, item.revision):
+        if number not in changes:
+            return False
+        snapshot = db.get(Revision, (item.id, number + 1))
+        if snapshot is None or any(
+            getattr(snapshot, key) != getattr(original, key)
+            for key in ("title", "body", "data", "status")
+        ):
+            return False
+    return True
 
 
 def latest_case_run(db: Session, case: Item) -> TestRun | None:
@@ -229,9 +375,54 @@ def check_task_completion(
     task: Item,
     data: dict,
     completion_states: dict[str, str] | None = None,
+    *,
+    actor_id: str | None = None,
 ) -> None:
-    items = {x.id: x for x in project_items(db, task.project_id)}
-    links = project_links(db, task.project_id)
+    references = db.get(ProjectArchiveReferences, task.project_id)
+    if references is not None and any(
+        (
+            (link["source_id"] == task.id and link["relation"] == "depends_on")
+            or (
+                link["target_id"] == task.id and link["relation"] == "verifies"
+            )
+        )
+        and (
+            link["source_id"] in references.data.get("missing_item_ids", [])
+            or link["target_id"] in references.data.get("missing_item_ids", [])
+        )
+        for link in references.data.get("links", [])
+    ):
+        raise Problem(
+            409, "복구한 외부 의존·테스트 참조가 누락되어 완료할 수 없습니다."
+        )
+    owner = db.get(Project, task.project_id)
+    assert owner is not None
+    links = list(
+        db.scalars(
+            select(Link).where(
+                or_(Link.source_id == task.id, Link.target_id == task.id)
+            )
+        )
+    )
+    actor_id = actor_id or owner.owner_id
+    try:
+        items = {
+            item_id: item_for_user(db, item_id, actor_id)
+            for item_id in {
+                task.id,
+                *(
+                    endpoint
+                    for link in links
+                    for endpoint in (link.source_id, link.target_id)
+                ),
+            }
+        }
+    except Problem as exc:
+        if exc.status == 404:
+            raise Problem(
+                409, "참조 자료의 접근권을 확인할 수 없어 완료할 수 없습니다."
+            ) from exc
+        raise
     for link in links:
         if link.source_id == task.id and link.relation == "depends_on":
             state = (completion_states or {}).get(
@@ -267,14 +458,37 @@ def check_task_completion(
                 )
 
 
-def trace(db: Session, project_id: str) -> dict:
+def trace(
+    db: Session, project_id: str, *, actor_id: str | None = None
+) -> dict:
     items = {x.id: x for x in project_items(db, project_id)}
     links = project_links(db, project_id)
+    project = db.get(Project, project_id)
+    assert project is not None
+    actor_id = actor_id or project.owner_id
+    project_for_user(db, project_id, actor_id)
+    readable = set(db.scalars(accessible_project_ids(db, actor_id)))
+    visible_links = []
+    for link in links:
+        endpoints = [
+            db.get(Item, item_id)
+            for item_id in (link.source_id, link.target_id)
+        ]
+        if link.project_id not in readable or any(
+            item is None or item.project_id not in readable
+            for item in endpoints
+        ):
+            continue
+        visible_links.append(link)
+        for endpoint in endpoints:
+            assert endpoint is not None
+            items[endpoint.id] = endpoint
+    links = visible_links
     stale = [x for x in links if is_stale(x, items)]
     # Traverse ordinary links with a visited set; their cycles are allowed.
     requirements = []
     for item in items.values():
-        if item.kind != "requirement":
+        if item.kind != "requirement" or item.project_id != project_id:
             continue
         connected = {item.id}
         stack = [item.id]
@@ -308,7 +522,9 @@ def trace(db: Session, project_id: str) -> dict:
     }
 
 
-def project_summary(db: Session, project_id: str) -> dict:
+def project_summary(
+    db: Session, project_id: str, *, actor_id: str | None = None
+) -> dict:
     items = project_items(db, project_id)
     tasks = [
         x for x in items if x.kind == "task" and x.data["state"] != "cancelled"
@@ -336,7 +552,9 @@ def project_summary(db: Session, project_id: str) -> dict:
             ),
             "total": len(cases),
         },
-        "needs_review": len(trace(db, project_id)["stale_links"]),
+        "needs_review": len(
+            trace(db, project_id, actor_id=actor_id)["stale_links"]
+        ),
     }
 
 

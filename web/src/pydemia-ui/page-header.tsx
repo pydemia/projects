@@ -3,6 +3,7 @@ import { cn } from "./utils";
 
 type PageHeaderProps = Omit<ComponentProps<"header">, "children" | "title"> & {
     title: ReactNode;
+    titleLabel?: string;
     subtitle?: ReactNode;
     eyebrow?: ReactNode;
     actions?: ReactNode;
@@ -30,6 +31,7 @@ const sizeClasses = {
 
 function PageHeader({
     title,
+    titleLabel,
     subtitle,
     eyebrow,
     actions,
@@ -62,7 +64,7 @@ function PageHeader({
                         {eyebrow}
                     </p>
                 )}
-                <Heading data-ui="heading" className={cn(
+                <Heading data-ui="heading" aria-label={titleLabel} className={cn(
                     "m-0 font-semibold leading-tight tracking-tight " +
                     "text-foreground",
                     styles.title,

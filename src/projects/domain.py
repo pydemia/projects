@@ -1,9 +1,12 @@
 """Business validation independent of HTTP and persistence."""
 
+import hashlib
+import json
 import re
 from collections import defaultdict
 from datetime import date
 from typing import Literal
+from uuid import UUID
 
 from pydantic import (
     BaseModel,
@@ -12,6 +15,9 @@ from pydantic import (
     ValidationError,
     field_validator,
 )
+
+from projects.assistant_result import AssistantResult
+from projects.note_reference_data import NoteReference
 
 type ItemKind = Literal[
     "idea",
@@ -50,6 +56,23 @@ class FeatureData(StrictData):
 
 
 class RequirementData(StrictData):
+    problem: str = ""
+    expected_outcome: str = ""
+    scope: str = ""
+    exclusions: str = ""
+    processing_state: (
+        Literal[
+            "raised",
+            "reviewing",
+            "planned",
+            "in_progress",
+            "verifying",
+            "fulfilled",
+            "on_hold",
+            "excluded",
+        ]
+        | None
+    ) = None
     category: Literal["functional", "nonfunctional"] = "functional"
     acceptance_criteria: list[str] = Field(
         default_factory=list, max_length=100
@@ -60,6 +83,22 @@ class RequirementData(StrictData):
     ] = "new"
     feature_ids: list[str] = Field(default_factory=list, max_length=100)
     excluded_reason: str = ""
+
+
+def story_criteria_hash(data: dict) -> str:
+    """Identify the acceptance scope, independently of cosmetic revisions."""
+    scope = {
+        "acceptance_criteria": data.get("acceptance_criteria", []),
+        **{
+            key: data.get(key, "")
+            for key in ("expected_outcome", "scope", "exclusions")
+        },
+    }
+    return hashlib.sha256(
+        json.dumps(
+            scope, sort_keys=True, ensure_ascii=False, separators=(",", ":")
+        ).encode("utf-8")
+    ).hexdigest()
 
 
 class ArtifactData(StrictData):
@@ -76,6 +115,13 @@ class ArtifactData(StrictData):
 
 
 class TaskData(StrictData):
+    assistant_result: AssistantResult | None = None
+    custom_fields: dict[str, str | int | float | bool | None] = Field(
+        default_factory=dict, max_length=100
+    )
+    note_references: list[NoteReference] = Field(
+        default_factory=list, max_length=100
+    )
     workflow: Literal["delivery", "personal"] = "delivery"
     state: Literal["todo", "in_progress", "in_review", "done", "cancelled"] = (
         "todo"
@@ -98,6 +144,14 @@ class TaskData(StrictData):
     target_sha: str = ""
     requires_test: bool = True
     cancellation_reason: str = ""
+
+    @field_validator("custom_fields")
+    @classmethod
+    def valid_custom_field_ids(cls, value: dict) -> dict:
+        for key in value:
+            if str(UUID(key)) != key:
+                raise ValueError("Use a canonical field UUID")
+        return value
 
     @field_validator("planned_date", "due_date")
     @classmethod

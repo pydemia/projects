@@ -70,9 +70,12 @@ export function StoriesPage({projectId, userId, route, items, onChanged, onPlan}
                         onPlan={onPlan}
                         verificationCurrent={selectedSummary?.verification_current}
                         taskProgress={selectedSummary && {done: selectedSummary.completed_task_count, total: new Set(selectedSummary.task_ids).size}} />
-                </> : <Empty title={route.item ? "선택한 Story를 찾을 수 없습니다." : "제목으로 첫 Story를 추가해 보세요."}>
-                    <p>{route.item ? "현재 접근할 수 있는 목록에서 다시 선택해 주세요." : "Task로 나누기 전에도 해결할 문제를 기록할 수 있습니다."}</p>
-                </Empty>}
+                </> : route.item ? <Empty title="선택한 Story를 찾을 수 없습니다.">
+                    <p>현재 접근할 수 있는 목록에서 다시 선택해 주세요.</p>
+                </Empty> : stories.length ? <Empty title="목록에서 Story를 선택해 주세요." /> :
+                    <Empty title="제목으로 첫 Story를 추가해 보세요.">
+                        <p>Task로 나누기 전에도 해결할 문제를 기록할 수 있습니다.</p>
+                    </Empty>}
             </CardContent></Card>
         </div>
         {creating && <NewStory projectId={projectId} userId={userId} onClose={() => setCreating(false)} onCreated={item => {

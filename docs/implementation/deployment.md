@@ -7,7 +7,8 @@ Story 목록은 제목 행만 표시한다. Task는 제목 버튼이나 행 여�
 
 - 기존 앱 이미지 `sha256:7611ef7be69201f3b8ba4d61753034ce18b851856415720a85d62562eb77016d`에 목록 UI 정적 자산 네 개를 추가해 이미지 `sha256:32f446962e6aa5c182ae5923032ced3b4ba8ce73f3c40808431615bff40a6608`로 전환
 - 현재 운영의 로그아웃 변경과 작업 요약을 포함한 기존 번들에서 목록 UI에 필요한 부분만 수정. 마크다운 모듈이 새 진입점과 같은 React 인스턴스를 사용하도록 양쪽 import 경로를 갱신
-- 현재 release는 `20261112-agent-track-dependencies-33dfdfe3c12a0ffb/story-task-lists-20261123-fa7d22fa19ef8f9a-df33fb47`. 적용 목록과 이전 Compose 파일 목록은 서버 release의 `manifest.json`과 `previous-config-files.json`에 보관
+- 첫 release `story-task-lists-20261123-fa7d22fa19ef8f9a-df33fb47`에 상세 선택 안내를 보완해 운영 이미지 `sha256:702aa3ff630c7bb36f3cfbc2ca4ead1ddb7c9d3925d5cf5a56ae79860c97420d`로 전환
+- 현재 release는 `20261112-agent-track-dependencies-33dfdfe3c12a0ffb/story-task-lists-20261123-b9cd22c597f95af8-e65e280f`. 적용 목록과 이전 Compose 파일 목록은 서버 release의 `manifest.json`과 `previous-config-files.json`에 보관
 - 앱 health, 환경변수 값, 실행 설정과 마운트, DB·edge·oauth2-proxy 컨테이너 ID 보존 확인. 공개 HTML·정적 자산·favicon의 해시와 비로그인 세션 거부 확인
 - 실제 Edge·격리 PostgreSQL에서 소스 빌드 흐름 11개 확인. 공개 운영 자산은 테스트 API 응답을 사용해 Edge 1720·390·320px에서 목록·본문·키보드 조작 확인
 

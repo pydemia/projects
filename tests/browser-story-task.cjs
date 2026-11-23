@@ -244,6 +244,7 @@ try {
       await goto('stories');
       const cards = page.getByLabel('Story 항목').locator('.doc-item');
       await expect(cards).toHaveCount(14);
+      if (width > 760) await expect(page.locator('.workspace-detail')).toContainText('목록에서 Story를 선택해 주세요.');
       const geometry = await cards.evaluateAll(elements => elements.map(element => {
         const bounds = element.getBoundingClientRect();
         return {top: bounds.top, bottom: bounds.bottom, contentBottom: element.lastElementChild.getBoundingClientRect().bottom};

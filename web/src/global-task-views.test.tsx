@@ -162,10 +162,10 @@ it("keeps global list pagination explicit", async () => {
     const tasks = vi.spyOn(api, "tasks").mockResolvedValueOnce(page(rows.slice(0, 50), "list-next", 151))
         .mockResolvedValueOnce(page(rows.slice(50, 100), "list-last", 151));
     render(<Global />);
-    await screen.findByRole("button", {name: "다음 작업 더 보기"});
+    const more = await screen.findByText("다음 작업 더 보기", {selector: "button"});
     expect(tasks).toHaveBeenCalledTimes(1);
     expect(tasks.mock.calls[0]?.[0].limit).toBe("50");
-    fireEvent.click(screen.getByRole("button", {name: "다음 작업 더 보기"}));
+    fireEvent.click(more);
     await waitFor(() => expect(document.querySelector(".task-result-count")?.textContent).toContain("불러온 작업 100개"));
     expect(tasks.mock.calls[1]?.[0].cursor).toBe("list-next");
 });

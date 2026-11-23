@@ -76,10 +76,16 @@ async function main() {
         pass("global task detail opens from the title or row padding, and the edit button still saves the title");
         await page.goto(url("board"));
         const card = page.locator(`[data-kanban-card="${task.id}"]`);
-        const cardTitle = card.locator(".inline-edit-value");
+        const cardTitle = card.locator(".task-board-title");
         await expect(cardTitle).toBeVisible();
-        expect((await cardTitle.boundingBox()).width).toBeGreaterThan((await card.boundingBox()).width - 45);
-        await cardTitle.click(); await card.getByRole("textbox").press("Escape");
+        const titleWidth = await cardTitle.evaluate(button => ({
+            button: button.getBoundingClientRect().width,
+            available: button.parentElement.clientWidth - button.nextElementSibling.getBoundingClientRect().width,
+        }));
+        expect(titleWidth.button).toBeGreaterThanOrEqual(titleWidth.available - 6);
+        expect(titleWidth.button).toBeGreaterThan(100);
+        await card.getByRole("button", {name: /제목 수정$/}).click();
+        await card.getByRole("textbox").press("Escape");
         await expect(cardTitle).toBeVisible();
         await cardTitle.dragTo(page.locator('[data-kanban-column="in_progress"]'), {targetPosition: {x: 80, y: 110}});
         await expect.poll(async () => (await request("GET", `/api/items/${task.id}`)).data.state).toBe("in_progress");

@@ -299,7 +299,7 @@ export function TaskWorkspace({ projectId, userId, route, items, selectedItem, r
         const anchor = anchors[view];
         if (!anchor) return;
         const frame = window.requestAnimationFrame(() => {
-            const link = workspaceRef.current?.querySelector<HTMLElement>(`[data-task-title-id="${anchor}"] :is(.task-open-button, button[data-ui="inline-edit-value"])`) ?? Array.from(workspaceRef.current?.querySelectorAll<HTMLAnchorElement>("a[href]") ?? [])
+            const link = workspaceRef.current?.querySelector<HTMLElement>(`[data-task-title-id="${anchor}"] :is(.task-open-button, .task-board-title, button[data-ui="inline-edit-value"])`) ?? Array.from(workspaceRef.current?.querySelectorAll<HTMLAnchorElement>("a[href]") ?? [])
                 .find(candidate => new URL(candidate.href, location.href).searchParams.get("item") === anchor);
             link?.scrollIntoView?.({block: "nearest", behavior: "auto"});
             link?.focus({preventScroll: true});

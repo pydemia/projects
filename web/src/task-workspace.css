@@ -32,9 +32,35 @@
 .task-board-toolbar [role="status"] { margin-left: auto; }
 .task-kanban [data-ui="kanban-column"] { min-height: 250px; }
 .task-kanban [data-kanban-card] { overflow-wrap: anywhere; }
-.task-kanban [data-kanban-card] > button[draggable] { touch-action: none; }
+.task-kanban .task-title-edit { display: block; }
+.task-kanban .task-board-title[data-ui="button"] {
+  flex: 1;
+  min-width: 0;
+  height: auto;
+  min-height: 28px;
+  justify-content: flex-start;
+  cursor: inherit;
+  padding: 0;
+  font: inherit;
+  text-align: start;
+  white-space: normal;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+.task-kanban .task-board-title > span { min-width: 0; }
+.task-kanban [data-kanban-card-header] .task-board-select {
+  align-self: center;
+  width: 20px;
+  min-width: 20px;
+  height: 20px;
+  min-height: 20px;
+  padding: 0;
+}
+@media (hover: hover) and (pointer: fine) {
+  .task-kanban [data-kanban-card] .inline-edit-trigger { width: 24px; min-width: 24px; height: 28px; min-height: 28px; }
+  .task-kanban [data-kanban-card]:not(:hover):not(:focus-within) .inline-edit-trigger { opacity: 0; }
+}
 .task-board-busy { opacity: .72; pointer-events: none; }
-.task-board-card-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
 .task-board-create { border-top: 1px solid var(--border); margin-top: 12px; padding-top: 8px; }
 .task-board-create form { display: grid; gap: 6px; }
 .task-board-create form > div { display: flex; gap: 6px; }
@@ -47,14 +73,6 @@
 .task-card-fields summary { cursor: pointer; font-size: 12px; }
 .task-card-fields label { padding: 5px 0; }
 .task-bulk-toolbar > strong { align-self: center; white-space: nowrap; }
-.task-board-detail { font-size: 11px; margin-right: auto; }
-.task-status-trigger, .task-more-trigger { border: 1px solid var(--border); border-radius: var(--control-radius); background: var(--surface); color: var(--foreground); cursor: pointer; min-height: 30px; padding: 3px 8px; font-size: 11px; }
-.task-status-trigger:hover, .task-more-trigger:hover { background: var(--surface-subtle); }
-.task-status-trigger:focus-visible, .task-more-trigger:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-.task-status-popover { width: 240px; }
-.task-status-popover label { display: block; margin-bottom: 5px; font-size: 12px; }
-.task-status-options { display: grid; gap: 3px; margin-top: 8px; }
-.task-status-options button { justify-content: start; }
 .task-calendar-head { display: flex; align-items: center; justify-content: center; gap: 16px; margin: 15px 0; }
 .task-calendar-head h2 { margin: 0; min-width: 140px; text-align: center; }
 .task-calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border-top: 1px solid var(--border); border-left: 1px solid var(--border); }

@@ -42,7 +42,7 @@ Popover·DropdownMenu·Dialog를 조합했다. `TaskFields.tsx`는 표시/순서
 | `pyd-field`, `pyd-dialog` | `ui.tsx` | 공통 필드와 신규/복원/영향 판단 Dialog |
 | `pyd-checkbox`, `pyd-native-select` | `ItemFields.tsx`, `RunsPage.tsx`, `TaskWorkspace.tsx`, `Relations.tsx`, `ProjectPages.tsx` | 완료·보드 상태·근거/결과 선택·관계/영향 입력 |
 | `pyd-card`, `pyd-navigation`, `pyd-search-input`, `pyd-tabs` | `ItemsPage.tsx`, `RunsPage.tsx`, `App.tsx` | 프로젝트 카드, 기획/문서/테스트/스킬 이력의 공통 목록→상세·검색·탭 |
-| `pyd-kanban`, `pyd-popover`, `pyd-dropdown-menu` | `TaskBoard.tsx` | 실제 카드 드래그·상태 검색 팝오버·작업 메뉴·키보드 이동 |
+| `pyd-kanban`, `pyd-dropdown-menu` | `TaskBoard.tsx` | 카드에서 상세 열기, 카드 드래그, 터치·키보드 이동 메뉴 |
 | `pyd-table`, `pyd-segmented-control`, `pyd-accordion`, `pyd-data-list` | `ProjectPages.tsx`, `TaskWorkspace.tsx`, `ItemsPage.tsx` | 추적 연결표/필터/기준선, 간편 GTD/ABC 옵션, 속성 |
 | `pyd-tokens`, `pyd-design-modes`, `ThemeScope` | `pydemia.css`, `theme.tsx` | 공통 semantic token, 디자인 모드·appearance·portal 스타일 |
 | 승인 pydemia 엠블럼 | `web/public/favicon.svg`, 16·24·32·48·64px light/dark PNG·ICO, `web/index.html`, `App.tsx` | 브라우저 favicon과 작업공간 브랜드 표식 |
@@ -61,10 +61,16 @@ drag를 연결했다. 기존 핸들·드롭/자동 스크롤·키보드 이동�
 `fc2544a50175dc7280eebffc1399aae1bbe589600c69af940fe75a966c42ddbe`다.
 
 같은 날 모바일 가로 칸반에서 열을 식별하도록 `data-kanban-column` 속성을
-추가했다. 현재 Kanban 수정본의 정규화 LF SHA-256은
+추가했다. 당시 Kanban 수정본의 정규화 LF SHA-256은
 `ec36128e9547b0833798004b96b17d547961f95b9e2eeecb0434a11d17a315f5`다.
 기존 SegmentedControl을 모바일의 네 보기·두 밀도 선택에도 사용한다.
 가로 열 배치·터치 스크롤과 상태 버튼·기억은 Projects CSS/TaskBoard가 소유한다.
+
+2026-11-23에는 [공용 Kanban 고정 릴리스](https://raw.githubusercontent.com/pydemia/ui/main/docs/r/releases/sha256-ae899d772b76b62f85fbc3d07f275052b234c6137527d30475847c8cf017ed7c/pyd-kanban.json)에서
+`kanban.tsx`를 그대로 편입했다. 파일 SHA-256은
+`9b2578e823bae3ee3b4c69f9d20a3ae0505a1ed18228bd1219a6905e97d5fe9b`다.
+카드 표면에서 상세를 열거나 드래그하고, 작업 메뉴에서 열과 수동 순서를 변경한다.
+Projects는 제목 편집, 일괄 선택, 관련 Story의 개수 표시와 펼치기를 연결한다.
 
 2026-11-02 목록의 `Checkbox`는 registry 원본을 유지하고 Projects의 label
 wrapper로 44px 터치와 20px 표시를 분리했다. 체크/테두리의 테마 색은 앱

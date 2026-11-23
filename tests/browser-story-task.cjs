@@ -149,13 +149,11 @@ try {
       await expect(page.locator('.task-result-count')).toContainText('2개 작업');
       assert.equal((await items()).filter(x=>x.kind==='task').length,2);
       if(view==='list'||view==='board') {
-        if(view==='list') {
-          const related=page.locator('.task-story-disclosure');
-          await expect(related).not.toHaveAttribute('open');
-          await related.locator('summary').click();
-          await expect(related).toHaveAttribute('open','');
-          await expect(page.locator('.task-selected')).toHaveCount(0);
-        }
+        const related=page.locator('.task-story-disclosure');
+        await expect(related).not.toHaveAttribute('open');
+        await related.locator('summary').click();
+        await expect(related).toHaveAttribute('open','');
+        await expect(page.locator('.task-selected')).toHaveCount(0);
         const chips=page.locator('.task-story-chips');
         await expect(chips).toBeVisible();await expect(chips.getByRole('link')).toHaveCount(2);
         await expect(chips.getByRole('link').first()).toHaveCSS('text-decoration-line','none');

@@ -154,7 +154,7 @@ it("retains an independently fetched selection without adding it to aggregate re
     expect(screen.getByText(/선택한 작업은 현재 조건 밖/)).toBeTruthy();
     await userEvent.click(screen.getByRole("tab", {name: "보드"}));
     expect(screen.getByRole("textbox", {name: "상세 초안"})).toBe(editor);
-    expect(screen.queryByRole("button", {name: "전역 작업 상태 메뉴"})).toBeNull();
+    expect(screen.queryByRole("button", {name: "전역 작업 작업 메뉴"})).toBeNull();
     expect(document.querySelector(".task-result-count")?.textContent).toContain("1개 작업");
 });
 
@@ -180,7 +180,8 @@ it("appends an individual global board status move without cross-project anchors
     expect(sort).toHaveProperty("value", "auto");
     expect(screen.getByText(/카드 소속 프로젝트/)).toBeTruthy();
     expect(within(sort).getByRole("option", {name: "수동 순서 · 드래그 가능"})).toHaveProperty("disabled", true);
-    fireEvent.click(screen.getByRole("button", {name: "전역 작업 오른쪽 열로 이동"}));
+    fireEvent.keyDown(screen.getByRole("button", {name: "전역 작업 작업 메뉴"}), {key: "Enter"});
+    fireEvent.click(await screen.findByRole("menuitem", {name: "진행 중 열로 이동"}));
     await waitFor(() => expect(move).toHaveBeenCalledWith(task.id, {
         expected_revision: task.revision, source_state: "todo", target_state: "in_progress", before_id: null, after_id: null,
     }));
@@ -205,7 +206,8 @@ it("keeps delivery completion gates and restores a rejected global board move", 
     const changed = vi.fn();
     const route = {project: "", view: "tasks", item: "", kind: "", q: "", run: "", baseline: "", taskLayout: "board", taskDensity: "compact"};
     render(<TaskWorkspace projectId="" userId={userId} route={route} items={[delivery]} onChanged={changed} />);
-    fireEvent.click(screen.getByRole("button", {name: "전역 작업 오른쪽 열로 이동"}));
+    fireEvent.keyDown(screen.getByRole("button", {name: "전역 작업 작업 메뉴"}), {key: "Enter"});
+    fireEvent.click(await screen.findByRole("menuitem", {name: "완료 열로 이동"}));
     await screen.findByText(/작업 상세에서 완료 근거를 확인/);
     expect(screen.getByRole("heading", {name: /검토 중\s*1/})).toBeTruthy();
     expect(changed).toHaveBeenCalledOnce();

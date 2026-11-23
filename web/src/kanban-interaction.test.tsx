@@ -16,7 +16,7 @@ it("scrolls a long column during a drag and leaves an invalid self-drop unchange
     let observedY = -1;
     column.addEventListener("dragover", event => { observedY = event.clientY; });
 
-    fireEvent.dragStart(screen.getByRole("button", { name: "첫 작업 끌어서 이동" }), { dataTransfer: dragData });
+    fireEvent.dragStart(screen.getByText("첫 작업"), { dataTransfer: dragData });
     expect(dragData.setData).toHaveBeenCalled();
     const over = new Event("dragover", { bubbles: true, cancelable: true });
     Object.defineProperty(over, "clientY", { value: 390 });
@@ -31,7 +31,7 @@ it("scrolls a long column during a drag and leaves an invalid self-drop unchange
     expect(changed).not.toHaveBeenCalled();
 });
 
-it("moves a card by its title or description, keeping the handle available", () => {
+it("moves a card by its title or description without a dedicated handle", () => {
     const changed = vi.fn();
     render(<Kanban label="본문 드래그" columns={[
         {id: "todo", title: "할 일", cards: [{id: "one", title: "본문 작업", description: "카드 설명"}]},
@@ -40,7 +40,8 @@ it("moves a card by its title or description, keeping the handle available", () 
     const card = screen.getByText("본문 작업").closest("li")!;
     const target = screen.getByRole("heading", {name: /진행 중\s*0/}).closest("section")!;
     expect(card.draggable).toBe(true);
-    for (const source of [screen.getByText("본문 작업"), screen.getByText("카드 설명"), screen.getByRole("button", {name: "본문 작업 끌어서 이동"})]) {
+    expect(card.querySelector("[data-kanban-drag-handle]")).toBeNull();
+    for (const source of [screen.getByText("본문 작업"), screen.getByText("카드 설명")]) {
         const dataTransfer = {setData: vi.fn(), setDragImage: vi.fn()};
         fireEvent.pointerDown(source);
         fireEvent.dragStart(source, {dataTransfer});
@@ -48,7 +49,24 @@ it("moves a card by its title or description, keeping the handle available", () 
         expect(changed).toHaveBeenLastCalledWith(expect.any(Array), expect.objectContaining({cardId: "one", fromColumnId: "todo", toColumnId: "doing"}));
         fireEvent.dragEnd(source);
     }
-    expect(changed).toHaveBeenCalledTimes(3);
+    expect(changed).toHaveBeenCalledTimes(2);
+});
+
+it("opens the card from its surface and keeps the keyboard menu independent", async () => {
+    const opened = vi.fn();
+    const changed = vi.fn();
+    render(<Kanban label="작업 보드" columns={[
+        {id: "todo", title: "할 일", cards: [{id: "one", title: "작업", description: "설명"}]},
+        {id: "doing", title: "진행 중", cards: []},
+    ]} onColumnsChange={changed} onCardOpen={opened} />);
+    fireEvent.click(screen.getByText("설명"));
+    expect(opened).toHaveBeenCalledOnce();
+    fireEvent.keyDown(screen.getByRole("button", {name: "작업 작업 메뉴"}), {key: "Enter"});
+    fireEvent.click(await screen.findByRole("menuitem", {name: "진행 중 열로 이동"}));
+    expect(opened).toHaveBeenCalledOnce();
+    expect(changed).toHaveBeenCalledWith(expect.any(Array), expect.objectContaining({
+        cardId: "one", toColumnId: "doing",
+    }));
 });
 
 it("does not start card drags from controls even when the browser targets the draggable ancestor", () => {

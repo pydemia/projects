@@ -48,7 +48,7 @@ it("uses capabilities independently of the role name and blocks archived work wr
     expect(canProject(archived, "project.archive")).toBe(true);
 });
 
-it("disables drag and keyboard board moves for a read-only task", () => {
+it("hides board move commands for a read-only task", async () => {
     const task = itemSchema.parse({...idea, kind: "task", title: "읽기 전용 카드", data: {workflow: "personal", requires_test: false}});
     if (task.kind !== "task") throw new Error("Expected task");
     const changed = vi.fn();
@@ -57,8 +57,9 @@ it("disables drag and keyboard board moves for a read-only task", () => {
         <TaskBoard projectId={projectId} tasks={[task]} lens="gtd" savedSort="manual" onSortChange={vi.fn()}
             selectedIds={new Set()} onSelect={vi.fn()} cardFields={[]} onChanged={changed} onError={vi.fn()} />
     </ProjectPermissionsProvider>);
-    expect(screen.getByRole("button", {name: "읽기 전용 카드 끌어서 이동"})).toHaveProperty("disabled", true);
-    expect(screen.getByRole("button", {name: "읽기 전용 카드 오른쪽 열로 이동"})).toHaveProperty("disabled", true);
+    fireEvent.keyDown(screen.getByRole("button", {name: "읽기 전용 카드 작업 메뉴"}), {key: "Enter"});
+    expect(await screen.findByRole("menuitem", {name: "상세 열기"})).toBeTruthy();
+    expect(screen.queryByRole("menuitem", {name: /이동/})).toBeNull();
     const card = view.container.querySelector(`[data-kanban-card="${task.id}"]`)!;
     expect(card.getAttribute("draggable")).toBe("false");
     const dataTransfer = {setData: vi.fn(), setDragImage: vi.fn()};

@@ -13,16 +13,10 @@ import type { Item, TaskFieldDefinition } from "./models";
 import { formatTaskField, taskFieldLabel } from "./TaskFields";
 import { Button } from "./pydemia-ui/button";
 import { Checkbox } from "./pydemia-ui/checkbox";
-import {
-    DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
-    DropdownMenuSeparator, DropdownMenuTrigger,
-} from "./pydemia-ui/dropdown-menu";
 import { Input } from "./pydemia-ui/input";
-import { Kanban, moveKanbanCard } from "./pydemia-ui/kanban";
+import { Kanban } from "./pydemia-ui/kanban";
 import type { KanbanColumn, KanbanMove } from "./pydemia-ui/kanban";
 import { NativeSelect } from "./pydemia-ui/native-select";
-import { Popover, PopoverContent, PopoverTrigger } from "./pydemia-ui/popover";
-import { RouteLink } from "./ui";
 
 type Task = Extract<Item, { kind: "task" }>;
 type TaskState = Task["data"]["state"];
@@ -78,8 +72,6 @@ export function TaskBoard({ projectId, tasks, lens, savedSort, onSortChange, sel
     }, [savedSort, projectId]);
     const [optimistic, setOptimistic] = useState<KanbanColumn[] | null>(null);
     const [busy, setBusy] = useState(false);
-    const [search, setSearch] = useState("");
-    const [statusOpenId, setStatusOpenId] = useState<string | null>(null);
     const [quickState, setQuickState] = useState<TaskState | null>(recovery.restored?.state ?? null);
     const [quickTitle, setQuickTitle] = useState(recovery.restored?.title ?? "");
     const [quickReason, setQuickReason] = useState(recovery.restored?.reason ?? "");
@@ -217,26 +209,6 @@ export function TaskBoard({ projectId, tasks, lens, savedSort, onSortChange, sel
         }
     }
 
-    function moveWithMenu(task: Task, state: TaskState, beforeId: string | null = null) {
-        setStatusOpenId(null);
-        if (busy) return;
-        const result = moveKanbanCard(columns, task.id, state, beforeId);
-        if (result) void commitMove(result.columns, result.move);
-    }
-
-    function adjacent(task: Task, direction: "up" | "down") {
-        if (sortMode === "auto") {
-            onError("자동 정렬 중에는 수동 순서를 바꿀 수 없습니다.");
-            return;
-        }
-        const column = columns.find(candidate => candidate.id === task.data.state);
-        if (!column) return;
-        const index = column.cards.findIndex(card => card.id === task.id);
-        if (direction === "up" && index > 0) moveWithMenu(task, task.data.state, column.cards[index - 1]!.id);
-        if (direction === "down" && index >= 0 && index < column.cards.length - 1)
-            moveWithMenu(task, task.data.state, column.cards[index + 2]?.id ?? null);
-    }
-
     async function quickCreate(event: React.FormEvent, state: TaskState) {
         if (!can(projectId, "task.create")) {event.preventDefault(); return;}
         event.preventDefault();
@@ -271,13 +243,20 @@ export function TaskBoard({ projectId, tasks, lens, savedSort, onSortChange, sel
                 <option value="manual" disabled={!projectId}>수동 순서 · 드래그 가능</option>
                 <option value="auto">{lens.toUpperCase()} 자동 순서 · 열 안 이동 제한</option>
             </NativeSelect>
-            {!projectId && <span>전역 보드는 자동 정렬입니다. 수동 순서는 프로젝트 작업에서 변경하세요.</span>}<span role="status" aria-live="polite">{busy ? "이동 저장 중…" : "카드를 끌거나 이동 버튼·메뉴를 사용하세요."}</span>
+            {!projectId && <span>전역 보드는 자동 정렬입니다. 수동 순서는 프로젝트 작업에서 변경하세요.</span>}<span role="status" aria-live="polite">{busy ? "이동 저장 중…" : !mobile ? "카드를 끌거나 작업 메뉴에서 이동하세요." : ""}</span>
             {undo && <Button variant="outline" disabled={busy || !can(projectId, "task.update")} onClick={() => { void undoLastMove(); }}>
                 {undo.title} 이동 되돌리기
             </Button>}
         </div>
         <Kanban label="작업 상태 보드" columns={columns} onColumnsChange={(next, move) => { void commitMove(next, move); }}
-            renderCardTitle={card => { const task = taskById.get(card.id); return task ? <><TaskTitleEdit task={task} disabled={busy} dragSurface onSaved={() => onChanged()} /><TaskStoryChips taskId={task.id} /></> : card.title; }}
+            onCardOpen={card => navigate({item: card.id})}
+            renderCardTitle={card => {
+                const task = taskById.get(card.id);
+                return task ? <TaskTitleEdit task={task} disabled={busy} dragSurface
+                    onOpen={() => navigate({item: task.id})} onSaved={onChanged} /> : card.title;
+            }}
+            renderCardSelection={card => <Checkbox className="task-board-select" aria-label={`${card.title} 일괄 선택`}
+                checked={selectedIds.has(card.id)} disabled={busy} onClick={event => onSelect(card.id, event.shiftKey)} />}
             onScroll={event => rememberScrolledColumn(event.currentTarget)}
             canReorder={sortMode === "manual"}
             canMoveCard={card => !busy && can(taskById.get(card.id)?.project_id ?? "", "task.update")}
@@ -303,48 +282,6 @@ export function TaskBoard({ projectId, tasks, lens, savedSort, onSortChange, sel
                     + {column.title} 작업
                 </Button>}
             </div> : null}
-            renderCard={card => {
-                const task = taskById.get(card.id);
-                if (!task) return null;
-                const currentColumn = columns.find(column => column.id === task.data.state);
-                const cardIndex = currentColumn?.cards.findIndex(candidate => candidate.id === task.id) ?? -1;
-                return <div className="task-board-card-actions">
-                    <Checkbox aria-label={`${task.title} 일괄 선택`} checked={selectedIds.has(task.id)}
-                        disabled={busy} onClick={event => onSelect(task.id, event.shiftKey)} />
-                    <RouteLink patch={{ item: task.id }} className="task-board-detail">상세 열기</RouteLink>
-                    <Popover open={statusOpenId === task.id} onOpenChange={open => { setStatusOpenId(open ? task.id : null); if (open) setSearch(""); }}>
-                        <PopoverTrigger className="task-status-trigger" disabled={busy || !can(task.project_id, "task.update")} aria-label={`${task.title} 상태 메뉴`}>
-                            {statusLabels[task.data.state]} ▾
-                        </PopoverTrigger>
-                        <PopoverContent align="start" className="task-status-popover">
-                            <label htmlFor={`status-search-${task.id}`}>상태 검색</label>
-                            <Input id={`status-search-${task.id}`} value={search} onChange={event => setSearch(event.target.value)}
-                                onKeyDown={event => event.stopPropagation()} placeholder="상태 검색" />
-                            <div className="task-status-options">
-                                {states.filter(state => statusLabels[state]!.toLocaleLowerCase().includes(search.toLocaleLowerCase()))
-                                    .map(state => <Button key={state} variant={state === task.data.state ? "outline" : "ghost"}
-                                        aria-current={state === task.data.state ? "true" : undefined}
-                                        onClick={() => {
-                                            if (state === task.data.state) setStatusOpenId(null);
-                                            else moveWithMenu(task, state);
-                                        }}>{statusLabels[state]}</Button>)}
-                            </div>
-                        </PopoverContent>
-                    </Popover>
-                    <DropdownMenu>
-                        <DropdownMenuTrigger className="task-more-trigger" disabled={busy} aria-label={`${task.title} 작업 메뉴`}>…</DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>{task.title}</DropdownMenuLabel>
-                            <DropdownMenuItem onSelect={() => navigate({ item: task.id })}>상세 편집</DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem disabled={!can(task.project_id, "task.update") || sortMode === "auto" || cardIndex <= 0}
-                                onSelect={() => adjacent(task, "up")}>위로 이동</DropdownMenuItem>
-                            <DropdownMenuItem disabled={!can(task.project_id, "task.update") || sortMode === "auto" || cardIndex < 0 || cardIndex >= (currentColumn?.cards.length ?? 0) - 1}
-                                onSelect={() => adjacent(task, "down")}>아래로 이동</DropdownMenuItem>
-                            <DropdownMenuItem disabled={!can(task.project_id, "task.update")} onSelect={() => moveWithMenu(task, "done")}>완료 열로 이동</DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                </div>;
-            }} />
+            renderCard={card => <TaskStoryChips taskId={card.id} collapsible />} />
     </div>;
 }

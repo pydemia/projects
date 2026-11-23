@@ -200,13 +200,13 @@ describe("task workspace", () => {
         expect(screen.getByText(/현재 스냅샷입니다/)).toBeTruthy();
     });
 
-    it("moves a personal task from the board status menu using the position API", async () => {
+    it("moves a personal task from the board card menu using the position API", async () => {
         const moved = { ...task, revision: 2, data: { ...task.data, state: "in_progress" as const } };
         const move = vi.spyOn(api, "moveTask").mockResolvedValue(moveResponse(moved));
         const view = render(<TaskWorkspace projectId={projectId} userId={userId}
             route={{ ...route, taskMode: "complex", taskView: "board" }} items={[task]} onChanged={vi.fn()} />);
-        fireEvent.click(screen.getByRole("button", { name: "짧은 작업 상태 메뉴" }));
-        fireEvent.click(await screen.findByRole("button", { name: "진행 중" }));
+        fireEvent.keyDown(screen.getByRole("button", { name: "짧은 작업 작업 메뉴" }), {key: "Enter"});
+        fireEvent.click(await screen.findByRole("menuitem", {name: "진행 중 열로 이동"}));
         await waitFor(() => expect(move).toHaveBeenCalledWith(task.id, expect.objectContaining({
             expected_revision: task.revision, source_state: "todo", target_state: "in_progress",
         })));
@@ -224,10 +224,11 @@ describe("task workspace", () => {
         const changed = vi.fn();
         const view = render(<TaskWorkspace projectId={projectId} userId={userId}
             route={{ ...route, taskMode: "complex", taskView: "board" }} items={[task]} onChanged={changed} />);
-        fireEvent.click(screen.getByRole("button", { name: "짧은 작업 오른쪽 열로 이동" }));
+        fireEvent.keyDown(screen.getByRole("button", { name: "짧은 작업 작업 메뉴" }), {key: "Enter"});
+        fireEvent.click(await screen.findByRole("menuitem", {name: "진행 중 열로 이동"}));
         await waitFor(() => expect(screen.getByText(/다른 변경이 저장되었습니다.*다시 이동해 주세요/)).toBeTruthy());
         expect(changed).toHaveBeenCalledOnce();
-        expect(screen.getByRole("button", { name: "짧은 작업 오른쪽 열로 이동" })).toBeTruthy();
+        expect(screen.getByRole("button", { name: "짧은 작업 작업 메뉴" })).toBeTruthy();
         expect(screen.getByRole("heading", { name: /할 일\s*1/ })).toBeTruthy();
         view.unmount();
         render(<TaskWorkspace projectId={projectId} userId={userId}
@@ -240,7 +241,8 @@ describe("task workspace", () => {
         const props = { projectId, userId, route: { ...route, taskMode: "complex", taskView: "board" }, items: [task], onChanged: vi.fn() };
         const view = render(<TaskWorkspace {...props} />);
         fireEvent.change(screen.getByRole("combobox", { name: "보드 정렬" }), { target: { value: "auto" } });
-        fireEvent.click(screen.getByRole("button", { name: "짧은 작업 오른쪽 열로 이동" }));
+        fireEvent.keyDown(screen.getByRole("button", { name: "짧은 작업 작업 메뉴" }), {key: "Enter"});
+        fireEvent.click(await screen.findByRole("menuitem", {name: "진행 중 열로 이동"}));
         await waitFor(() => expect(move).toHaveBeenCalledWith(task.id, expect.objectContaining({
             target_state: "in_progress", before_id: null, after_id: null,
         })));
@@ -257,7 +259,8 @@ describe("task workspace", () => {
         render(<TaskWorkspace projectId={projectId} userId={userId}
             route={{ ...route, taskMode: "complex", taskView: "board" }}
             items={[{ ...task, board_order: 0 }, next]} onChanged={vi.fn()} />);
-        fireEvent.click(screen.getByRole("button", { name: "다음 작업 위로 이동" }));
+        fireEvent.keyDown(screen.getByRole("button", { name: "다음 작업 작업 메뉴" }), {key: "Enter"});
+        fireEvent.click(await screen.findByRole("menuitem", {name: "위로 이동"}));
         await waitFor(() => expect(move).toHaveBeenCalledWith(next.id, expect.objectContaining({
             before_id: task.id, after_id: null,
         })));

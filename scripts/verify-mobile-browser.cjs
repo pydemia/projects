@@ -84,8 +84,8 @@ async function main() {
         await expect(page.locator('[data-ui="kanban-column"]:visible')).toHaveCount(1);
         await expect(page.locator('[data-ui="kanban-column"]:visible')).toContainText("보드 검토");
         await page.screenshot({ path: path.join(shots, "board-390.png"), fullPage: true });
-        await page.getByRole("button", { name: "보드 검토 상태 메뉴" }).click();
-        await page.getByRole("button", { name: "진행 중", exact: true }).click();
+        await page.getByRole("button", { name: "보드 검토 작업 메뉴" }).tap();
+        await page.getByRole("menuitem", { name: "진행 중 열로 이동", exact: true }).tap();
         await expect(page.getByRole("combobox", { name: "상태 열" })).toHaveValue("in_progress");
         const moved = await (await context.request.get(`${apiBase}/api/items/${review.id}`)).json();
         expect(moved.data.state).toBe("in_progress");

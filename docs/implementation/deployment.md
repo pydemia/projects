@@ -1,5 +1,14 @@
 # Projects 원격 배포와 Microsoft Entra 로그인
 
+## 2026-11-23 Kanban 카드 조작 운영 반영
+
+[공용 Kanban](https://ui.pydemia.ai/?component=kanban#components)을 먼저 게시한 뒤 Projects 작업 보드에 적용했다. 카드 표면에서 상세를 열거나 드래그한다. `···` 작업 메뉴에서는 열을 바꾸거나 수동 정렬 순서를 조정한다. 관련 Story는 개수를 눌러 펼친다.
+
+- 운영 앱 이미지 `sha256:702aa3ff630c7bb36f3cfbc2ca4ead1ddb7c9d3925d5cf5a56ae79860c97420d`에 칸반 정적 자산을 추가해 `sha256:64541b5c4692407950eff7dfe374df8905da6f7027fdf37ffbea5642d75f1f45`로 전환했다. DB·edge·oauth2-proxy 컨테이너와 앱 실행 설정 및 마운트를 대조했다.
+- 운영 릴리스 디렉터리는 `20261112-agent-track-dependencies-33dfdfe3c12a0ffb/kanban-card-controls-20261123-771045f96b01ef5b-51932899`다. 게시 자산의 해시와 이전 Compose 구성을 해당 디렉터리에 보관했다.
+- 공개 HTML·CSS·JS·favicon 해시, 앱 health, Microsoft 로그인 방식과 비로그인 세션 거부를 확인했다.
+- 웹 테스트 280개와 빌드가 통과했다. 격리 PostgreSQL과 Edge에서 제목 표시·편집·드래그를 확인했다. 운영 자산은 테스트 API 응답으로 Edge 1440·390·320px에서 카드 열기와 이동을 확인했다.
+
 ## 2026-11-23 Story·Task 목록 운영 반영
 
 Story 목록은 제목 행만 표시한다. Task는 제목 버튼이나 행 여백에서 본문을 열고,

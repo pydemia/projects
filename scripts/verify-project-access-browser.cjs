@@ -194,7 +194,7 @@ async function main() {
         await member.page.goto(tasksUrl(projectA, "board"));
         const editCard = member.page.locator(`[data-kanban-card="${editableTask.id}"]`);
         await expect(editCard).toHaveAttribute("draggable", "true");
-        await editCard.locator(".inline-edit-value").dragTo(member.page.locator('[data-kanban-column="in_progress"]'), {targetPosition: {x: 80, y: 110}});
+        await editCard.getByRole("button", {name: changedTitle, exact: true}).dragTo(member.page.locator('[data-kanban-column="in_progress"]'), {targetPosition: {x: 80, y: 110}});
         await expect.poll(async () => (await get(owner, `/api/items/${editableTask.id}`)).data.state).toBe("in_progress");
         await member.page.goto(tasksUrl(projectB));
         await expect(member.page.getByRole("button", {name: `${viewerTask.title} 제목 수정`, exact: true})).toBeDisabled();
@@ -202,8 +202,10 @@ async function main() {
         await member.page.goto(tasksUrl(projectB, "board"));
         const viewerCard = member.page.locator(`[data-kanban-card="${viewerTask.id}"]`);
         await expect(viewerCard).toHaveAttribute("draggable", "false");
-        await expect(viewerCard.getByRole("button", {name: `${viewerTask.title} 끌어서 이동`, exact: true})).toBeDisabled();
-        await expect(viewerCard.getByRole("button", {name: `${viewerTask.title} 상태 메뉴`, exact: true})).toBeDisabled();
+        await viewerCard.getByRole("button", {name: `${viewerTask.title} 작업 메뉴`, exact: true}).press("Enter");
+        await expect(member.page.getByRole("menuitem", {name: "상세 열기"})).toBeVisible();
+        await expect(member.page.getByRole("menuitem", {name: /이동/})).toHaveCount(0);
+        await member.page.keyboard.press("Escape");
         await screenshot(member.page, "viewer-board-desktop.png");
         pass("editor saves title/state and drags cards; viewer title/state/drag controls are disabled in the real browser");
 

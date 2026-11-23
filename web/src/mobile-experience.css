@@ -124,7 +124,7 @@
   .projects-theme .task-row .task-plan-actions button { min-height: 40px; }
   .projects-theme .task-row .task-select { grid-column: 1; grid-row: 1 / span 2; min-width: 44px; min-height: 44px; }
   .projects-theme .task-workspace[data-mobile-selecting="false"] .task-row .task-select,
-  .projects-theme .task-workspace[data-mobile-selecting="false"] .task-board-card-actions [data-ui="checkbox-control"] { display: none; }
+  .projects-theme .task-workspace[data-mobile-selecting="false"] .task-board-select { display: none; }
   .projects-theme .task-workspace[data-mobile-selecting="true"] .task-row .task-check { display: none; }
   .projects-theme .task-group-label { grid-column: 1 / -1; }
   .projects-theme .mobile-selection-bar { position: fixed; inset: auto 0 calc(68px + env(safe-area-inset-bottom)); z-index: 24; display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 62px; padding: 8px 16px; border-top: 1px solid var(--border); background: var(--surface); box-shadow: 0 -4px 16px color-mix(in srgb, var(--foreground) 7%, transparent); }
@@ -149,11 +149,7 @@
   .projects-theme .task-kanban > div { display: flex; min-width: max-content; padding-bottom: 10px; }
   .projects-theme .task-kanban [data-ui="kanban-column"] { display: block; flex: 0 0 min(82vw, 320px); width: min(82vw, 320px); max-height: none; overflow: visible; scroll-snap-align: start; }
   .projects-theme .task-kanban [data-kanban-card] { min-width: 0; }
-  .projects-theme .task-kanban [data-kanban-card] [data-kanban-action] { min-width: 36px; min-height: 36px; }
-  .projects-theme .task-board-card-actions { gap: 6px; }
-  .projects-theme .task-board-card-actions .task-board-detail { min-height: 36px; display: inline-flex; align-items: center; }
-  .projects-theme .task-status-trigger,
-  .projects-theme .task-more-trigger { min-height: 40px; min-width: 40px; }
+  .projects-theme .task-kanban [data-kanban-menu-trigger] { min-width: 44px; min-height: 44px; }
   .projects-theme .task-calendar-head,
   .projects-theme .task-calendar-grid,
   .projects-theme .task-calendar > .hint { display: none; }

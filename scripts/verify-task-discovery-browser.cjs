@@ -129,7 +129,7 @@ async function main() {
         await expect(todo.locator("[data-kanban-card]").first()).toHaveAttribute("data-kanban-card", undated.id);
         await page.reload();
         await expect(todo.locator("[data-kanban-card]").first()).toHaveAttribute("data-kanban-card", undated.id);
-        await card(task.id).getByRole("button", { name: `${task.title} 끌어서 이동`, exact: true }).dragTo(doing, { targetPosition: { x: 80, y: 110 } });
+        await card(task.id).getByRole("button", { name: task.title, exact: true }).dragTo(doing, { targetPosition: { x: 80, y: 110 } });
         await expect.poll(async () => (await readTask(task.id)).data.state).toBe("in_progress");
         await page.getByRole("button", { name: `${task.title} 이동 되돌리기`, exact: true }).click();
         await expect.poll(async () => (await readTask(task.id)).data.state).toBe("todo");
@@ -140,10 +140,10 @@ async function main() {
         await card(task.id).getByRole("checkbox", { name: `${task.title} 일괄 선택`, exact: true }).check();
         await expect(card(task.id).getByRole("checkbox", { name: `${task.title} 일괄 선택`, exact: true })).toBeChecked();
         await card(task.id).getByRole("checkbox", { name: `${task.title} 일괄 선택`, exact: true }).uncheck();
-        await card(task.id).getByRole("button", { name: `${task.title} 상태 메뉴`, exact: true }).click();
-        await expect(page.getByRole("textbox", { name: "상태 검색", exact: true })).toBeVisible();
+        await card(task.id).getByRole("button", { name: `${task.title} 작업 메뉴`, exact: true }).press("Enter");
+        await expect(page.getByRole("menuitem", { name: "진행 중 열로 이동", exact: true })).toBeVisible();
         await page.keyboard.press("Escape");
-        await card(task.id).getByRole("link", { name: "상세 열기", exact: true }).click();
+        await card(task.id).click({position: {x: 5, y: 5}});
         await expect(page).toHaveURL(new RegExp(`item=${task.id}`));
 
         await page.goto(`${base}/?project=${a.id}&view=tasks&taskScope=all&taskLayout=list&taskDensity=detailed&item=${task.id}`);
@@ -268,8 +268,10 @@ async function main() {
             await expect.poll(() => board.evaluate(element => element.scrollLeft)).toBeGreaterThan(900);
             await statusNav.getByRole("button", {name: /^할 일/}).click();
             await expect.poll(() => board.evaluate(element => element.scrollLeft)).toBe(0);
-            await phone.locator(`[data-kanban-card="${task.id}"]`).getByRole("button", {name: `${task.title} 상태 메뉴`, exact: true}).click();
-            await phone.getByRole("button", {name: "진행 중", exact: true}).click();
+            const cardMenu = phone.locator(`[data-kanban-card="${task.id}"]`).getByRole("button", {name: `${task.title} 작업 메뉴`, exact: true});
+            expect((await cardMenu.boundingBox()).height).toBeGreaterThanOrEqual(44);
+            await cardMenu.tap();
+            await phone.getByRole("menuitem", {name: "진행 중 열로 이동", exact: true}).tap();
             await expect.poll(async () => (await readTask(task.id)).data.state).toBe("in_progress");
             await expect(statusNav.getByRole("button", {name: /^진행 중/})).toHaveAttribute("aria-current", "true");
             await phone.getByRole("button", {name: `${task.title} 이동 되돌리기`, exact: true}).click();

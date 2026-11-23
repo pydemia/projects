@@ -12,11 +12,11 @@ import {
 import type { Bundle, Catalog, Item, Operation, Runtime, SkillRun } from "./models";
 import { ArtifactFields } from "./ItemFields";
 import { itemRoute } from "./Relations";
+import { CollectionLayout } from "./CollectionLayout";
 import { Card, CardContent } from "./pydemia-ui/card";
 import { Checkbox } from "./pydemia-ui/checkbox";
 import { NativeSelect } from "./pydemia-ui/native-select";
 import { SearchInput } from "./pydemia-ui/search-input";
-import { SideNav } from "./pydemia-ui/navigation";
 import { Textarea } from "./pydemia-ui/textarea";
 import {
     ActionButton, Badge, Empty, ErrorNotice, Field, Loading, Markdown, PageHead,
@@ -51,22 +51,24 @@ export function RunsPage({ projectId, userId, route, items, catalog, runtime, on
             {executable && <RouteLink className="button primary" patch={{ run: "new", item: "" }}>+ 새 실행</RouteLink>}
             <ActionButton onClick={runs.reload}>이력 새로고침</ActionButton>
         </PageHead>
-        <div className={`document-layout run-layout ${route.run ? "has-selection" : ""}`}>
+        <CollectionLayout selected={!!route.run} className="run-layout" list={
             <Card className="doclist workspace-collection" aria-label="스킬 실행 이력"><CardContent><div className="workspace-list-heading"><h2>실행 이력</h2><span>{visibleRuns.length}개</span></div>
                 <SearchInput label="실행 이력 검색" value={query} onValueChange={setQuery} onSearch={() => undefined} variant="toolbar" placeholder="작업 종류·요청·상태 검색" />
                 {runs.status === "loading" && <Loading />}
                 {runs.status === "error" && <ErrorNotice error={runs.error} retry={runs.reload} />}
-                {runs.status === "ready" && <SideNav aria-label="스킬 실행 항목" className="doc-list-items">
+                {runs.status === "ready" && <nav aria-label="스킬 실행 항목" className="doc-list-items">
                     {!runs.data.length && <p className="muted">아직 실행한 작업이 없습니다.</p>}
                     {!!runs.data.length && !visibleRuns.length && <p className="muted">일치하는 실행 이력이 없습니다.</p>}
-                    {[...visibleRuns].sort((a, b) => b.created_at.localeCompare(a.created_at)).map(run => <RouteLink key={run.id} patch={{ run: run.id }} appearance="side" className="doc-item" current={route.run === run.id}>
-                        <strong>{operationLabels[run.operation]}</strong><small className="truncate-two">{run.instruction}</small><Badge value={run.status} /><small><DateTimeValue value={run.created_at} /></small>
+                    {[...visibleRuns].sort((a, b) => b.created_at.localeCompare(a.created_at)).map(run => <RouteLink key={run.id} patch={{ run: run.id }} className="doc-item" current={route.run === run.id}>
+                        <strong>{operationLabels[run.operation]}</strong>
+                        <small className="truncate-two">{run.instruction}</small>
+                        <span className="doc-item-meta"><Badge value={run.status} /><small><DateTimeValue value={run.created_at} /></small></span>
                     </RouteLink>)}
-                </SideNav>}</CardContent></Card>
+                </nav>}</CardContent></Card>}>
             <Card className="document-main workspace-detail"><CardContent>
                 {route.run && <ActionButton className="mobile-detail-back" type="button" onClick={() => navigate({ run: "", item: "" })}>← 실행 이력</ActionButton>}
                 {route.run && route.run !== "new" ? <RunDetail key={route.run} runId={route.run} projectId={projectId} userId={userId} items={items} onStatusChanged={runs.reload} onChanged={() => { runs.reload(); onChanged(); }} /> : executable ? <RunComposer key={`${projectId}:${route.item}`} projectId={projectId} userId={userId} targetId={route.item} items={items} catalog={catalog} runtime={runtime} onRuntimeReload={onRuntimeReload} onCreated={run => { runs.reload(); navigate({ run: run.id }); }} /> : <Empty title="스킬 실행은 읽기 전용입니다."><p>왼쪽 이력에서 기존 실행과 결과를 확인할 수 있습니다.</p></Empty>}</CardContent></Card>
-        </div>
+        </CollectionLayout>
     </>;
 }
 

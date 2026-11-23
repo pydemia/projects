@@ -96,24 +96,103 @@
 .projects-theme .workspace-kind-tabs [data-ui="tab"] { border: 0; border-bottom: 2px solid transparent; border-radius: 0; padding: 10px 16px; background: transparent; white-space: nowrap; }
 .projects-theme .workspace-kind-tabs [data-ui="tab"][data-state="active"] { border-bottom-color: var(--accent); color: var(--accent); }
 .projects-theme .workspace-kind-tabs [data-ui="tab"] span { margin-left: 6px; font-size: 11px; color: var(--muted); }
-.projects-theme .document-layout { display: grid; grid-template-columns: minmax(270px, 318px) minmax(0, 1fr); gap: 16px; align-items: start; min-height: 0; border: 0; }
-.projects-theme .workspace-collection { position: sticky; top: 94px; min-width: 0; max-height: calc(100dvh - 112px); overflow: hidden; border: 1px solid var(--border); background: var(--surface); }
-.projects-theme .workspace-collection > div { display: flex; flex-direction: column; gap: 14px; max-height: inherit; padding: 18px; }
+.projects-theme .collection-layout {
+  display: grid;
+  grid-template-columns: var(--sidebar-width, clamp(216px, 34%, 360px)) 14px minmax(0, 1fr);
+  align-items: start;
+  min-height: 0;
+  border: 0;
+}
+.projects-theme .workspace-list-pane { position: sticky; top: 94px; min-width: 0; }
+.projects-theme .workspace-list-divider {
+  position: relative;
+  align-self: stretch;
+  width: auto;
+  cursor: col-resize;
+  touch-action: none;
+  user-select: none;
+}
+.projects-theme .workspace-list-divider::before {
+  position: absolute;
+  inset: 0 6px;
+  width: auto;
+  border-radius: 2px;
+  background: var(--border);
+  content: "";
+}
+.projects-theme .workspace-list-divider:is(:hover, :focus-visible, [data-dragging="true"])::before { background: var(--accent); }
+.projects-theme .workspace-list-divider:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.projects-theme .workspace-collection {
+  min-width: 0;
+  max-height: max(230px, calc(100dvh - 112px));
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+.projects-theme .workspace-collection > div {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: inherit;
+  padding: 16px 0 0;
+}
+.projects-theme .workspace-collection > div > :not(.doc-list-items) { flex: none; margin-inline: 16px; }
 .projects-theme .workspace-list-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
 .projects-theme .workspace-list-heading h2 { margin: 0; font-size: 15px; }
 .projects-theme .workspace-list-heading span { color: var(--muted); font-size: 12px; white-space: nowrap; }
 .projects-theme .workspace-collection [data-ui="search-input"] { gap: 0; }
 .projects-theme .workspace-collection [data-slot="search-controls"] { gap: 6px; }
 .projects-theme .workspace-collection [data-slot="search-controls"] input { min-width: 0; }
-.projects-theme .workspace-collection .doc-list-items { display: grid; align-content: start; gap: 3px; max-height: none; overflow-y: auto; margin: 0 -8px -4px; padding: 4px 8px 8px; }
-.projects-theme .workspace-collection .doc-item { display: block; width: 100%; margin: 0; padding: 11px 12px; border-left: 2px solid transparent; border-radius: var(--control-radius); color: var(--foreground); background: transparent; font-size: 13px; line-height: 1.4; }
+.projects-theme .workspace-collection .doc-list-items {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-height: 0;
+  max-height: none;
+  overflow: auto;
+  overscroll-behavior-y: contain;
+  scrollbar-gutter: stable;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-block-start: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.projects-theme .workspace-collection .doc-list-items > p { margin: 0; padding: 12px 16px; }
+.projects-theme .workspace-collection .doc-item {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  justify-content: center;
+  width: 100%;
+  height: auto;
+  min-height: 44px;
+  margin: 0;
+  padding: 10px 14px;
+  border: 0;
+  border-block-end: 1px solid var(--border);
+  border-inline-start: 3px solid transparent;
+  border-radius: 0;
+  color: var(--foreground);
+  background: transparent;
+  font-size: 13px;
+  line-height: 1.45;
+  text-decoration: none;
+  white-space: normal;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
 .projects-theme .workspace-collection .doc-item:hover { background: var(--surface-subtle); }
-.projects-theme .workspace-collection .doc-item[aria-current="page"] { border-left-color: var(--accent); color: var(--foreground); background: color-mix(in srgb, var(--accent) 9%, var(--surface)); }
+.projects-theme .workspace-collection .doc-item[aria-current="page"] { border-inline-start-color: var(--accent); background: color-mix(in srgb, var(--accent) 9%, var(--surface)); }
+.projects-theme .workspace-collection .doc-item:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
 .projects-theme .workspace-collection .doc-item strong { font-weight: 600; overflow-wrap: anywhere; }
 .projects-theme .workspace-collection .doc-item small { margin: 4px 0 0; }
 .projects-theme .doc-item-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 5px; }
 .projects-theme .doc-item-meta small, .projects-theme .doc-item-meta .badge { margin: 0; }
-.projects-theme .workspace-detail { min-width: 0; min-height: 420px; padding: 0; border: 1px solid var(--border); background: var(--surface); }
+.projects-theme .workspace-detail { container: workspace-detail / inline-size; min-width: 0; min-height: 420px; padding: 0; border: 1px solid var(--border); background: var(--surface); }
 .projects-theme .workspace-detail > div { padding: clamp(18px, 2vw, 30px); }
 .projects-theme .document-editor { min-width: 0; }
 .projects-theme .doc-heading { padding: 0 0 18px; border-bottom: 1px solid var(--border); }
@@ -125,6 +204,13 @@
 .projects-theme .editor-tabs [data-ui="tab"][data-state="active"] { color: var(--accent); border-bottom-color: var(--accent); background: transparent; }
 .projects-theme .doc-split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(180px, 220px); gap: 26px; }
 .projects-theme .doc-aside { border-left: 1px solid var(--border); padding: 2px 0 0 19px; }
+.projects-theme .workspace-detail .doc-heading { flex-wrap: wrap; gap: 8px 14px; }
+.projects-theme .workspace-detail .doc-heading > div:first-child { flex: 1 1 min(19rem, 100%); }
+.projects-theme .workspace-detail .doc-heading .actions { max-width: 100%; margin-bottom: 0; justify-content: flex-start; }
+@container workspace-detail (max-width: 620px) {
+  .projects-theme .workspace-detail .doc-split { grid-template-columns: minmax(0, 1fr); }
+  .projects-theme .workspace-detail .doc-aside { border-inline-start: 0; border-block-start: 1px solid var(--border); padding: 16px 0 0; }
+}
 .projects-theme .field[data-ui="field"] { display: grid; gap: 7px; margin: 0 0 18px; font-weight: 400; }
 .projects-theme .field[data-ui="field"] > label { margin: 0; font-size: 12px; font-weight: 600; }
 .projects-theme .field[data-ui="field"] > div { width: 100%; }
@@ -176,15 +262,14 @@
 .projects-theme .baseline-section { padding: 22px; border: 1px solid var(--border); border-radius: var(--panel-radius, 8px); background: var(--surface); }
 .projects-theme [data-ui="accordion"] .baseline-list { margin: 10px 0 0; }
 @media (max-width: 1180px) {
-  .projects-theme .document-layout { grid-template-columns: minmax(230px, 275px) minmax(0, 1fr); }
   .projects-theme .doc-split { grid-template-columns: 1fr; }
   .projects-theme .doc-aside { border-left: 0; border-top: 1px solid var(--border); padding: 18px 0 0; }
 }
 @media (max-width: 760px) {
-  .projects-theme .document-layout { grid-template-columns: 1fr; gap: 12px; }
-  .projects-theme .workspace-collection { position: static; max-height: none; }
-  .projects-theme .workspace-collection .doc-list-items { display: flex; gap: 6px; max-height: 160px; overflow-x: auto; overflow-y: auto; }
-  .projects-theme .workspace-collection .doc-item { flex: 0 0 210px; white-space: normal; }
+  .projects-theme .collection-layout { display: block; }
+  .projects-theme .workspace-list-pane { position: static; }
+  .projects-theme .workspace-collection { max-height: none; }
+  .projects-theme .workspace-collection .doc-list-items { overflow: visible; scrollbar-gutter: auto; }
   .projects-theme .workspace-detail { min-height: 240px; }
   .projects-theme .workspace-detail > div { padding: 18px; }
 }

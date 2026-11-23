@@ -56,6 +56,7 @@ def main() -> None:
         "verify-reauth-browser.cjs",
         "verify-datetime-browser.cjs",
         "verify-task-title-browser.cjs",
+        "verify-collection-layout-browser.cjs",
         "verify-project-access-browser.cjs",
         "verify-startup-browser.cjs",
         "verify-login-layout-browser.cjs",

@@ -14,10 +14,10 @@ import type { Catalog, Item, Kind, Revision } from "./models";
 import { cleanData, ItemDataFields } from "./ItemFields";
 import { itemRoute, Relations, StoryTaskLinks, TestExecutions } from "./Relations";
 import { Input } from "./pydemia-ui/input";
+import { CollectionLayout } from "./CollectionLayout";
 import { Card, CardContent } from "./pydemia-ui/card";
 import { DataList } from "./pydemia-ui/data-list";
 import { SearchInput } from "./pydemia-ui/search-input";
-import { SideNav } from "./pydemia-ui/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./pydemia-ui/tabs";
 import { Textarea } from "./pydemia-ui/textarea";
 import { InlineBodyEdit, InlineTextEdit } from "./InlineEdit";
@@ -85,19 +85,19 @@ export function ItemsPage({ projectId, userId, route, items, catalog, onChanged 
                 {viewKinds.map(kind => <TabsTrigger key={kind} value={kind}>{kindLabels[kind]} <span>{items.filter(item => item.kind === kind).length}</span></TabsTrigger>)}
             </TabsList>
         </Tabs>}
-        <div className={`document-layout ${selected ? "has-selection" : ""}`}>
+        <CollectionLayout selected={!!selected} list={
             <Card className="doclist workspace-collection" aria-label={`${title} 목록`}>
                 <CardContent>
                 <div className="workspace-list-heading"><h2>{kindLabels[validKind]} 목록</h2><span>{filtered.length}개</span></div>
                 <SearchInput label={`${title} 검색`} value={query} onValueChange={setQuery} onSearch={value => navigate({ q: value, item: "" })} variant="toolbar" placeholder="제목·ID·본문 검색" />
-                <SideNav aria-label={`${title} 항목`} className="doc-list-items">
-                    {filtered.map(item => <RouteLink key={item.id} patch={{ item: item.id }} appearance="side" className="doc-item" current={selected?.id === item.id}>
+                <nav aria-label={`${title} 항목`} className="doc-list-items">
+                    {filtered.map(item => <RouteLink key={item.id} patch={{ item: item.id }} className="doc-item" current={selected?.id === item.id}>
                         <strong>{item.title}</strong>
                         <span className="doc-item-meta"><small>{shortId(item.id)} · r{item.revision}</small><Badge value={item.kind === "task" ? item.data.state : item.status} /></span>
                     </RouteLink>)}
                     {!filtered.length && <p className="muted small">{route.q ? "검색 결과가 없습니다." : "아직 등록한 항목이 없습니다."}</p>}
-                </SideNav></CardContent>
-            </Card>
+                </nav></CardContent>
+            </Card>}>
             <Card className="document-main workspace-detail"><CardContent>
                 {selected && <ActionButton type="button" className="mobile-detail-back" onClick={() => navigate({ item: "" })}>← {kindLabels[validKind]} 목록</ActionButton>}
                 {selected ? <RecordEditor key={selected.id} item={selected} items={items} catalog={catalog} userId={userId} onChanged={onChanged} /> : <Empty title={route.item ? "선택한 항목을 찾을 수 없습니다." : `첫 ${kindLabels[validKind]}부터 시작해 보세요.`}>
@@ -105,7 +105,7 @@ export function ItemsPage({ projectId, userId, route, items, catalog, onChanged 
                     <ActionButton disabled={!can(projectId, itemWritePermission(validKind, true))} onClick={() => setNewKind(validKind)}>+ {kindLabels[validKind]} 만들기</ActionButton>
                 </Empty>}
             </CardContent></Card>
-        </div>
+        </CollectionLayout>
         {newKind && <NewItem kind={newKind} projectId={projectId} userId={userId} items={items} catalog={catalog}
             onClose={() => {setNewKind(null); recovery.clear();}} onCreated={item => { setNewKind(null); recovery.clear(); onChanged(); navigate(itemRoute(item)); }} />}
     </>;

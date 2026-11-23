@@ -68,12 +68,11 @@
   .projects-theme .page:has(> .document-layout.has-selection) > .pagehead,
   .projects-theme .page:has(> .document-layout.has-selection) .workspace-kind-tabs { display: none; }
   .projects-theme .document-layout { display: block; }
-  .projects-theme .document-layout.has-selection .workspace-collection,
+  .projects-theme .document-layout.has-selection .workspace-list-pane,
   .projects-theme .document-layout:not(.has-selection) .workspace-detail { display: none; }
   .projects-theme .workspace-collection { max-height: none; border: 0; background: transparent; }
   .projects-theme .workspace-collection > div { padding: 0; }
-  .projects-theme .workspace-collection .doc-list-items { display: grid; gap: 0; max-height: none; overflow: visible; margin: 0; padding: 0; }
-  .projects-theme .workspace-collection .doc-item { min-height: 58px; padding: 12px 4px; border: 0; border-bottom: 1px solid var(--border); border-radius: 0; }
+  .projects-theme .workspace-collection > div > :not(.doc-list-items) { margin-inline: 0; }
   .projects-theme .workspace-detail { min-height: 0; border: 0; }
   .projects-theme .workspace-detail > div { padding: 0; }
   .projects-theme .doc-split { display: block; }

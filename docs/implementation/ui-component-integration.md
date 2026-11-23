@@ -72,6 +72,16 @@ drag를 연결했다. 기존 핸들·드롭/자동 스크롤·키보드 이동�
 카드 표면에서 상세를 열거나 드래그하고, 작업 메뉴에서 열과 수동 순서를 변경한다.
 Projects는 제목 편집, 일괄 선택, 관련 Story의 개수 표시와 펼치기를 연결한다.
 
+테스트·임시 문서·자료·Story·스킬 실행 이력은 Projects의 `CollectionLayout`을
+공유한다. 목록 행은 제목과 보조 정보의 실제 높이에 맞춰 늘어난다. 데스크톱에서는
+목록 너비를 끌거나 키보드로 변경하고, 같은 브라우저에서 설정을 재사용한다.
+모바일에서는 세로 목록에서 항목을 선택해 상세를 연다.
+
+너비 조절에는 [공용 Sidebar의 resize 모듈](https://github.com/pydemia/ui/blob/d2d92feaf2a6c62f8d7257d8418b75aa6cc59384/packages/ui/src/components/sidebar/resize.tsx)을
+그대로 편입했다. 파일 SHA-256은
+`7a597f568280ae0c8e36022ed4019fb758e25fd584f261e78acc0eca6f3dc0d7`이다.
+Projects가 너비 범위와 상세 공간의 하한, 모바일 전환점을 정한다.
+
 2026-11-02 목록의 `Checkbox`는 registry 원본을 유지하고 Projects의 label
 wrapper로 44px 터치와 20px 표시를 분리했다. 체크/테두리의 테마 색은 앱
 CSS에서 지정한다. 구현 작업의 상태 선택은 기존 `NativeSelect`의 wrapper와

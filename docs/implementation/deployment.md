@@ -1,5 +1,15 @@
 # Projects 원격 배포와 Microsoft Entra 로그인
 
+## 2026-11-23 목록·상세 레이아웃 운영 반영
+
+테스트·임시 문서·자료·Story·스킬 실행 이력에 콘텐츠 높이를 따르는 세로 행과
+공통 목록·상세 레이아웃을 적용했다. 데스크톱에서 목록 너비를 변경하고 브라우저에
+저장한다. 모바일에서 항목 목록과 상세는 각자 화면 폭을 사용한다.
+
+- 운영 칸반 이미지에 목록 레이아웃 자산을 추가해 `sha256:513b28fcf6f03a08547b0769952df17a38a6f2941e38ee829d6db57204cc1af6`로 전환했다. 서버 릴리스 경로의 끝은 `collection-layout-20261123-a613da5e56fe7625-fdc3e4b1`이다.
+- 앱 health와 공개 자산 해시를 확인했다. 실행 설정·마운트와 DB·edge·oauth2-proxy 컨테이너를 대조했다.
+- 격리 PostgreSQL·Edge의 `verify-collection-layout-browser.cjs`에서 테스트·문서·Story의 행 높이, 목록 크기 변경·저장, 모바일 상세 왕복을 검증했다. 운영 자산은 테스트 API 응답과 함께 실행 이력을 포함한 네 화면에서 검증했다.
+
 ## 2026-11-23 Kanban 카드 조작 운영 반영
 
 [공용 Kanban](https://ui.pydemia.ai/?component=kanban#components)을 먼저 게시한 뒤 Projects 작업 보드에 적용했다. 카드 표면에서 상세를 열거나 드래그한다. `···` 작업 메뉴에서는 열을 바꾸거나 수동 정렬 순서를 조정한다. 관련 Story는 개수를 눌러 펼친다.

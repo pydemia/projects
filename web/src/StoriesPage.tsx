@@ -10,6 +10,7 @@ import { useProjectPermissions } from "./ProjectPermissions";
 import { Relations, StoryTaskLinks } from "./Relations";
 import { storyApi } from "./story-api";
 import { storyCriteria, storyState, storyStateLabels, storyProcessingStateSchema } from "./story-models";
+import { CollectionLayout } from "./CollectionLayout";
 import { Card, CardContent } from "./pydemia-ui/card";
 import { Input } from "./pydemia-ui/input";
 import { NativeSelect } from "./pydemia-ui/native-select";
@@ -53,16 +54,16 @@ export function StoriesPage({projectId, userId, route, items, onChanged, onPlan}
                 <small className="muted">현재 접근 가능한 범위 · 공유 Task는 한 번 집계</small>
             </>}
         </div>
-        <div className={`document-layout story-workspace ${selected ? "has-selection" : ""}`}>
+        <CollectionLayout selected={!!selected} className="story-workspace" list={
             <Card className="doclist workspace-collection" aria-label="Story 목록"><CardContent>
                 <div className="workspace-list-heading"><h2>Story 목록</h2><span>{filtered.length}개</span></div>
                 <SearchInput label="Story 검색" value={query} onValueChange={setQuery} onSearch={value => navigate({q: value, item: ""})} variant="toolbar" placeholder="제목·문제·기대 결과 검색" />
-                <nav aria-label="Story 항목" className="story-list">
+                <nav aria-label="Story 항목" className="doc-list-items">
                     {filtered.map(item => <RouteLink key={item.id} patch={{view: "stories", kind: "requirement", item: item.id}}
                         className="doc-item story-list-row" current={selected?.id === item.id}><strong>{item.title}</strong></RouteLink>)}
                     {!filtered.length && <p className="muted">{route.q ? "검색 결과가 없습니다." : "아직 등록한 Story가 없습니다."}</p>}
                 </nav>
-            </CardContent></Card>
+            </CardContent></Card>}>
             <Card className="document-main workspace-detail"><CardContent>
                 {selected ? <>
                     <ActionButton className="mobile-detail-back" onClick={() => navigate({item: ""})}>← Story 목록</ActionButton>
@@ -77,7 +78,7 @@ export function StoriesPage({projectId, userId, route, items, onChanged, onPlan}
                         <p>Task로 나누기 전에도 해결할 문제를 기록할 수 있습니다.</p>
                     </Empty>}
             </CardContent></Card>
-        </div>
+        </CollectionLayout>
         {creating && <NewStory projectId={projectId} userId={userId} onClose={() => setCreating(false)} onCreated={item => {
             setCreating(false); changed(); navigate({view: "stories", kind: "requirement", item: item.id});
         }} />}

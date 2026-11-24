@@ -155,6 +155,7 @@ function Workbench({ session, onLogout }: { session: Session; onLogout: () => vo
     const [createOpen, setCreateOpen] = useState(false);
     const [error, setError] = useState("");
     const [logoutBusy, setLogoutBusy] = useState(false);
+    const logoutInFlight = useRef(false);
     const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
     const pickerRecovery: AuthenticationDraft<z.infer<typeof projectPickerDraftSchema>> = useAuthenticationDraft("project:mobile-picker", projectPickerDraftSchema,
         () => mobileProjectsOpen ? {open: true} : null);
@@ -243,20 +244,41 @@ function Workbench({ session, onLogout }: { session: Session; onLogout: () => vo
         { id: "work", label: "작업", icon: "☷", patch: {view: "tasks", taskScope: "all", item: "", run: ""} },
     ];
     async function logout() {
+        if (logoutInFlight.current) return;
+        logoutInFlight.current = true;
         setLogoutBusy(true); setError("");
+        let recovery: ReturnType<typeof reauthentication.suspendForLogout> | undefined;
         try {
-            const result = await api.logout();
-            clearAcceptanceToken();
-            for (const key of Object.keys(sessionStorage)) if (key.startsWith(`projects:task-view-memory:${session.user.id}:`)) sessionStorage.removeItem(key);
+            recovery = reauthentication.suspendForLogout();
+            let mode = session.auth_mode ?? "password";
+            try { mode = (await api.logout()).auth_mode; }
+            catch (error) { if (!(error instanceof ApiError && error.status === 401)) throw error; }
+            if (!recovery.isCurrent()) return;
+            try { clearAcceptanceToken(); } catch { /* Continue clearing navigation memory. */ }
+            try {
+                for (const key of Object.keys(sessionStorage)) {
+                    if (!key.startsWith(`projects:task-view-memory:${session.user.id}:`)) continue;
+                    try { sessionStorage.removeItem(key); } catch { /* Continue with the remaining keys. */ }
+                }
+            } catch { /* Storage availability does not affect logout. */ }
             try { localStorage.removeItem(projectMemoryKey); } catch { /* No remembered project when storage is unavailable. */ }
-            if (result.auth_mode === "microsoft") {
-                window.location.assign("/oauth2/sign_out");
-                return;
+            if (mode === "microsoft") {
+                const form = document.createElement("form");
+                form.method = "post";
+                form.action = "/oauth2/logout-global";
+                form.hidden = true;
+                document.body.append(form);
+                form.submit();
+            } else onLogout();
+        } catch (error) {
+            if (!recovery || recovery.isCurrent()) {
+                recovery?.resume();
+                setError(errorMessage(error));
             }
-            onLogout();
+        } finally {
+            logoutInFlight.current = false;
+            setLogoutBusy(false);
         }
-        catch (error) { setError(errorMessage(error)); }
-        finally { setLogoutBusy(false); }
     }
     return <ProjectPermissionsProvider projects={projectRows}><AppShell appearance="canvas" className="shell"><a href="#main" className="skip-link">본문으로 이동</a>
         <AppBody className="workspace-body"><AppSidebar className="sidebar" aria-label="프로젝트 탐색"><div><Brand clientNavigation /><div className="workspace">개인 작업공간</div></div>

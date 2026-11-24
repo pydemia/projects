@@ -1,5 +1,5 @@
 import { ownerAccess } from "./permissions.test-support";
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import App from "./App";
 import { api, ApiError } from "./api";
@@ -61,4 +61,26 @@ it("offers Microsoft login with the current deep link instead of the workspace r
     mount();
     const link = await screen.findByRole("link", {name: "Microsoft 계정으로 로그인"});
     expect(new URL(link.getAttribute("href")!, location.origin).searchParams.get("rd")).toBe(original);
+});
+
+it("keeps session recovery suspended and posts Microsoft logout after a concurrent session expiry", async () => {
+    window.history.replaceState(null, "", original);
+    vi.mocked(api.session).mockResolvedValue({...session, auth_mode: "microsoft"});
+    const logout = vi.spyOn(api, "logout").mockImplementation(async () => {
+        window.dispatchEvent(new Event("projects:unauthorized"));
+        throw new ApiError("expired", 401);
+    });
+    const submit = vi.spyOn(HTMLFormElement.prototype, "submit").mockImplementation(function (this: HTMLFormElement) {
+        expect(this.method).toBe("post");
+        expect(new URL(this.action).pathname).toBe("/oauth2/logout-global");
+        this.remove();
+    });
+    try {
+        mount();
+        await screen.findByLabelText("작성 중인 작업");
+        fireEvent.click(screen.getAllByRole("button", {name: "로그아웃"})[0]!);
+        await waitFor(() => expect(submit).toHaveBeenCalledOnce());
+        expect(logout).toHaveBeenCalledOnce();
+        expect(reauthentication.snapshot().phase).toBe("idle");
+    } finally { submit.mockRestore(); logout.mockRestore(); }
 });

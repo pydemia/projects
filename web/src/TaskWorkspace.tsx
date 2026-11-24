@@ -21,6 +21,8 @@ import { TaskViewBar } from "./TaskViewBar";
 import { TaskTitleEdit } from "./TaskTitleEdit";
 import { TaskStoryChips, useTaskRelations } from "./StoryChips";
 import { TaskListStatus } from "./TaskListStatus";
+import { AgentTrackActivity, AgentTrackSummary } from "./AgentTrackSummary";
+import type { ContextSummary } from "./agent-track-shared/context/contracts";
 import { dataSchemas, statusLabels } from "./models";
 import type { Catalog, Item, TaskFieldDefinition, TaskViewSettings } from "./models";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "./pydemia-ui/dropdown-menu";
@@ -186,6 +188,8 @@ export function TaskWorkspace({ projectId, userId, route, items, selectedItem, r
 }) {
     const can = useProjectPermissions();
     const relations = useTaskRelations();
+    const [trackProject, setTrackProject] = useState<{ projectId: string; summary: ContextSummary | null }>({ projectId, summary: null });
+    const projectTrack = projectId && trackProject.projectId === projectId ? trackProject.summary : null;
     const parents = useMemo(() => taskParents(relations.links), [relations.links]);
     const accessKey = useProjectCatalog().map(project => `${project.id}:${project.access?.access_revision}`).sort().join(";");
     const quickRecovery: AuthenticationDraft<z.infer<typeof quickDraftSchema>> = useAuthenticationDraft(`workspace:${projectId || "global"}:creation`, quickDraftSchema,
@@ -612,6 +616,7 @@ export function TaskWorkspace({ projectId, userId, route, items, selectedItem, r
                     {rowGrouping !== "list" && !listFields.includes("list_name") && <span>{task.data.list_name}</span>}
                     {scope === "today" && task.data.planned_date && !listFields.includes("planned_date") && <span>실행 <DateTimeValue value={task.data.planned_date} dateOnly /></span>}
                     <TaskStoryChips taskId={task.id} collapsible />
+                    {projectTrack && <AgentTrackActivity summary={projectTrack} taskId={task.id} />}
                 </div>
             </div>
             </div>
@@ -695,6 +700,7 @@ export function TaskWorkspace({ projectId, userId, route, items, selectedItem, r
         onChanged();
     }} />;
     return <section ref={workspaceRef} data-density={mode} className={`task-workspace ${selected ? "has-task-selection" : ""}`} data-mobile-selecting={mobile && mode === "complex" && mobileSelecting}>
+        {projectId && <AgentTrackSummary key={`project:${projectId}`} projectId={projectId} compact onProjectSummary={summary => setTrackProject(current => current.projectId === projectId && current.summary === summary ? current : { projectId, summary })} />}
         {mobile && <div className="mobile-task-header"><div className="mobile-task-title"><div><h1>{projectId ? "작업" : "전체 작업"}</h1>{allProjectsLink}</div>
             <SegmentedControl className="task-density-control" label="보기 모드" name="mobile-task-mode" value={mode} onValueChange={value => changeMode(value as "simple" | "complex")}>
                 <SegmentedControlItem value="simple">간단</SegmentedControlItem><SegmentedControlItem value="complex">상세</SegmentedControlItem>
@@ -824,6 +830,7 @@ export function TaskWorkspace({ projectId, userId, route, items, selectedItem, r
             <div className="section-head"><h2>선택한 작업</h2><ActionButton disabled={!can(selected.project_id, "task.move")} onClick={() => startTransfer([selected.id])}>프로젝트 이동</ActionButton>
                 <ActionButton className="small" onClick={() => navigate({ item: "" })}>닫기</ActionButton></div>
             {!visible.some(task => task.id === selected.id) && <p role="status">선택한 작업은 현재 조건 밖에 있습니다. 상세와 초안은 유지됩니다.</p>}
+            <AgentTrackSummary key={`task:${selected.project_id}:${selected.id}`} projectId={selected.project_id} taskId={selected.id} />
             <TaskParentEditor key={`parent:${selected.id}`} task={selected} parentId={parents.get(selected.id)} parentTitle={taskCache.current.get(parents.get(selected.id) ?? "")?.title} />
             <RecordEditor key={`record:${selected.id}`} item={selected} items={items} catalog={catalog} userId={userId} onChanged={onChanged} /><TaskNoteReferences item={selected} onChanged={onChanged} /><TaskContext itemId={selected.id} revision={selected.revision} />
             {detailModal && taskTransfer}

@@ -17,6 +17,7 @@ import { Table, TableCell, TableHead } from "./pydemia-ui/table";
 import { Textarea } from "./pydemia-ui/textarea";
 import { ProjectNameEdit } from "./ProjectNameEdit";
 import { ProjectActions } from "./ProjectActions";
+import { AgentTrackSummary } from "./AgentTrackSummary";
 import {
     ActionButton, Badge, Empty, ErrorNotice, Field, Loading, Modal, PageHead, RouteLink,
 } from "./ui";
@@ -39,6 +40,7 @@ export function Overview({ project, items, revision, onProjectRenamed }: {
         <Card variant="subtle" className="scope-note"><CardContent><strong>현재 프로젝트 전체</strong><span className="scope-note-meta muted">{project.profile === "simple" ? "간편 프로필" : project.profile === "standard" ? "표준 프로필" : project.profile} · {items.length}개 항목</span>
             <p>{hasTests ? "요건·문서·작업·테스트는 각각의 근거와 상태로 관리합니다. 기준선은 추적·변경 화면에서 확인할 수 있습니다." : "작업과 문서를 한곳에서 확인하고, 다음에 할 일을 관리합니다."}</p>
         </CardContent></Card>
+        <AgentTrackSummary key={`project:${project.id}`} projectId={project.id} />
         {project.repository_url && <RepositoryHistory project={project} />}
         {!project.repository_url && project.repository_imported_at && project.repository_kind && <Card className="overview-panel repository-history"><CardContent><section>
             <h2>Git ZIP에서 시작</h2>

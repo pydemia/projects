@@ -1,0 +1,47 @@
+{
+  "repository": "pydemia/agent-track",
+  "integrationRevision": "ef0258f59407db11247973a01ca6c646e90ce214",
+  "sharedRevision": "508467bbf9c4aba4b8fcce91b4dfd20ae0cc8496",
+  "adaptations": [
+    "Remove unused default React import",
+    "Omit .ts suffix from native TypeScript imports"
+  ],
+  "files": {
+    "web/src/AgentTrackSummary.tsx": {
+      "source": "integrations/projects/web/src/AgentTrackSummary.tsx",
+      "revision": "ef0258f59407db11247973a01ca6c646e90ce214",
+      "sourceSha256": "0258ad9275b927f3716f41993266fd686fc84f6d08b4fa1c7bdfdeda8f51a3bb",
+      "adaptedSha256": "0258ad9275b927f3716f41993266fd686fc84f6d08b4fa1c7bdfdeda8f51a3bb"
+    },
+    "web/src/agent-track.css": {
+      "source": "integrations/projects/web/src/agent-track.css",
+      "revision": "ef0258f59407db11247973a01ca6c646e90ce214",
+      "sourceSha256": "6ad9080b479d9386642b8f87361ec2831a6bc8656a6fe435b16336b4e68759a0",
+      "adaptedSha256": "6ad9080b479d9386642b8f87361ec2831a6bc8656a6fe435b16336b4e68759a0"
+    },
+    "web/src/agent-track.test.tsx": {
+      "source": "integrations/projects/web/src/agent-track.test.tsx",
+      "revision": "ef0258f59407db11247973a01ca6c646e90ce214",
+      "sourceSha256": "d1fbfe65882fbf9ec7357af96d39e26f5786d8accc6da8e4a6519c791b1d8c5f",
+      "adaptedSha256": "d1fbfe65882fbf9ec7357af96d39e26f5786d8accc6da8e4a6519c791b1d8c5f"
+    },
+    "web/src/agent-track-shared/context/contracts.ts": {
+      "source": "packages/context/contracts.ts",
+      "revision": "508467bbf9c4aba4b8fcce91b4dfd20ae0cc8496",
+      "sourceSha256": "fde8fb44411e4be45461460ba1d2b41daba13a732ed9dbd8a596a7e7dfc8b24c",
+      "adaptedSha256": "032d2bc471c988060ea8571dbe36b8beb95c76743d877b26bd80ed9753235700"
+    },
+    "web/src/agent-track-shared/context/ExecutionSummary.tsx": {
+      "source": "packages/context/ExecutionSummary.tsx",
+      "revision": "508467bbf9c4aba4b8fcce91b4dfd20ae0cc8496",
+      "sourceSha256": "202f8b8b80f267d768de03bf91d46a83dc0e6d384e0d9ba5c1dbb875d106354c",
+      "adaptedSha256": "82dd85196cc041e28a06287100103e236890e5623a1da7477d741488e37d6f41"
+    },
+    "web/src/agent-track-shared/contracts/index.ts": {
+      "source": "packages/contracts/index.ts",
+      "revision": "508467bbf9c4aba4b8fcce91b4dfd20ae0cc8496",
+      "sourceSha256": "f567714f919879e1599858061de851b28271bfbba69b0571dc64d700a2688aa5",
+      "adaptedSha256": "f567714f919879e1599858061de851b28271bfbba69b0571dc64d700a2688aa5"
+    }
+  }
+}

@@ -60,6 +60,7 @@ export function createReauthenticationController(environment: RecoveryEnvironmen
     let context: {mode: AuthenticationMode; userId: string} | null = null;
     let destination = "/";
     let sequence = 0;
+    let logout: {pending: boolean} | null = null;
     const subscribers = new Set<() => void>();
     const checkpoints = new Set<Checkpoint>();
     function publish(next: RecoveryState) {
@@ -78,6 +79,7 @@ export function createReauthenticationController(environment: RecoveryEnvironmen
         } catch { return false; }
     }
     function required() {
+        if (logout) { logout.pending = true; return; }
         if (!context || state.phase !== "idle") return;
         destination = checkpointAcceptancePath(authenticationReturnPath(environment.location()), environment.location().origin);
         publish({phase: "required"});
@@ -116,8 +118,26 @@ export function createReauthenticationController(environment: RecoveryEnvironmen
         register: (checkpoint: Checkpoint) => { checkpoints.add(checkpoint); return () => { checkpoints.delete(checkpoint); }; },
         configure: (value: {mode: AuthenticationMode; userId: string} | null) => {
             sequence++;
+            logout = null;
             context = value;
             publish({phase: "idle"});
+        },
+        suspendForLogout: () => {
+            if (!context) throw new Error("로그아웃할 세션이 없습니다.");
+            if (!logout) {
+                logout = {pending: state.phase !== "idle"};
+                sequence++;
+                publish({phase: "idle"});
+            }
+            const current = logout;
+            return {
+                isCurrent: () => logout === current,
+                resume: () => {
+                    if (logout !== current) return;
+                    logout = null;
+                    if (current.pending) required();
+                },
+            };
         },
         required,
         run,

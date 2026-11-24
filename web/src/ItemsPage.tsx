@@ -22,6 +22,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "./pydemia-ui/tabs";
 import { Textarea } from "./pydemia-ui/textarea";
 import { InlineBodyEdit, InlineTextEdit } from "./InlineEdit";
 import { TaskQuickProperties } from "./TaskQuickProperties";
+import { AgentTrackSummary } from "./AgentTrackSummary";
 import {
     ActionButton, Badge, Empty, ErrorNotice, ExternalLink, Field, Loading, Markdown, Modal,
     PageHead, RouteLink, StringList,
@@ -100,7 +101,7 @@ export function ItemsPage({ projectId, userId, route, items, catalog, onChanged 
             </Card>}>
             <Card className="document-main workspace-detail"><CardContent>
                 {selected && <ActionButton type="button" className="mobile-detail-back" onClick={() => navigate({ item: "" })}>← {kindLabels[validKind]} 목록</ActionButton>}
-                {selected ? <RecordEditor key={selected.id} item={selected} items={items} catalog={catalog} userId={userId} onChanged={onChanged} /> : <Empty title={route.item ? "선택한 항목을 찾을 수 없습니다." : `첫 ${kindLabels[validKind]}부터 시작해 보세요.`}>
+                {selected ? <>{selected.kind === "task" && <AgentTrackSummary key={`task:${selected.project_id}:${selected.id}`} projectId={selected.project_id} taskId={selected.id} />}<RecordEditor key={selected.id} item={selected} items={items} catalog={catalog} userId={userId} onChanged={onChanged} /></> : <Empty title={route.item ? "선택한 항목을 찾을 수 없습니다." : `첫 ${kindLabels[validKind]}부터 시작해 보세요.`}>
                     <p>{route.item ? "다른 종류를 선택했거나 접근할 수 없는 항목일 수 있습니다. 목록에서 다시 선택해 주세요." : "왼쪽 목록에서 항목을 열거나 새로 작성할 수 있습니다."}</p>
                     <ActionButton disabled={!can(projectId, itemWritePermission(validKind, true))} onClick={() => setNewKind(validKind)}>+ {kindLabels[validKind]} 만들기</ActionButton>
                 </Empty>}

@@ -6,7 +6,7 @@ import { api, ApiError } from "./api";
 import { idea, projectId, userId } from "./fixtures.test-data";
 import { GlobalTasks } from "./GlobalTasks";
 import { useRoute } from "./hooks";
-import { itemSchema } from "./models";
+import { itemSchema, linkSchema, taskViewSchema } from "./models";
 import { TaskWorkspace } from "./TaskWorkspace";
 
 vi.mock("./ItemsPage", () => ({ NewItem: () => null, RecordEditor: () => <input aria-label="상세 초안" defaultValue="" /> }));
@@ -36,7 +36,7 @@ it.each(["compact", "detailed"])("opens every global layout in %s mode without l
     const save = vi.spyOn(api, "saveItem");
     const move = vi.spyOn(api, "moveTask");
     fireEvent.change(editor, {target: {value: "보존할 초안"}});
-    for (const [name, layout] of [["보드", "board"], ["캘린더", "calendar"], ["집계", "insights"], ["목록", "list"]]) {
+    for (const [name, layout] of [["보드", "board"], ["그래프", "graph"], ["캘린더", "calendar"], ["집계", "insights"], ["목록", "list"]]) {
         const tab = screen.getByRole("tab", {name});
         expect((tab as HTMLButtonElement).disabled).toBe(false);
         await userEvent.click(tab);
@@ -50,6 +50,7 @@ it.each(["compact", "detailed"])("opens every global layout in %s mode without l
             expect(screen.getByRole("combobox", {name: "보드 정렬"})).toHaveProperty("value", "auto");
             expect(screen.queryByRole("button", {name: "+ 할 일 작업"})).toBeNull();
         }
+        if (layout === "graph") expect(screen.getByRole("region", {name: "작업 그래프"})).toBeTruthy();
         if (layout === "calendar") expect(screen.getByRole("combobox", {name: "캘린더 날짜 기준"})).toBeTruthy();
         if (layout === "insights") expect(screen.getByRole("region", {name: "작업 집계"})).toBeTruthy();
     }
@@ -67,7 +68,7 @@ it("shows a visible 보기 모드 legend with concise selectable modes", () => {
     expect(new URLSearchParams(location.search).get("taskDensity")).toBe("detailed");
 });
 
-it.each(["board", "calendar", "insights"])("aggregates every bounded server page for global %s", async layout => {
+it.each(["board", "graph", "calendar", "insights"])("aggregates every bounded server page for global %s", async layout => {
     window.history.replaceState(null, "", `/?view=tasks&taskLayout=${layout}&taskDensity=compact`);
     const tasks = vi.spyOn(api, "tasks").mockResolvedValueOnce(page(rows.slice(0, 100), "next", 151)).mockResolvedValueOnce(page(rows.slice(100), null, 151));
     render(<Global />);
@@ -126,6 +127,38 @@ it("selects a canonical project while preserving layout and density", async () =
     expect(params.get("q")).toBe("전역");
 });
 
+it("loads a saved project filter and deadline layout before requesting tasks", async () => {
+    const otherProjectId = "00000000-0000-4000-8000-000000000992";
+    const otherTask = itemSchema.parse({...rows[0], project_id: otherProjectId, title: "다른 프로젝트 작업"});
+    const saved = taskViewSchema.parse({id: "00000000-0000-4000-8000-000000000993", project_id: null, owner_id: userId,
+        name: "내 마감 일정", scope: "personal", is_default: false, revision: 1,
+        settings: {schema_version: 2, task_scope: "all", view: "list", mode: "complex", query: "", status: "open",
+            lens: "gtd", minutes: 0, context: "", energy: "any", grouping: "state", sort: "deadline",
+            layout_sorts: {list: "gtd"}, card_fields: [], list_variant: "deadline", project_ids: [projectId]}});
+    vi.mocked(api.taskViews).mockResolvedValue([saved]);
+    const tasks = vi.spyOn(api, "tasks").mockImplementation(async params => page(params.project_ids ? [task] : [task, otherTask]));
+    window.history.replaceState(null, "", `/?view=tasks&savedView=${saved.id}`);
+    render(<Global />, undefined, [ownerProject(projectId, "선택 프로젝트"), ownerProject(otherProjectId, "다른 프로젝트")]);
+
+    await screen.findByRole("button", {name: "전역 작업"});
+    expect(tasks.mock.calls[0]?.[0]).toMatchObject({project_ids: projectId, sort: "deadline"});
+    expect(screen.getByRole("radio", {name: "마감 우선"})).toHaveProperty("checked", true);
+    expect(screen.queryByRole("button", {name: "다른 프로젝트 작업"})).toBeNull();
+
+    await userEvent.click(screen.getByRole("button", {name: /프로젝트 필터/}));
+    await userEvent.click(screen.getByRole("button", {name: "모두 보기"}));
+    await screen.findByRole("button", {name: "다른 프로젝트 작업"});
+    expect(new URLSearchParams(location.search).get("taskProjects")).toBe("");
+    expect(tasks.mock.lastCall?.[0]).not.toHaveProperty("project_ids");
+    expect(tasks.mock.lastCall?.[0].sort).toBe("deadline");
+
+    await userEvent.keyboard("{Escape}");
+    await userEvent.click(screen.getByRole("button", {name: /내 마감 일정 마감 우선/}));
+    await screen.findByRole("button", {name: "전역 작업"});
+    expect(tasks.mock.lastCall?.[0]).toMatchObject({project_ids: projectId, sort: "deadline"});
+    expect(screen.queryByRole("button", {name: "다른 프로젝트 작업"})).toBeNull();
+});
+
 it("aborts an old aggregate and ignores its late page when the filter changes", async () => {
     window.history.replaceState(null, "", "/?view=tasks&taskLayout=insights&taskDensity=detailed");
     let finishOld!: (value: ReturnType<typeof page>) => void;
@@ -144,11 +177,17 @@ it("aborts an old aggregate and ignores its late page when the filter changes", 
 });
 
 it("retains an independently fetched selection without adding it to aggregate results", async () => {
-    window.history.replaceState(null, "", `/?view=tasks&taskLayout=insights&item=${task.id}`);
+    const selectionProjectId = "00000000-0000-4000-8000-000000000990";
+    const selection = itemSchema.parse({...task, project_id: selectionProjectId});
+    const parentLink = linkSchema.parse({id: rows[1]!.id, project_id: selectionProjectId, source_id: selection.id, target_id: rows[2]!.id,
+        relation: "subtask_of", source_revision: 1, target_revision: 1});
+    window.history.replaceState(null, "", `/?view=tasks&taskLayout=insights&taskProjects=${projectId}&item=${selection.id}`);
     vi.spyOn(api, "tasks").mockResolvedValue(page([rows[0]!]));
-    vi.spyOn(api, "item").mockResolvedValue(task);
-    render(<Global />);
+    vi.spyOn(api, "item").mockResolvedValue(selection);
+    vi.mocked(api.links).mockImplementation(async id => id === selectionProjectId ? [parentLink] : []);
+    render(<Global />, undefined, [ownerProject(projectId, "결과 프로젝트"), ownerProject(selectionProjectId, "선택 작업 프로젝트")]);
     const editor = await screen.findByRole("textbox", {name: "상세 초안"});
+    await screen.findByRole("button", {name: "부모 작업 변경"});
     fireEvent.change(editor, {target: {value: "보존할 초안"}});
     await waitFor(() => expect(document.querySelector(".task-result-count")?.textContent).toContain("1개 작업"));
     expect(screen.getByText(/선택한 작업은 현재 조건 밖/)).toBeTruthy();
@@ -156,6 +195,10 @@ it("retains an independently fetched selection without adding it to aggregate re
     expect(screen.getByRole("textbox", {name: "상세 초안"})).toBe(editor);
     expect(screen.queryByRole("button", {name: "전역 작업 작업 메뉴"})).toBeNull();
     expect(document.querySelector(".task-result-count")?.textContent).toContain("1개 작업");
+    await userEvent.click(screen.getByRole("tab", {name: "그래프"}));
+    const graph = screen.getByRole("region", {name: "작업 그래프"});
+    await within(graph).findByText("작업 1개 · 관계 0개");
+    expect(graph.querySelector(`[data-task-graph-id="${selection.id}"]`)).toBeNull();
 });
 
 it("keeps global list pagination explicit", async () => {
@@ -191,12 +234,12 @@ it.each(["compact", "detailed"])("keeps every layout available for empty and com
     const completed = itemSchema.parse({...task, data: {...task.data, state: "done"}});
     const route = {project: "", view: "tasks", item: "", kind: "", q: "", run: "", baseline: "", taskLayout: "list", taskDensity: density, taskStatus: "done"};
     const view = render(<TaskWorkspace projectId="" userId={userId} route={route} items={[]} onChanged={vi.fn()} />);
-    for (const layout of ["list", "board", "calendar", "insights"]) {
+    for (const layout of ["list", "board", "graph", "calendar", "insights"]) {
         view.rerender(<TaskWorkspace projectId="" userId={userId} route={{...route, taskLayout: layout}} items={[]} onChanged={vi.fn()} />);
         for (const tab of screen.getAllByRole("tab")) expect(tab).toHaveProperty("disabled", false);
         view.rerender(<TaskWorkspace projectId="" userId={userId} route={{...route, taskLayout: layout}} items={[completed]} onChanged={vi.fn()} />);
         expect(document.querySelector(".task-result-count")?.textContent).toContain("1개 작업");
-        expect(screen.getByRole("tab", {name: {list: "목록", board: "보드", calendar: "캘린더", insights: "집계"}[layout]}).getAttribute("aria-selected")).toBe("true");
+        expect(screen.getByRole("tab", {name: {list: "목록", board: "보드", graph: "그래프", calendar: "캘린더", insights: "집계"}[layout]}).getAttribute("aria-selected")).toBe("true");
     }
 });
 

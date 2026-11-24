@@ -17,8 +17,6 @@
 .task-result-count { margin: 7px 0 14px; color: var(--muted); font-size: 12px; }
 .task-list { border-top: 1px solid var(--border); }
 .task-row { display: flex; align-items: start; gap: 12px; padding: 13px 7px; border-bottom: 1px solid var(--border); }
-.task-row:has(.task-group-label) { flex-wrap: wrap; }
-.task-group-label { flex: 0 0 100%; color: var(--muted); font-size: 12px; padding: 2px 0 4px; }
 .task-select { margin: 7px 2px 0; }
 .task-plan-actions { display: flex; gap: 4px; }
 .task-row-main { flex: 1; min-width: 0; }
@@ -30,7 +28,19 @@
 .task-board-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin: 0 0 12px; font-size: 12px; color: var(--muted); }
 .task-board-toolbar select { width: auto; min-width: 220px; }
 .task-board-toolbar [role="status"] { margin-left: auto; }
-.task-kanban [data-ui="kanban-column"] { min-height: 250px; }
+.projects-theme .task-kanban {
+  --task-kanban-column-width: 352px;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-color: var(--muted) var(--surface-subtle);
+}
+.projects-theme .task-kanban [data-ui="kanban-column"] {
+  flex: 0 0 var(--task-kanban-column-width);
+  width: var(--task-kanban-column-width);
+  min-height: 250px;
+}
 .task-kanban [data-kanban-card] { overflow-wrap: anywhere; }
 .task-kanban .task-title-edit { display: block; }
 .task-kanban .task-board-title[data-ui="button"] {

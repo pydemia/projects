@@ -93,13 +93,15 @@ export const taskViewSettingsSchema = z.object({
     task_scope: z.enum(["all", "today", "inbox", "upcoming"]).nullish(),
     calendar_date_field: z.enum(["planned", "due"]).optional(),
     mode: z.enum(["simple", "complex"]),
-    view: z.enum(["today", "inbox", "upcoming", "list", "board", "calendar", "insights"]),
+    view: z.enum(["today", "inbox", "upcoming", "list", "board", "graph", "calendar", "insights"]),
     query: text, status: text, lens: z.enum(["gtd", "abc"]),
     minutes: z.number().int().nonnegative(), context: text,
     energy: z.enum(["any", "low", "medium", "high"]),
     grouping: z.enum(["state", "list", "none"]),
-    sort: z.enum(["manual", "gtd", "abc", "due_date"]),
-    layout_sorts: z.object({list: z.enum(["manual", "gtd", "abc", "due_date"]), board: z.enum(["manual", "gtd", "abc", "due_date"])}).partial().optional(),
+    sort: z.enum(["manual", "gtd", "abc", "due_date", "deadline"]),
+    layout_sorts: z.object({list: z.enum(["manual", "gtd", "abc", "due_date", "deadline"]), board: z.enum(["manual", "gtd", "abc", "due_date", "deadline"])}).partial().optional(),
+    list_variant: z.enum(["state", "deadline", "split"]).nullish(),
+    project_ids: z.array(id).max(100).optional(),
     card_fields: z.array(text).max(32),
     list_fields: z.array(text).max(32).nullish(),
 });
@@ -164,7 +166,7 @@ export const summarySchema = z.object({
     needs_review: z.number().nonnegative(),
 });
 export const relationSchema = z.enum([
-    "source", "implements", "verifies", "depends_on", "relates_to",
+    "source", "implements", "verifies", "depends_on", "relates_to", "subtask_of",
 ]);
 export const linkSchema = z.object({
     id, project_id: id, source_id: id, target_id: id,
@@ -284,7 +286,7 @@ export const statusLabels: Record<string, string> = {
 };
 export const relationLabels: Record<z.infer<typeof relationSchema>, string> = {
     source: "근거", implements: "구현", verifies: "검증",
-    depends_on: "선행 작업", relates_to: "관련",
+    depends_on: "선행 작업", relates_to: "관련", subtask_of: "부모 작업",
 };
 export const operationLabels: Record<Operation, string> = {
     write_document: "문서 작성", revise_document: "문서 수정",

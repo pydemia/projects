@@ -172,6 +172,16 @@ class TaskQuickCreate(RequestModel):
     cancellation_reason: str = Field(default="", max_length=2000)
 
 
+class TaskParentUpdate(RequestModel):
+    parent_task_id: str | None = Field(max_length=36)
+    expected_parent_id: str | None = Field(max_length=36)
+
+    @field_validator("parent_task_id", "expected_parent_id")
+    @classmethod
+    def valid_task_id(cls, value: str | None) -> str | None:
+        return str(UUID(value)) if value is not None else None
+
+
 class TaskRevision(RequestModel):
     id: str
     expected_revision: int = Field(ge=1)
@@ -189,14 +199,24 @@ class TaskBulkChange(RequestModel):
 
 class TaskViewSettings(RequestModel):
     schema_version: Literal[1, 2] = 1
+    list_variant: Literal["state", "deadline", "split"] | None = None
+    project_ids: list[str] = Field(default_factory=list, max_length=100)
     task_scope: Literal["all", "today", "inbox", "upcoming"] | None = None
     calendar_date_field: Literal["planned", "due"] = "planned"
     layout_sorts: dict[
-        Literal["list", "board"], Literal["manual", "gtd", "abc", "due_date"]
+        Literal["list", "board"],
+        Literal["manual", "gtd", "abc", "due_date", "deadline"],
     ] = Field(default_factory=dict)
     mode: Literal["simple", "complex"]
     view: Literal[
-        "today", "inbox", "upcoming", "list", "board", "calendar", "insights"
+        "today",
+        "inbox",
+        "upcoming",
+        "list",
+        "board",
+        "calendar",
+        "insights",
+        "graph",
     ]
     query: str = Field(default="", max_length=1000)
     status: Literal[
@@ -207,9 +227,14 @@ class TaskViewSettings(RequestModel):
     context: str = Field(default="", max_length=80)
     energy: Literal["any", "low", "medium", "high"] = "any"
     grouping: Literal["state", "list", "none"] = "state"
-    sort: Literal["manual", "gtd", "abc", "due_date"] = "manual"
+    sort: Literal["manual", "gtd", "abc", "due_date", "deadline"] = "manual"
     card_fields: list[str] = Field(default_factory=list, max_length=32)
     list_fields: list[str] | None = Field(default=None, max_length=32)
+
+    @field_validator("project_ids")
+    @classmethod
+    def valid_project_ids(cls, values: list[str]) -> list[str]:
+        return sorted({str(UUID(value.strip())) for value in values})
 
     @field_validator("card_fields", "list_fields")
     @classmethod
@@ -224,6 +249,8 @@ class TaskViewSettings(RequestModel):
     @model_validator(mode="after")
     def compatible_view(self) -> Self:
         simple = {"today", "inbox", "upcoming"}
+        if self.view == "graph" and self.schema_version != 2:
+            raise ValueError("Graph requires version 2")
         if self.schema_version == 1 and (self.view in simple) != (
             self.mode == "simple"
         ):

@@ -40,7 +40,7 @@ import {
 
 const menu = [
     ["overview", "◫", "개요"], ["stories", "✎", "Story·요구사항"],
-    ["tasks", "☷", "Task"], ["documents", "▤", "임시 문서"], ["schedules", "▦", "상위 일정"],
+    ["tasks", "☷", "작업"], ["documents", "▤", "임시 문서"], ["schedules", "▦", "상위 일정"],
     ["tests", "✓", "테스트"], ["trace", "⌁", "추적·변경"],
     ["runs", "↗", "스킬 작업"],
 ];

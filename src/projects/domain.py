@@ -29,7 +29,12 @@ type ItemKind = Literal[
     "decision",
 ]
 type Relation = Literal[
-    "source", "implements", "verifies", "depends_on", "relates_to"
+    "source",
+    "implements",
+    "verifies",
+    "depends_on",
+    "relates_to",
+    "subtask_of",
 ]
 
 
@@ -224,3 +229,22 @@ def check_dependency_cycle(
         if node not in visited:
             visited.add(node)
             stack.extend(graph[node])
+
+
+def check_task_parent(
+    child: str, parent: str, edges: list[tuple[str, str]]
+) -> None:
+    if child == parent:
+        raise Problem(422, "작업을 자신의 상위 작업으로 지정할 수 없습니다.")
+    parents = dict(edges)
+    if child in parents and parents[child] != parent:
+        raise Problem(409, "작업에는 하나의 상위 작업만 지정할 수 있습니다.")
+    node = parent
+    visited: set[str] = set()
+    while node not in visited:
+        if node == child:
+            raise Problem(409, "상위·하위 작업 관계가 순환합니다.")
+        visited.add(node)
+        if node not in parents:
+            break
+        node = parents[node]

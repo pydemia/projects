@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { defaultDateTimeSettings, formatDateOnly } from "./date-time";
 import { useDateTimeSettings } from "./date-time-settings";
 import { z } from "zod";
@@ -192,13 +192,15 @@ function validDate(value: string): boolean {
     return Number.isFinite(parsed.valueOf()) && parsed.toISOString().slice(0, 10) === value;
 }
 
-function TaskFieldCell({ task, fieldKey, definitions, onChanged, onError, disabled = false, surface }: {
+function TaskFieldCell({ task, fieldKey, definitions, onChanged, onError, disabled = false, surface, referenceDay }: {
     task: Task; fieldKey: string; definitions: readonly TaskFieldDefinition[];
     onChanged: (item: Item) => void; onError?: (message: string) => void;
     disabled?: boolean;
     surface: string;
+    referenceDay: string;
 }) {
     const {dateFormat, timeZone} = useDateTimeSettings();
+    const dueCueId = useId();
     const recovery: AuthenticationDraft<z.infer<typeof cellDraftSchema>> = useAuthenticationDraft(`task:${task.project_id}:${task.id}:field:${fieldKey}:${surface}`, cellDraftSchema,
         () => open ? {draft, checked, expectedRevision, fieldType: type, options} : null);
     const [open, setOpen] = useState(!!recovery.restored);
@@ -222,6 +224,12 @@ function TaskFieldCell({ task, fieldKey, definitions, onChanged, onError, disabl
         : fieldKey === "acceptance_criteria" || fieldKey === "cancellation_reason" ? "multiline" : "text");
     const options = definition?.options ?? (fieldKey === "abc_priority" ? ["A", "B", "C"]
         : fieldKey === "energy" ? ["any", "low", "medium", "high"] : []);
+    const openTask = task.data.state !== "done" && task.data.state !== "cancelled";
+    const dueState = surface === "list" && fieldKey === "due_date" && openTask && validDate(task.data.due_date)
+        ? task.data.due_date < referenceDay ? "overdue" : task.data.due_date === referenceDay ? "today" : undefined
+        : undefined;
+    const priority = surface === "list" && fieldKey === "abc_priority" && task.data.abc_priority !== "none"
+        ? task.data.abc_priority : undefined;
 
     function changeOpen(value: boolean) {
         if (busy || (disabled && value)) return;
@@ -297,10 +305,12 @@ function TaskFieldCell({ task, fieldKey, definitions, onChanged, onError, disabl
         } finally { setBusy(false); }
     }
 
-    return <div className="task-field-cell" data-field-key={fieldKey}>
+    return <div className="task-field-cell" data-field-key={fieldKey} data-due-state={dueState} data-priority={priority}>
         <Popover open={open} onOpenChange={changeOpen}>
-            <PopoverTrigger asChild><Button variant="ghost" className="task-field-value" disabled={disabled || (custom && !definition)} aria-label={`${task.title} ${label} 편집`} title={label}>
-                <span className="task-field-mobile-label">{label}</span><span className="task-field-value-text">{formatTaskField(task, fieldKey, definitions, dateFormat, timeZone)}</span>
+            <PopoverTrigger asChild><Button variant="ghost" className="task-field-value" disabled={disabled || (custom && !definition)} aria-label={`${task.title} ${label} 편집`} aria-describedby={dueState ? dueCueId : undefined} title={label}>
+                <span className="task-field-mobile-label">{label}</span>
+                {dueState && <span id={dueCueId} className="task-field-due-cue">{dueState === "overdue" ? "지연" : "오늘"}</span>}
+                <span className="task-field-value-text">{formatTaskField(task, fieldKey, definitions, dateFormat, timeZone)}</span>
             </Button></PopoverTrigger>
             <PopoverContent align="start" className="task-field-editor" aria-label={`${label} 편집`} onInteractOutside={event => event.preventDefault()} onEscapeKeyDown={event => { if (busy) event.preventDefault(); }}>
                 <form onSubmit={event => void save(event)} noValidate>
@@ -323,11 +333,15 @@ function TaskFieldCell({ task, fieldKey, definitions, onChanged, onError, disabl
     </div>;
 }
 
-export function TaskFieldCells({ task, fields, definitions, onChanged, onError, disabled = false, surface = "list" }: {
+export function TaskFieldCells({ task, fields, definitions, onChanged, onError, disabled = false, surface = "list", referenceDay }: {
     task: Task; fields: readonly string[]; definitions: readonly TaskFieldDefinition[];
     onChanged: (item: Item) => void; onError?: (message: string) => void;
     disabled?: boolean;
     surface?: string;
+    referenceDay?: string;
 }) {
-    return <div className="task-field-cells">{fields.map(key => <TaskFieldCell key={key} task={task} fieldKey={key} definitions={definitions} onChanged={onChanged} onError={onError} disabled={disabled} surface={surface} />)}</div>;
+    const today = referenceDay ?? (surface === "list" ? new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Asia/Seoul", year: "numeric", month: "2-digit", day: "2-digit",
+    }).format(new Date()) : "");
+    return <div className="task-field-cells" data-surface={surface}>{fields.map(key => <TaskFieldCell key={key} task={task} fieldKey={key} definitions={definitions} onChanged={onChanged} onError={onError} disabled={disabled} surface={surface} referenceDay={today} />)}</div>;
 }

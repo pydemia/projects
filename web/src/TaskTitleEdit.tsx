@@ -10,8 +10,8 @@ import { Button } from "./pydemia-ui/button";
 type Task = Extract<Item, {kind: "task"}>;
 const titleDraftSchema = z.object({title: z.string(), revision: z.number().int().positive(),
     body: z.string(), data: dataSchemas.task.strict()}).strict();
-export function TaskTitleEdit({ task, onSaved, disabled = false, dragSurface = false, onOpen }: {
-    task: Task; onSaved: (item: Item) => void; disabled?: boolean; dragSurface?: boolean; onOpen?: () => void;
+export function TaskTitleEdit({ task, onSaved, disabled = false, dragSurface = false, current = false, onOpen }: {
+    task: Task; onSaved: (item: Item) => void; disabled?: boolean; dragSurface?: boolean; current?: boolean; onOpen?: () => void;
 }) {
     const can = useProjectPermissions();
     disabled = disabled || !can(task.project_id, "task.update");
@@ -45,7 +45,7 @@ export function TaskTitleEdit({ task, onSaved, disabled = false, dragSurface = f
     return <span className="task-title task-title-edit" data-task-title-id={task.id}>
         <InlineTextEdit label={`${task.title} 제목`} value={task.title} required maxLength={300} disabled={disabled || loading}
             preview={onOpen && <Button variant="ghost" className={dragSurface ? "task-board-title" : "task-open-button"}
-                data-kanban-title-edit={dragSurface || undefined} onClick={onOpen}><span>{task.title}</span></Button>}
+                data-kanban-title-edit={dragSurface || undefined} aria-current={current || undefined} onClick={onOpen}><span>{task.title}</span></Button>}
             initialDraft={!disabled ? recovery.restored?.title : undefined}
             onDraftChange={value => {entered.current = value; if (value === null) recovery.clear();}}
             dragSurface={dragSurface} onBegin={() => {base.current = task; setConflict(false); setError("");}}

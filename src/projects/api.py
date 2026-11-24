@@ -84,6 +84,7 @@ from projects.records import (
     revise_item,
     search_items,
     serialize,
+    set_task_parent,
     trace,
 )
 from projects.repository_import import GitHubInspector
@@ -111,6 +112,7 @@ from projects.schemas import (
     TaskBulkChange,
     TaskFieldInput,
     TaskMove,
+    TaskParentUpdate,
     TaskPropertiesUpdate,
     TaskQuickCreate,
     TaskTypeUpdate,
@@ -1463,6 +1465,19 @@ def create_app(
             )
         ]
 
+    @app.put("/api/items/{item_id}/task-parent")
+    def task_parent(
+        item_id: str, payload: TaskParentUpdate, db: DB, user: User
+    ) -> dict:
+        set_task_parent(
+            db,
+            user.id,
+            item_id,
+            payload.parent_task_id,
+            payload.expected_parent_id,
+        )
+        return {"ok": True}
+
     @app.post("/api/projects/{project_id}/links", status_code=201)
     def new_link(
         project_id: str, payload: LinkInput, db: DB, user: User
@@ -1529,6 +1544,8 @@ def create_app(
         require_project_access(db, link.project_id, user.id, "relation.write")
         for project_id in endpoints:
             require_project_access(db, project_id, user.id, "relation.write")
+            if link.relation == "subtask_of":
+                require_project_access(db, project_id, user.id, "task.update")
         db.refresh(link, with_for_update=True)
         return link
 

@@ -36,7 +36,8 @@
   .projects-theme .pagehead .actions { flex-shrink: 0; }
   .projects-theme .pagehead .actions:has(.git-source-action) { width: 100%; min-width: 0; flex-shrink: 1; flex-wrap: wrap; }
   .projects-theme .pagehead .actions:has(.git-source-action) > button { min-width: 0; flex: 1 1 auto; min-height: 44px; white-space: normal; }
-  .projects-theme .pagehead .actions .button:not(.primary) { display: none; }
+  .projects-theme .pagehead .actions .button:not(.primary, .project-work-link) { display: none; }
+  .projects-theme .pagehead .actions .project-work-link { min-height: 44px; }
   .projects-theme .metrics,
   .projects-theme .task-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .projects-theme .footer-note { padding-bottom: 5px; }
@@ -125,7 +126,6 @@
   .projects-theme .task-workspace[data-mobile-selecting="false"] .task-row .task-select,
   .projects-theme .task-workspace[data-mobile-selecting="false"] .task-board-select { display: none; }
   .projects-theme .task-workspace[data-mobile-selecting="true"] .task-row .task-check { display: none; }
-  .projects-theme .task-group-label { grid-column: 1 / -1; }
   .projects-theme .mobile-selection-bar { position: fixed; inset: auto 0 calc(68px + env(safe-area-inset-bottom)); z-index: 24; display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 62px; padding: 8px 16px; border-top: 1px solid var(--border); background: var(--surface); box-shadow: 0 -4px 16px color-mix(in srgb, var(--foreground) 7%, transparent); }
   .projects-theme .mobile-selection-bar button { min-height: 44px; }
   .projects-theme .task-workspace.has-task-selection .mobile-selection-bar,
@@ -144,9 +144,8 @@
   .projects-theme .task-board-toolbar { display: grid; grid-template-columns: 1fr; }
   .projects-theme .task-board-toolbar select { min-width: 0; width: 100%; min-height: 44px; }
   .projects-theme .task-board-toolbar [role="status"] { margin: 0; }
-  .projects-theme .task-kanban { max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity; touch-action: pan-x pan-y pinch-zoom; }
-  .projects-theme .task-kanban > div { display: flex; min-width: max-content; padding-bottom: 10px; }
-  .projects-theme .task-kanban [data-ui="kanban-column"] { display: block; flex: 0 0 min(82vw, 320px); width: min(82vw, 320px); max-height: none; overflow: visible; scroll-snap-align: start; }
+  .projects-theme .task-kanban { --task-kanban-column-width: min(88vw, 352px); scroll-snap-type: x proximity; touch-action: pan-x pan-y pinch-zoom; }
+  .projects-theme .task-kanban [data-ui="kanban-column"] { max-height: none; overflow: visible; scroll-snap-align: start; }
   .projects-theme .task-kanban [data-kanban-card] { min-width: 0; }
   .projects-theme .task-kanban [data-kanban-menu-trigger] { min-width: 44px; min-height: 44px; }
   .projects-theme .task-calendar-head,

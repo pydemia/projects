@@ -33,7 +33,12 @@ from projects.database import (
     TestRun,
     utcnow,
 )
-from projects.domain import Problem, check_dependency_cycle, validate_item_data
+from projects.domain import (
+    Problem,
+    check_dependency_cycle,
+    check_task_parent,
+    validate_item_data,
+)
 from projects.planning_archive import (
     export_planning,
     import_planning,
@@ -802,6 +807,7 @@ def _import_project(db: Session, user_id: str, encoded: str) -> Project:
                     project_id=project_id,
                 )
         edges: list[tuple[str, str]] = []
+        hierarchy: list[tuple[str, str]] = []
         for link in data["links"]:
             if (
                 link["source_id"] not in known_items
@@ -813,6 +819,21 @@ def _import_project(db: Session, user_id: str, encoded: str) -> Project:
                     link["source_id"], link["target_id"], edges
                 )
                 edges.append((link["source_id"], link["target_id"]))
+            if link["relation"] == "subtask_of":
+                child = known_items[link["source_id"]]
+                parent = known_items[link["target_id"]]
+                if (
+                    child["kind"] != "task"
+                    or parent["kind"] != "task"
+                    or child["project_id"] != parent["project_id"]
+                    or link["project_id"] != child["project_id"]
+                ):
+                    raise ValueError("task hierarchy endpoints")
+                try:
+                    check_task_parent(child["id"], parent["id"], hierarchy)
+                except Problem as exc:
+                    raise ValueError("task hierarchy") from exc
+                hierarchy.append((child["id"], parent["id"]))
         for baseline in data["baselines"]:
             if not set(baseline["revisions"]) <= set(known_items):
                 raise ValueError("baseline")

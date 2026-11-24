@@ -119,7 +119,8 @@ export function Relations({ item, items, onChanged }: {
                 const link = group[0]!;
                 const from = all.get(link.source_id)!, to = all.get(link.target_id)!;
                 const stale = group.some(entry => all.get(entry.source_id)?.revision !== entry.source_revision || all.get(entry.target_id)?.revision !== entry.target_revision);
-                const label = link.relation === "depends_on" ? link.source_id === item.id ? "먼저 끝낼 일" : "이 작업을 기다리는 일" : relationLabels[link.relation];
+                const label = link.relation === "depends_on" ? link.source_id === item.id ? "먼저 끝낼 일" : "이 작업을 기다리는 일"
+                    : link.relation === "subtask_of" ? link.source_id === item.id ? "부모 작업" : "하위 작업" : relationLabels[link.relation];
                 return <li key={link.id}><div>
                     <RouteLink patch={itemRoute(from)}>{from.title}</RouteLink>
                     <small>r{link.source_revision} {link.relation === "relates_to" ? "↔" : "→"} {label} {link.relation === "relates_to" ? "↔" : "→"} r{link.target_revision}</small>
@@ -143,7 +144,7 @@ export function Relations({ item, items, onChanged }: {
                     {items.filter(entry => entry.project_id === item.project_id).map(entry => <option key={entry.id} value={entry.id}>{kindLabels[entry.kind]} · {entry.title}</option>)}
                 </NativeSelect></Field>
                 <Field label="관계"><NativeSelect value={relation} onChange={event => setRelation(event.target.value)}>
-                    {relationSchema.options.map(value => <option key={value} value={value}>{relationLabels[value]}</option>)}
+                    {relationSchema.options.filter(value => value !== "subtask_of").map(value => <option key={value} value={value}>{relationLabels[value]}</option>)}
                 </NativeSelect></Field>
                 <Field label="연결 대상"><NativeSelect required value={target} onChange={event => setTarget(event.target.value)}>
                     <option value="">대상 선택</option>

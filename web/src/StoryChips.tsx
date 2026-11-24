@@ -1,12 +1,17 @@
 import { createContext, useContext, useEffect, type ReactNode } from "react";
 import { api, ApiError } from "./api";
 import { useResource } from "./hooks";
-import type { Item } from "./models";
+import type { Item, Link } from "./models";
 import { useProjectCatalog, useProjectPermissions } from "./ProjectPermissions";
 import { itemRoute } from "./Relations";
 import { ErrorNotice, RouteLink } from "./ui";
 
 const TaskStories = createContext<ReadonlyMap<string, readonly Item[]>>(new Map());
+const noLinks: readonly Link[] = [];
+const TaskRelations = createContext<{links: readonly Link[]; loading: boolean; incomplete: boolean}>({
+    links: noLinks, loading: false, incomplete: false,
+});
+export function useTaskRelations() { return useContext(TaskRelations); }
 
 export function TaskStoryProvider({projectId, items, revision, children}: {
     projectId: string; items: Item[]; revision: string | number; children: ReactNode;
@@ -18,10 +23,10 @@ export function TaskStoryProvider({projectId, items, revision, children}: {
     const accessKey = catalog.map(project => `${project.id}:${project.access?.access_revision ?? "unknown"}`).sort().join(",");
     const source = useResource(`task-story-chips:${projects.join(",")}:${revision}:${accessKey}:${readable.map(item => `${item.id}:${item.revision}`).join(",")}`, async signal => {
         const groups = await Promise.all(projects.map(id => api.links(id, signal)));
-        const links = [...new Map(groups.flat().map(link => [link.id, link])).values()].filter(link => link.relation === "implements");
+        const links = [...new Map(groups.flat().map(link => [link.id, link])).values()];
         const visible = new Map(readable.map(item => [item.id, item]));
         const taskIds = new Set(readable.filter(item => item.kind === "task").map(item => item.id));
-        const canonical = links.filter(link => taskIds.has(link.source_id));
+        const canonical = links.filter(link => link.relation === "implements" && taskIds.has(link.source_id));
         const missing = [...new Set(canonical.map(link => link.target_id).filter(id => !visible.has(id)))];
         await Promise.all(missing.map(async id => {
             try {const target = await api.item(id, signal); if (can(target.project_id, "project.read")) visible.set(id, target);}
@@ -35,16 +40,18 @@ export function TaskStoryProvider({projectId, items, revision, children}: {
             if (!stories.some(entry => entry.id === story.id)) stories.push(story);
             byTask.set(link.source_id, stories);
         }
-        return byTask;
+        return {links, byTask};
     });
     useEffect(() => {
         window.addEventListener("projects:relations-changed", source.reload);
         return () => window.removeEventListener("projects:relations-changed", source.reload);
     }, [source.reload]);
-    return <TaskStories.Provider value={source.status === "ready" ? source.data : new Map()}>
+    return <TaskRelations.Provider value={{links: source.data?.links ?? noLinks, loading: source.status === "loading", incomplete: source.status !== "ready"}}>
+        <TaskStories.Provider value={source.data?.byTask ?? new Map()}>
         {source.status === "error" && <ErrorNotice error={source.error} retry={source.reload} />}
         {children}
-    </TaskStories.Provider>;
+        </TaskStories.Provider>
+    </TaskRelations.Provider>;
 }
 
 export function TaskStoryChips({taskId, collapsible = false}: {taskId: string; collapsible?: boolean}) {

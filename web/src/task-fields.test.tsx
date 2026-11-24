@@ -26,6 +26,55 @@ const task = taskRecord;
 
 beforeEach(() => { vi.restoreAllMocks(); });
 
+describe("task field scanning", () => {
+    it.each([
+        {state: "todo" as const, due: "2026-11-23", cue: "지연"},
+        {state: "in_progress" as const, due: "2026-11-24", cue: "오늘"},
+        {state: "in_review" as const, due: "2026-11-23", cue: "지연"},
+        {state: "todo" as const, due: "2026-11-25", cue: null},
+        {state: "todo" as const, due: "", cue: null},
+        {state: "todo" as const, due: "2026-02-30", cue: null},
+        {state: "done" as const, due: "2026-11-23", cue: null},
+        {state: "cancelled" as const, due: "2026-11-24", cue: null},
+    ])("shows the appropriate due cue for $state with $due", ({state, due, cue}) => {
+        const current = {...task, data: {...task.data, state, due_date: due}};
+        render(<TaskFieldCells task={current} fields={["due_date"]} definitions={[]} referenceDay="2026-11-24" onChanged={vi.fn()} />);
+        const button = screen.getByRole("button", {name: "필드 작업 마감일 편집"});
+        expect(within(button).getByText(formatTaskField(current, "due_date", []))).toBeTruthy();
+        expect(within(button).queryByText("지연")).toBe(cue === "지연" ? within(button).getByText("지연") : null);
+        expect(within(button).queryByText("오늘")).toBe(cue === "오늘" ? within(button).getByText("오늘") : null);
+        expect(screen.getByRole("button", {name: "필드 작업 마감일 편집", description: cue ?? "마감일"})).toBe(button);
+    });
+
+    it("uses the Seoul day at the UTC day boundary", () => {
+        vi.useFakeTimers();
+        try {
+            vi.setSystemTime(new Date("2026-11-23T15:00:00Z"));
+            const current = {...task, data: {...task.data, due_date: "2026-11-24"}};
+            render(<TaskFieldCells task={current} fields={["due_date"]} definitions={[]} onChanged={vi.fn()} />);
+            expect(screen.getByText("오늘")).toBeTruthy();
+            expect(screen.queryByText("지연")).toBeNull();
+        } finally { vi.useRealTimers(); }
+    });
+
+    it("retains due and priority values for read-only tasks and preserves board fields", () => {
+        const update = vi.spyOn(api, "updateTaskProperties");
+        const {rerender} = render(<TaskFieldCells task={task} fields={["due_date", "abc_priority"]} definitions={[]} referenceDay="2026-11-24" onChanged={vi.fn()} disabled />);
+        const date = screen.getByRole("button", {name: "필드 작업 마감일 편집"});
+        const priority = screen.getByRole("button", {name: "필드 작업 우선순위 편집"});
+        expect((date as HTMLButtonElement).disabled).toBe(true);
+        expect(within(date).getByText("지연")).toBeTruthy();
+        expect(within(priority).getByText("B")).toBeTruthy();
+        fireEvent.click(date);
+        expect(screen.queryByRole("button", {name: "저장"})).toBeNull();
+        expect(update).not.toHaveBeenCalled();
+        rerender(<TaskFieldCells task={task} fields={["due_date", "abc_priority"]} definitions={[]} referenceDay="2026-11-24" surface="board" onChanged={vi.fn()} />);
+        expect(screen.queryByText("지연")).toBeNull();
+        expect(screen.getByText("2026-11-03")).toBeTruthy();
+        expect(screen.getByText("B").closest("[data-priority]")).toBeNull();
+    });
+});
+
 describe("task field management", () => {
     it("allows personal field visibility choices without granting a task editor field creation", () => {
         const create = vi.spyOn(api, "createTaskField");

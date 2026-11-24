@@ -1,4 +1,11 @@
+from uuid import uuid4
+
+import pytest
 from fastapi.testclient import TestClient
+from pydantic import ValidationError
+
+from projects.schemas import TaskViewSettings
+from projects.task_queries import TaskQuery
 
 
 def task(client, project_id, title, **data):
@@ -205,3 +212,176 @@ def test_global_gtd_orders_before_paging_and_searches_context(client, project):
     assert response.json()["total"] == 2
     matches = client.get("/api/tasks", params={"query": "walk"}).json()
     assert [row["id"] for row in matches["items"]] == [suitable["id"]]
+
+
+def test_project_filter_is_applied_to_counts_pages_and_snapshot(
+    client, project
+):
+    other = client.post("/api/projects", json={"name": "다른 프로젝트"}).json()
+    first = task(client, project["id"], "선택 첫 작업")
+    second = task(client, project["id"], "선택 다음 작업")
+    task(client, other["id"], "선택 밖 작업")
+    params = {
+        "project_ids": project["id"],
+        "limit": 1,
+        "sort": "manual",
+        "date": "2026-11-02",
+    }
+    response = client.get("/api/tasks", params=params)
+    assert response.status_code == 200, response.text
+    page = response.json()
+    assert page["total"] == page["scope_counts"]["all"] == 2
+    # Changes outside the selected projects do not stale a selected page.
+    task(client, other["id"], "선택 밖 새 작업")
+    response = client.get(
+        "/api/tasks",
+        params={
+            **params,
+            "project_ids": f"{project['id'].upper()},{project['id']}",
+            "cursor": page["next_cursor"],
+        },
+    )
+    assert response.status_code == 200, response.text
+    assert {page["items"][0]["id"], response.json()["items"][0]["id"]} == {
+        first["id"],
+        second["id"],
+    }
+    assert (
+        client.get(
+            "/api/tasks",
+            params={
+                **params,
+                "project_ids": other["id"],
+                "cursor": page["next_cursor"],
+            },
+        ).status_code
+        == 422
+    )
+    task(client, project["id"], "선택 안 새 작업")
+    assert (
+        client.get(
+            "/api/tasks", params={**params, "cursor": page["next_cursor"]}
+        ).status_code
+        == 409
+    )
+    both = client.get(
+        "/api/tasks", params={"project_ids": f"{project['id']},{other['id']}"}
+    ).json()
+    assert both["total"] == 5
+    for invalid in (
+        {"project_ids": "invalid"},
+        {"project_ids": f"{project['id']},"},
+        {"project_id": project["id"], "project_ids": other["id"]},
+    ):
+        assert client.get("/api/tasks", params=invalid).status_code == 422
+
+
+def test_deadline_orders_open_before_closed_and_before_pagination(
+    client, project
+):
+    completed = task(client, project["id"], "완료", due_date="2026-01-01")
+    finished = client.patch(
+        f"/api/items/{completed['id']}/task-properties",
+        json={
+            "expected_revision": completed["revision"],
+            "values": {"state": "done"},
+        },
+    )
+    assert finished.status_code == 200, finished.text
+    undated = task(client, project["id"], "날짜 없음")
+    later = task(client, project["id"], "늦은 마감", due_date="2026-11-20")
+    earlier = task(client, project["id"], "빠른 마감", due_date="2026-11-10")
+    cancelled = task(
+        client,
+        project["id"],
+        "취소",
+        state="cancelled",
+        cancellation_reason="취소 확인",
+    )
+    params = {"sort": "deadline", "status": "all", "limit": 1}
+    found = []
+    while True:
+        response = client.get("/api/tasks", params=params)
+        assert response.status_code == 200, response.text
+        page = response.json()
+        found.extend(row["id"] for row in page["items"])
+        if not page["next_cursor"]:
+            break
+        params["cursor"] = page["next_cursor"]
+    assert found == [
+        earlier["id"],
+        later["id"],
+        undated["id"],
+        completed["id"],
+        cancelled["id"],
+    ]
+    legacy = client.get(
+        "/api/tasks", params={"sort": "due_date", "status": "all", "limit": 1}
+    ).json()
+    assert legacy["items"][0]["id"] == completed["id"]
+
+
+def test_list_variant_and_project_selection_saved_updated_and_duplicated(
+    client, project
+):
+    unavailable = str(uuid4())
+    settings = {
+        "mode": "complex",
+        "view": "list",
+        "list_variant": "split",
+        "project_ids": [project["id"].upper(), unavailable, project["id"]],
+        "sort": "deadline",
+        "layout_sorts": {"list": "deadline"},
+    }
+    response = client.post(
+        "/api/task-views", json={"name": "나눈 목록", "settings": settings}
+    )
+    assert response.status_code == 201, response.text
+    saved = response.json()
+    assert saved["settings"]["project_ids"] == sorted(
+        [project["id"], unavailable]
+    )
+    assert saved["settings"]["list_variant"] == "split"
+    updated = client.put(
+        f"/api/task-views/{saved['id']}",
+        json={
+            "name": "마감 목록",
+            "expected_revision": saved["revision"],
+            "settings": {**saved["settings"], "list_variant": "deadline"},
+        },
+    )
+    assert updated.status_code == 200, updated.text
+    copied = client.post(
+        "/api/task-views",
+        json={"name": "목록 사본", "settings": updated.json()["settings"]},
+    )
+    assert copied.status_code == 201, copied.text
+    assert copied.json()["settings"] == updated.json()["settings"]
+    loaded = {row["id"]: row for row in client.get("/api/task-views").json()}
+    assert (
+        loaded[copied.json()["id"]]["settings"] == updated.json()["settings"]
+    )
+    legacy = TaskViewSettings(mode="complex", view="list")
+    assert legacy.list_variant is None and legacy.project_ids == []
+
+
+def test_project_filter_models_normalize_uuid_and_limit_selections():
+    selected = str(uuid4())
+    assert (
+        TaskQuery(project_ids=f"{selected.upper()},{selected}").project_ids
+        == selected
+    )
+    assert TaskQuery(project_ids="").project_ids is None
+    assert TaskViewSettings(
+        mode="complex", view="list", project_ids=[selected.upper(), selected]
+    ).project_ids == [selected]
+    for invalid in ("bad", f"{selected},", ",".join([selected] * 101)):
+        with pytest.raises(ValidationError):
+            TaskQuery(project_ids=invalid)
+    with pytest.raises(ValidationError):
+        TaskQuery(project_id=selected, project_ids=selected)
+    for invalid_ids in (["bad"], [selected] * 101):
+        with pytest.raises(ValidationError):
+            TaskViewSettings(
+                mode="complex", view="list", project_ids=invalid_ids
+            )

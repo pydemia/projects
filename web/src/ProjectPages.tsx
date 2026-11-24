@@ -32,6 +32,7 @@ export function Overview({ project, items, revision, onProjectRenamed }: {
     return <>
         <PageHead title={<ProjectNameEdit key={project.id} project={project} onSaved={onProjectRenamed} />} titleLabel={project.name} description={project.goal || "목표를 정리하며 프로젝트를 시작해 보세요."} eyebrow="PROJECT OVERVIEW">
             <ProjectActions project={project} onRenamed={onProjectRenamed} recoverySurface="overview" />
+            <RouteLink className="button project-work-link" patch={{ view: "tasks", item: "", run: "", q: "" }}>작업 보기</RouteLink>
             {can(project.id, "item.write") && <RouteLink className="button primary" patch={{ view: "planning", kind: "idea", item: "", q: "" }}>아이디어 작성</RouteLink>}
             <RouteLink className="button" patch={{ view: "runs", run: "", item: "" }}>스킬 작업</RouteLink>
         </PageHead>
@@ -52,7 +53,7 @@ export function Overview({ project, items, revision, onProjectRenamed }: {
                 <MetricCard label="임시 문서" value={summary.data.artifacts.total} detail="Note 연계 예정 · 확정률 집계 제외" />
                 {hasTests && <Metric label="테스트 통과" done={summary.data.tests.passed} total={summary.data.tests.total} note="현재 케이스 기준 · 미실행은 통과 제외" />}
             </div>
-            <div className="overview-grid"><Card className="overview-panel"><CardContent><section><div className="section-head"><h2>다음에 확인할 일</h2><RouteLink patch={{ view: "tasks", item: "", q: "" }}>작업 전체</RouteLink></div>
+            <div className="overview-grid"><Card className="overview-panel"><CardContent><section><h2>다음에 확인할 일</h2>
                 {summary.data.needs_review > 0 && <div className="attention-row"><span className="number">검토</span><div><strong>근거 변경 검토 {summary.data.needs_review}건</strong><p>연결한 revision과 현재 내용이 달라진 대상을 확인해 주세요.</p></div><RouteLink className="button small" patch={{ view: "trace", item: "" }}>영향 확인</RouteLink></div>}
                 {!items.length && <Empty title="첫 메모를 남길 준비가 되었습니다."><p>아이디어를 적거나 임시 Markdown 문서를 작성하고 스킬로 구체화할 수 있습니다.</p></Empty>}
                 {activeTasks.slice(0, 5).map((task, index) => <div className="attention-row" key={task.id}><span className="number">{String(index + 1).padStart(2, "0")}</span><div><RouteLink patch={itemRoute(task)}>{task.title}</RouteLink><p><Badge value={task.kind === "task" ? task.data.state : task.status} /> · r{task.revision}</p></div><RouteLink className="button small" patch={itemRoute(task)}>열기</RouteLink></div>)}

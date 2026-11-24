@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import { useAuthenticationDraft, type AuthenticationDraft } from "./auth-drafts";
-import { BarChart3, CalendarDays, Columns3, List, MoreHorizontal, Plus, Star } from "lucide-react";
+import { BarChart3, CalendarDays, Columns3, List, MoreHorizontal, Network, Plus, Star } from "lucide-react";
 import { api, errorMessage } from "./api";
 import { taskViewSchema, taskViewSettingsSchema, type TaskView, type TaskViewSettings } from "./models";
+import { taskListVariants } from "./task-view-memory";
 import { Button } from "./pydemia-ui/button";
 import { Input } from "./pydemia-ui/input";
 import { NativeSelect } from "./pydemia-ui/native-select";
@@ -14,6 +15,7 @@ import "./task-view-bar.css";
 const layouts = {
     list: { label: "목록", icon: List },
     board: { label: "보드", icon: Columns3 },
+    graph: { label: "그래프", icon: Network },
     calendar: { label: "캘린더", icon: CalendarDays },
     insights: { label: "집계", icon: BarChart3 },
 };
@@ -21,7 +23,7 @@ type Layout = keyof typeof layouts;
 type ViewDialog = { kind: "create"; settings: TaskViewSettings } |
     { kind: "rename" | "duplicate" | "delete"; view: TaskView };
 const recoveryViewSchema = taskViewSchema.extend({settings: taskViewSettingsSchema.strict()}).strict();
-const viewDraftSchema = z.object({name: z.string(), layout: z.enum(["list", "board", "calendar", "insights"]),
+const viewDraftSchema = z.object({name: z.string(), layout: z.enum(["list", "board", "graph", "calendar", "insights"]),
     dialog: z.union([z.object({kind: z.literal("create"), settings: taskViewSettingsSchema.strict()}).strict(),
         z.object({kind: z.enum(["rename", "duplicate", "delete"]), view: recoveryViewSchema}).strict()])}).strict();
 
@@ -39,7 +41,7 @@ export type TaskViewBarProps = {
 };
 
 function layoutFor(settings: TaskViewSettings): Layout {
-    return settings.view === "board" || settings.view === "calendar" || settings.view === "insights"
+    return settings.view === "board" || settings.view === "graph" || settings.view === "calendar" || settings.view === "insights"
         ? settings.view : "list";
 }
 
@@ -133,15 +135,17 @@ export function TaskViewBar({ projectId, views, activeId, settings, dirty, loadi
         <div className="task-named-view-toolbar">
             <nav className="task-named-view-list" aria-label="이름으로 저장한 보기">
                 {ordered.map(view => {
-                    const presentation = layouts[layoutFor(view.settings)];
+                    const layout = layoutFor(view.settings);
+                    const presentation = layouts[layout];
+                    const label = layout === "list" && view.settings.list_variant ? taskListVariants[view.settings.list_variant] : presentation.label;
                     const Icon = presentation.icon;
                     const current = view.id === activeId;
                     return <div className="task-named-view" key={view.id} data-current={current}>
                         <Button variant="ghost" className="task-named-view-select" aria-current={current ? "page" : undefined}
-                            aria-label={`${view.name} ${presentation.label}${view.is_default ? " 기본 보기" : ""}${current && dirty ? " 저장하지 않은 변경" : ""}`}
+                            aria-label={`${view.name} ${label}${view.is_default ? " 기본 보기" : ""}${current && dirty ? " 저장하지 않은 변경" : ""}`}
                             disabled={busy} onClick={() => onSelect(view.id)}>
                             <Icon aria-hidden="true" size={15} /><span>{view.name}</span>
-                            <span className="task-named-view-layout">{presentation.label}</span>
+                            <span className="task-named-view-layout">{label}</span>
                             {view.is_default && <><Star aria-hidden="true" size={12} /><span className="sr-only">기본 보기</span></>}
                             {current && dirty && <span className="task-named-view-dirty" aria-label="저장하지 않은 변경">•</span>}
                         </Button>
@@ -178,7 +182,7 @@ export function TaskViewBar({ projectId, views, activeId, settings, dirty, loadi
                     <Field label="저장 보기 이름"><Input value={name} onChange={event => setName(event.target.value)} required maxLength={100} disabled={busy} autoFocus /></Field>
                     {dialog.kind === "create" && <Field label="저장 보기 레이아웃"><NativeSelect value={layout} disabled={busy} onChange={event => {
                         const value = event.target.value;
-                        if (value === "list" || value === "board" || value === "calendar" || value === "insights") setLayout(value);
+                        if (Object.hasOwn(layouts, value)) setLayout(value as Layout);
                     }}>{Object.entries(layouts).map(([value, item]) => <option value={value} key={value}>{item.label}</option>)}</NativeSelect></Field>}
                     <p className="muted">{dialog.kind === "create" ? "현재 필터와 표시할 필드를 함께 저장합니다." : dialog.kind === "duplicate" ? "저장된 설정을 복제합니다. 현재 화면의 미저장 변경은 포함하지 않습니다." : "저장된 필터와 표시 설정을 유지합니다."}</p>
                 </>}

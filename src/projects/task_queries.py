@@ -4,10 +4,17 @@ import base64
 import hashlib
 import json
 from datetime import date, datetime
-from typing import Literal
+from typing import Literal, Self
+from uuid import UUID
 from zoneinfo import ZoneInfo
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_validator,
+    model_validator,
+)
 from sqlalchemy import Integer, and_, case, cast, func, or_, select
 from sqlalchemy.orm import Session
 from sqlalchemy.sql.elements import ColumnElement
@@ -22,12 +29,13 @@ class TaskQuery(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     project_id: str | None = None
+    project_ids: str | None = Field(default=None, max_length=4000)
     task_scope: Literal["all", "today", "inbox", "upcoming"] = "all"
     status: Literal[
         "all", "open", "todo", "in_progress", "in_review", "done", "cancelled"
     ] = "open"
     query: str = Field(default="", max_length=1000)
-    sort: Literal["manual", "due_date", "gtd", "abc"] = "due_date"
+    sort: Literal["manual", "due_date", "deadline", "gtd", "abc"] = "due_date"
     context: str = Field(default="", max_length=80)
     minutes: int = Field(default=0, ge=0, le=100000)
     energy: Literal["any", "low", "medium", "high"] = "any"
@@ -36,8 +44,24 @@ class TaskQuery(BaseModel):
     date: str | None = None
     timezone: Literal["Asia/Seoul"] = "Asia/Seoul"
 
+    @field_validator("project_ids")
+    @classmethod
+    def valid_project_ids(cls, value: str | None) -> str | None:
+        if not value:
+            return None
+        values = value.split(",")
+        if len(values) > 100:
+            raise ValueError("Select at most 100 projects")
+        return ",".join(sorted({str(UUID(value.strip())) for value in values}))
 
-def _snapshot(db: Session, user_id: str, project_id: str | None) -> str:
+    @model_validator(mode="after")
+    def exclusive_project_filter(self) -> Self:
+        if self.project_id and self.project_ids:
+            raise ValueError("Use project_id or project_ids, not both")
+        return self
+
+
+def _snapshot(db: Session, user_id: str, project_ids: list[str] | None) -> str:
     statement = (
         select(
             func.count(Item.id),
@@ -50,8 +74,8 @@ def _snapshot(db: Session, user_id: str, project_id: str | None) -> str:
             Item.kind == "task",
         )
     )
-    if project_id:
-        statement = statement.where(Item.project_id == project_id)
+    if project_ids is not None:
+        statement = statement.where(Item.project_id.in_(project_ids))
     values = db.execute(statement).one()
     return hashlib.sha256(
         (str(tuple(values)) + access_fingerprint(db, user_id)).encode()
@@ -61,6 +85,11 @@ def _snapshot(db: Session, user_id: str, project_id: str | None) -> str:
 def query_tasks(db: Session, user_id: str, request: TaskQuery) -> dict:
     if request.project_id:
         project_for_user(db, request.project_id, user_id)
+    project_ids = None
+    if request.project_id:
+        project_ids = [request.project_id]
+    elif request.project_ids:
+        project_ids = request.project_ids.split(",")
     try:
         day = (
             date.fromisoformat(request.date)
@@ -92,9 +121,9 @@ def query_tasks(db: Session, user_id: str, request: TaskQuery) -> dict:
         Project.id.in_(accessible_project_ids(db, user_id)),
         Item.kind == "task",
     ]
-    if request.project_id:
-        owner_filters.append(Item.project_id == request.project_id)
-    snapshot = _snapshot(db, user_id, request.project_id)
+    if project_ids is not None:
+        owner_filters.append(Item.project_id.in_(project_ids))
+    snapshot = _snapshot(db, user_id, project_ids)
     fingerprint = hashlib.sha256(
         json.dumps(
             {
@@ -167,6 +196,8 @@ def query_tasks(db: Session, user_id: str, request: TaskQuery) -> dict:
     due_order = func.nullif(due, "").asc().nulls_last()
     if request.sort == "manual":
         ordering = [Item.project_id, func.coalesce(TaskPosition.position, 0)]
+    elif request.sort == "deadline":
+        ordering = [case((opened, 0), else_=1), due_order]
     elif request.sort == "abc":
         priority = Item.data["abc_priority"].as_string()
         ordering = [
@@ -234,7 +265,7 @@ def query_tasks(db: Session, user_id: str, request: TaskQuery) -> dict:
         .offset(min(offset, total))
         .limit(request.limit),
     ).all()
-    if _snapshot(db, user_id, request.project_id) != snapshot:
+    if _snapshot(db, user_id, project_ids) != snapshot:
         raise Problem(409, "작업 목록이 변경되었습니다. 다시 불러와 주세요.")
     next_offset = offset + len(rows)
     cursor_value = None

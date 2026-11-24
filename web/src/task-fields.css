@@ -19,6 +19,16 @@
 .task-field-value { width: 100%; min-width: 0; justify-content: start; text-align: left; font-size: 12px; padding: 4px 8px; }
 .task-field-value-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .task-field-mobile-label { display: none; }
+.task-field-cells[data-surface="list"] .task-field-value { gap: 6px; font-variant-numeric: tabular-nums; }
+.task-field-cells[data-surface="list"] .task-field-value:disabled { opacity: 1; }
+.task-field-due-cue { flex-shrink: 0; font-size: 11px; font-weight: 700; }
+.task-field-cell[data-due-state] .task-field-value { font-weight: 600; }
+.task-field-cell[data-due-state="overdue"] .task-field-due-cue { color: var(--danger); }
+.task-field-cell[data-due-state="today"] .task-field-due-cue { color: var(--accent); }
+.task-field-cell[data-priority] .task-field-value-text { display: inline-grid; place-items: center; flex-shrink: 0; min-width: 24px; height: 22px; border-radius: 4px; font-size: 12px; font-weight: 700; }
+.task-field-cell[data-priority="A"] .task-field-value-text { color: var(--danger); background: color-mix(in srgb, var(--danger) 11%, var(--surface)); }
+.task-field-cell[data-priority="B"] .task-field-value-text { color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--surface)); }
+.task-field-cell[data-priority="C"] .task-field-value-text { color: var(--muted); background: var(--surface-subtle); }
 .task-field-editor { width: 300px; }
 .task-field-editor form { display: grid; gap: 12px; }
 .task-field-editor-actions { display: flex; flex-wrap: wrap; justify-content: end; gap: 5px; }

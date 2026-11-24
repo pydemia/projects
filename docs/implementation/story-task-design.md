@@ -13,7 +13,10 @@ APP-REQ-065~072 / AC-144~160을 구현 대상으로 삼는다. 기획안의 1·2
 Story는 `Item.kind=requirement`의 표시 이름과 기능 확장이다. 별도 Story 복제본이나
 새 Item 종류를 만들지 않는다. Task는 `kind=task`와 기존 personal/delivery workflow,
 다섯 상태·완료 gate를 유지한다. 독립 Task와 Task 없는 Story는 정상 상태다.
-부모 Task 필드, Subtask 종류, 필수 Epic/Phase/Iteration은 추가하지 않는다.
+2026-11-24 사용자가 선택한 부모 작업은 같은 프로젝트의 Task 간 `subtask_of`
+관계로 저장한다. 하위 작업도 기존 Task 종류를 사용한다. Epic·Phase·Iteration의
+연결은 선택 사항이다.
+[작업 보기와 하위 작업](task-list-ux-benchmark.md)에 적용 범위를 기록한다.
 
 Idea는 기획 원문, Feature는 확인한 현재 기능, Decision은 선택과 이유를 보존한다.
 기획을 적용해도 프로젝트 목표·원문 Idea·현재 Feature를 암묵적으로 수정하지 않는다.

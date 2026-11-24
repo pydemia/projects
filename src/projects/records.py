@@ -22,6 +22,7 @@ from projects.database import (
 from projects.domain import (
     Problem,
     check_dependency_cycle,
+    check_task_parent,
     validate_item_data,
 )
 from projects.project_access import (
@@ -264,6 +265,29 @@ def add_link(
     project_for_user(db, project_id, actor_id, "relation.write")
     for item in (source, target):
         project_for_user(db, item.project_id, actor_id, "relation.write")
+    if relation == "subtask_of":
+        if (
+            source.kind != "task"
+            or target.kind != "task"
+            or source.project_id != target.project_id
+            or project_id != source.project_id
+        ):
+            raise Problem(
+                422, "상위·하위 작업은 같은 프로젝트의 작업끼리 연결합니다."
+            )
+        project_for_user(db, source.project_id, actor_id, "task.update")
+        check_task_parent(
+            source.id,
+            target.id,
+            list(
+                db.execute(
+                    select(Link.source_id, Link.target_id).where(
+                        Link.project_id == project_id,
+                        Link.relation == "subtask_of",
+                    )
+                ).tuples()
+            ),
+        )
     if source.id == target.id:
         raise Problem(422, "자기 자신을 연결할 수 없습니다.")
     endpoints: ColumnElement[bool] = (Link.source_id == source.id) & (
@@ -309,6 +333,51 @@ def add_link(
     db.add(link)
     db.flush()
     return link
+
+
+def set_task_parent(
+    db: Session,
+    user_id: str,
+    item_id: str,
+    parent_task_id: str | None,
+    expected_parent_id: str | None,
+) -> None:
+    child = item_for_user(db, item_id, user_id, "task.update", lock=True)
+    project_for_user(db, child.project_id, user_id, "relation.write")
+    if child.kind != "task":
+        raise Problem(422, "작업에만 상위 작업을 지정할 수 있습니다.")
+    current = list(
+        db.scalars(
+            select(Link).where(
+                Link.source_id == child.id, Link.relation == "subtask_of"
+            )
+        )
+    )
+    if len(current) > 1:
+        raise Problem(409, "상위 작업 관계를 다시 확인해 주세요.")
+    current_parent = current[0].target_id if current else None
+    if current_parent != expected_parent_id:
+        raise Problem(409, "상위 작업이 변경되었습니다. 다시 불러와 주세요.")
+    if parent_task_id == current_parent:
+        return
+    parent = (
+        item_for_user(db, parent_task_id, user_id) if parent_task_id else None
+    )
+    if parent is not None and parent.project_id != child.project_id:
+        raise Problem(422, "같은 프로젝트의 상위 작업을 선택해 주세요.")
+    with db.begin_nested():
+        for link in current:
+            db.delete(link)
+        db.flush()
+        if parent is not None:
+            add_link(
+                db,
+                child.project_id,
+                child,
+                parent,
+                "subtask_of",
+                actor_id=user_id,
+            )
 
 
 def is_stale(link: Link, items: dict[str, Item]) -> bool:

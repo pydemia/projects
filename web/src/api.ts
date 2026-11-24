@@ -88,6 +88,7 @@ export const api = {
     createTaskField: (body: unknown) => request("/api/task-fields", taskFieldDefinitionSchema, { method: "POST", body }),
     updateTaskProperties: (iid: string, body: unknown) => request(`${itemPath(iid)}/task-properties`, itemSchema, { method: "PATCH", body }),
     updateTaskType: (iid: string, body: { expected_revision: number; workflow: "personal" | "delivery" }) => request(`${itemPath(iid)}/task-type`, itemSchema, { method: "PATCH", body }),
+    updateTaskParent: (iid: string, body: {parent_task_id: string | null; expected_parent_id: string | null}) => request(`${itemPath(iid)}/task-parent`, okSchema, {method: "PUT", body}),
     authOptions: (signal?: AbortSignal) => request("/api/auth/options", z.object({ registration_enabled: z.boolean(), auth_mode: z.enum(["password", "microsoft"]) }), { signal }),
     session: (signal?: AbortSignal) => request("/api/session", sessionSchema, { signal }),
     auth: (mode: "login" | "register", body: unknown) => request(`/api/auth/${mode}`, sessionSchema, { method: "POST", body }),

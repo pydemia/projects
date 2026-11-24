@@ -243,7 +243,7 @@ export function TaskBoard({ projectId, tasks, lens, savedSort, onSortChange, sel
                 <option value="manual" disabled={!projectId}>수동 순서 · 드래그 가능</option>
                 <option value="auto">{lens.toUpperCase()} 자동 순서 · 열 안 이동 제한</option>
             </NativeSelect>
-            {!projectId && <span>전역 보드는 자동 정렬입니다. 수동 순서는 프로젝트 작업에서 변경하세요.</span>}<span role="status" aria-live="polite">{busy ? "이동 저장 중…" : !mobile ? "카드를 끌거나 작업 메뉴에서 이동하세요." : ""}</span>
+            {!projectId && <span>전역 보드는 자동 정렬입니다. 수동 순서는 프로젝트 작업에서 변경하세요.</span>}<span role="status" aria-live="polite">{busy ? "이동 저장 중…" : !mobile ? "좌우로 스크롤해 열을 확인하세요. 카드는 끌거나 작업 메뉴에서 이동할 수 있습니다." : ""}</span>
             {undo && <Button variant="outline" disabled={busy || !can(projectId, "task.update")} onClick={() => { void undoLastMove(); }}>
                 {undo.title} 이동 되돌리기
             </Button>}

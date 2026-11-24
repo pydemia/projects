@@ -19,7 +19,7 @@ import { ActionButton, ErrorNotice, Field, Loading, Modal } from "./ui";
 import "./planning.css";
 
 const proposalLabels = {create_story: "새 Story", create_task: "새 Task", link: "기존 항목 연결", update_item: "기존 항목 수정", record_decision: "근거·결정 기록"};
-const relationLabels = {implements: "Task → Story · 기여", depends_on: "후행 Task → 선행 Task", relates_to: "관련 작업 · 대칭", source: "원문 참조", verifies: "검증"};
+const relationLabels = {implements: "Task → Story · 기여", depends_on: "후행 Task → 선행 Task", relates_to: "관련 작업 · 대칭", subtask_of: "하위 작업 → 부모 작업", source: "원문 참조", verifies: "검증"};
 const planningWritePermissions: ProjectPermission[] = ["item.write", "task.create", "task.update", "relation.write", "test.write"];
 type Attempt = PlanningApply & {draft_id: string};
 type PlanningDialogProps = {

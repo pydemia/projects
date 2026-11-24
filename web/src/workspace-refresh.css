@@ -57,7 +57,6 @@
 .projects-theme .task-priority-options .task-tools { display: grid; grid-template-columns: 1fr; margin: 0; }
 .projects-theme .task-row [data-ui="checkbox-control"] { align-self: flex-start; margin: 3px 5px 0 0; }
 .projects-theme .task-result-count { margin: 12px 0 16px; }
-.projects-theme .task-list { display: grid; gap: 1px; border: 1px solid var(--border); border-radius: var(--panel-radius, 8px); overflow: hidden; background: var(--border); }
 .projects-theme .task-row { padding: 13px 16px; border: 0; background: var(--surface); }
 .projects-theme .task-row:hover { background: var(--surface-subtle); }
 .projects-theme .task-selected { margin-top: 22px; padding: 22px; border-color: var(--border); scroll-margin-top: 90px; }

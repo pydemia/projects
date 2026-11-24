@@ -234,6 +234,16 @@ def _inspect(db: Session, user_id: str, payload: TransferPreview) -> dict:
         project_for_user(db, link.project_id, user_id)
         item_for_user(db, link.source_id, user_id)
         item_for_user(db, link.target_id, user_id)
+        if link.relation == "subtask_of" and not {
+            link.source_id,
+            link.target_id,
+        } <= set(ids):
+            blockers.extend(
+                {"id": item_id, "reason": "task_hierarchy"}
+                for item_id in sorted(
+                    {link.source_id, link.target_id}.intersection(ids)
+                )
+            )
     runs = _related_runs(db, ids)
     for run in runs:
         project_for_user(db, run.project_id, user_id)
@@ -450,6 +460,26 @@ def _move(
     *,
     undo_of: str | None = None,
 ) -> dict:
+    destinations = {task.id: target_id for task, target_id, _ in moves}
+    hierarchy = list(
+        db.scalars(
+            select(Link).where(
+                Link.relation == "subtask_of",
+                or_(
+                    Link.source_id.in_(destinations),
+                    Link.target_id.in_(destinations),
+                ),
+            )
+        )
+    )
+    for link in hierarchy:
+        child = db.get(Item, link.source_id)
+        parent = db.get(Item, link.target_id)
+        assert child is not None and parent is not None
+        child_project = destinations.get(child.id, child.project_id)
+        parent_project = destinations.get(parent.id, parent.project_id)
+        if child_project != parent_project:
+            raise Problem(409, "상위·하위 작업을 함께 이동해 주세요.")
     transfer_id = new_id()
     changes = []
     projects = {
@@ -510,6 +540,8 @@ def _move(
         if position:
             position.position = 2**31 - 1
         store_revision(db, task)
+    for link in hierarchy:
+        link.project_id = destinations.get(link.source_id, link.project_id)
     _positions(db, projects)
     project_versions = []
     for project_id in sorted(projects):

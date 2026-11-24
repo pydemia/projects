@@ -51,7 +51,7 @@ it("restores list GTD sorting after changing the board to manual order", async (
     fireEvent.change(screen.getByRole("combobox", {name: "보드 정렬"}), {target: {value: "auto"}});
     fireEvent.change(screen.getByRole("combobox", {name: "보드 정렬"}), {target: {value: "manual"}});
     await userEvent.click(screen.getByRole("tab", {name: "목록"}));
-    fireEvent.click(screen.getByText("보기 설정 · GTD/ABC·그룹·정렬"));
+    fireEvent.click(screen.getByText("보기 설정 · GTD/ABC·정렬"));
     expect((screen.getByRole("combobox", {name: "정렬"}) as HTMLSelectElement).value).toBe("gtd");
     const memory = JSON.parse(sessionStorage.getItem(`projects:task-view-memory:${userId}:${projectId}`)!);
     expect(memory.settings.layout_sorts).toEqual({list: "gtd", board: "manual"});
@@ -65,7 +65,7 @@ it("restores separate user-scoped project and global views, filters and calendar
     }
     window.history.replaceState(null, "", `/?project=${projectId}&view=tasks&taskLayout=list&taskDensity=detailed`);
     render(<SwitchingWorkspace />);
-    fireEvent.click(screen.getByText("보기 설정 · GTD/ABC·그룹·정렬"));
+    fireEvent.click(screen.getByText("보기 설정 · GTD/ABC·정렬"));
     fireEvent.change(screen.getByRole("textbox", {name: "현재 맥락"}), {target: {value: "desk"}});
     await userEvent.click(screen.getByRole("tab", {name: "캘린더"}));
     fireEvent.change(screen.getByRole("combobox", {name: "캘린더 날짜 기준"}), {target: {value: "due"}});
@@ -81,7 +81,7 @@ it("restores separate user-scoped project and global views, filters and calendar
     expect(JSON.parse(sessionStorage.getItem(memoryKey)!).month).toBe(storedMonth);
     expect(document.querySelector(".task-calendar-head h2")?.textContent).toBe(month);
     await userEvent.click(screen.getByRole("tab", {name: "목록"}));
-    fireEvent.click(screen.getByText("보기 설정 · GTD/ABC·그룹·정렬"));
+    fireEvent.click(screen.getByText("보기 설정 · GTD/ABC·정렬"));
     expect((screen.getByRole("textbox", {name: "현재 맥락"}) as HTMLInputElement).value).toBe("desk");
     fireEvent.click(screen.getByRole("button", {name: "전역으로"}));
     expect((screen.getByRole("radio", {name: "Inbox"}) as HTMLInputElement).checked).toBe(true);

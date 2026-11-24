@@ -147,6 +147,62 @@ def access_http(app, client, project):
         }
 
 
+def test_saved_multi_project_filter_cannot_retain_or_expand_access(
+    access_http,
+):
+    actor = access_http["actor"]
+    projects = access_http["projects"]
+    first, second, private = [row["id"] for row in projects]
+    settings = {
+        "mode": "complex",
+        "view": "list",
+        "list_variant": "state",
+        "project_ids": [first, second, private],
+    }
+    saved = actor.post(
+        "/api/task-views", json={"name": "선택 프로젝트", "settings": settings}
+    )
+    assert saved.status_code == 201, saved.text
+    params = {
+        "project_ids": ",".join(saved.json()["settings"]["project_ids"]),
+        "limit": 1,
+        "date": "2026-11-07",
+    }
+    page = actor.get("/api/tasks", params=params)
+    assert page.status_code == 200, page.text
+    assert page.json()["total"] == page.json()["scope_counts"]["all"] == 2
+    assert page.json()["items"][0]["project_id"] in {first, second}
+    # The saved IDs remain preferences after one membership is revoked.
+    with Session(access_http["app"].state.engine) as db, db.begin():
+        membership = db.scalar(
+            select(ProjectMembership).where(
+                ProjectMembership.project_id == second,
+                ProjectMembership.account_id == access_http["actor_id"],
+            )
+        )
+        db.delete(membership)
+        db.get(Project, second).access_revision += 1
+    stale = actor.get(
+        "/api/tasks", params={**params, "cursor": page.json()["next_cursor"]}
+    )
+    assert stale.status_code == 409, stale.text
+    current = actor.get("/api/tasks", params=params).json()
+    assert current["total"] == current["scope_counts"]["all"] == 1
+    assert current["items"][0]["project_id"] == first
+    assert current["next_cursor"] is None
+    for unavailable in (second, private, str(uuid4()), f"{second},{private}"):
+        response = actor.get("/api/tasks", params={"project_ids": unavailable})
+        assert response.status_code == 200, response.text
+        result = response.json()
+        assert result["items"] == [] and result["total"] == 0
+        assert not any(result["scope_counts"].values())
+        assert result["next_cursor"] is None
+    assert (
+        actor.get("/api/tasks", params={"project_id": second}).status_code
+        == 404
+    )
+
+
 def graph_snapshot(app):
     with Session(app.state.engine) as db:
         return {

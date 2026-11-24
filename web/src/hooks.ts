@@ -42,6 +42,7 @@ export type Route = {
     invitationId?: string; ownershipId?: string; expectedRevision?: string;
     plan?: string; planningDraft?: string; taskMode?: string; taskView?: string; savedView?: string;
     taskScope?: string; taskLayout?: string; taskDensity?: string; taskStatus?: string; taskProject?: string;
+    taskListVariant?: string; taskProjects?: string;
 };
 function readRoute(): Route {
     const query = new URLSearchParams(window.location.search);
@@ -55,6 +56,7 @@ function readRoute(): Route {
         savedView: query.get("savedView") ?? "",
         taskScope: query.get("taskScope") ?? "", taskLayout: query.get("taskLayout") ?? "",
         taskDensity: query.get("taskDensity") ?? "", taskStatus: query.get("taskStatus") ?? "", taskProject: query.get("taskProject") ?? "",
+        taskListVariant: query.get("taskListVariant") ?? "", taskProjects: query.get("taskProjects") ?? undefined,
     };
 }
 export function routeUrl(patch: Partial<Route>): string {
@@ -63,7 +65,7 @@ export function routeUrl(patch: Partial<Route>): string {
     if (Object.hasOwn(patch, "project") && patch.project !== previous.project) {
         if (!Object.hasOwn(patch, "plan")) current.plan = "";
         if (!Object.hasOwn(patch, "planningDraft")) current.planningDraft = "";
-        for (const key of ["taskMode", "taskView", "taskScope", "taskLayout", "taskDensity", "taskStatus", "taskProject", "savedView"] as const) {
+        for (const key of ["taskMode", "taskView", "taskScope", "taskLayout", "taskDensity", "taskStatus", "taskProject", "taskListVariant", "taskProjects", "savedView"] as const) {
             if (!Object.hasOwn(patch, key)) current[key] = undefined;
         }
         if (!Object.hasOwn(patch, "q")) {current.q = ""; current.qPresent = false;}
@@ -74,7 +76,7 @@ export function routeUrl(patch: Partial<Route>): string {
     );
     for (const [key, value] of Object.entries(current)) {
         if (key === "qPresent") continue;
-        if (typeof value === "string" && (value || key === "q" && preserveEmptyQuery)) query.set(key, value);
+        if (typeof value === "string" && (value || key === "q" && preserveEmptyQuery || key === "taskProjects")) query.set(key, value);
     }
     return `?${query.toString()}`;
 }
@@ -92,18 +94,21 @@ export function useRoute(): Route {
     return route;
 }
 
-export function useMobileViewport(): boolean {
-    const [mobile, setMobile] = useState(() => typeof window.matchMedia === "function" &&
-        window.matchMedia("(max-width: 760px)").matches);
+export function useViewportQuery(media: string): boolean {
+    const [matches, setMatches] = useState(() => window.matchMedia?.(media).matches ?? false);
     useEffect(() => {
         if (typeof window.matchMedia !== "function") return;
-        const query = window.matchMedia("(max-width: 760px)");
-        const update = () => setMobile(query.matches);
+        const query = window.matchMedia(media);
+        const update = () => setMatches(query.matches);
         update();
         query.addEventListener("change", update);
         return () => query.removeEventListener("change", update);
-    }, []);
-    return mobile;
+    }, [media]);
+    return matches;
+}
+
+export function useMobileViewport(): boolean {
+    return useViewportQuery("(max-width: 760px)");
 }
 
 export const draftSchema = z.object({

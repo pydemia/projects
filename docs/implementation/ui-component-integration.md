@@ -81,6 +81,8 @@ Projects는 제목 편집, 일괄 선택, 관련 Story의 개수 표시와 펼�
 그대로 편입했다. 파일 SHA-256은
 `7a597f568280ae0c8e36022ed4019fb758e25fd584f261e78acc0eca6f3dc0d7`이다.
 Projects가 너비 범위와 상세 공간의 하한, 모바일 전환점을 정한다.
+왼쪽 프로젝트 탐색도 같은 resize 모듈을 사용한다. `projects:sidebar-width:v1`에
+브라우저별 너비를 저장하고, 본문 속 목록 너비는 별도 설정으로 유지한다.
 
 2026-11-02 목록의 `Checkbox`는 registry 원본을 유지하고 Projects의 label
 wrapper로 44px 터치와 20px 표시를 분리했다. 체크/테두리의 테마 색은 앱

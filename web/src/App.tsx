@@ -1,4 +1,4 @@
-import { Component, useEffect, useRef, useState } from "react";
+import { Component, useEffect, useId, useRef, useState } from "react";
 import { z } from "zod";
 import type { ReactNode } from "react";
 import { restoreAcceptanceToken, clearAcceptanceToken } from "./acceptance-token";
@@ -8,7 +8,7 @@ import { api, ApiError, errorMessage, setCsrf } from "./api";
 import { AuthRecoveryProvider, useAuthenticationDraft, type AuthenticationDraft } from "./auth-drafts";
 import { AuthenticationRecovery } from "./AuthenticationRecovery";
 import { authenticationReturnPath, authenticationUrl, reauthentication } from "./reauthentication";
-import { navigate, routeUrl, useResource, useRoute } from "./hooks";
+import { navigate, routeUrl, useMobileViewport, useResource, useRoute } from "./hooks";
 import type { Session, Project, Item } from "./models";
 import { Button } from "./pydemia-ui/button";
 import { Card } from "./pydemia-ui/card";
@@ -17,6 +17,7 @@ import { Input } from "./pydemia-ui/input";
 import { NativeSelect } from "./pydemia-ui/native-select";
 import { SegmentedControl, SegmentedControlItem } from "./pydemia-ui/segmented-control";
 import { BottomNav, BottomNavLink, SideNav, SideNavLink } from "./pydemia-ui/navigation";
+import { SidebarResizeHandle, useSidebarResize } from "./pydemia-ui/sidebar-resize";
 import { Textarea } from "./pydemia-ui/textarea";
 import { ThemeControls } from "./theme";
 import { ItemsPage } from "./ItemsPage";
@@ -143,6 +144,16 @@ function AuthPage({ onSignedIn, sessionError, retrySession }: {
 
 const projectPickerDraftSchema = z.object({open: z.literal(true)}).strict();
 function Workbench({ session, onLogout }: { session: Session; onLogout: () => void }) {
+    const mobile = useMobileViewport();
+    const sidebarId = useId();
+    const sidebar = useSidebarResize({
+        defaultWidth: 252,
+        minWidth: 208,
+        maxWidth: 420,
+        contentWidth: 560,
+        enabled: !mobile,
+        storageKey: "projects:sidebar-width:v1",
+    });
     const route = useRoute();
     const projects = useResource("projects", async signal => {
         const data = await api.projects(signal);
@@ -281,7 +292,7 @@ function Workbench({ session, onLogout }: { session: Session; onLogout: () => vo
         }
     }
     return <ProjectPermissionsProvider projects={projectRows}><AppShell appearance="canvas" className="shell"><a href="#main" className="skip-link">본문으로 이동</a>
-        <AppBody className="workspace-body"><AppSidebar className="sidebar" aria-label="프로젝트 탐색"><div><Brand clientNavigation /><div className="workspace">개인 작업공간</div></div>
+        <AppBody className="workspace-body" style={sidebar.style}><AppSidebar id={sidebarId} ref={sidebar.panelRef} className="sidebar" aria-label="프로젝트 탐색"><div><Brand clientNavigation /><div className="workspace">개인 작업공간</div></div>
             <div className="project-nav"><RouteLink className="my-tasks-nav" current={!route.project && route.view === "tasks"} patch={{project: "", view: "tasks", taskScope: "all", item: ""}}>☷ 전체 작업</RouteLink><RouteLink className="side-label project-list-link" patch={{ view: "projects", item: "", run: "", baseline: "", q: "" }}>PROJECTS · 전체 보기</RouteLink>
                 {projectRows.length > 0 && <ProjectOrderList projects={projectRows} currentId={route.project} onRenamed={projectRenamed} compact busy={orderingProjects} onReorder={reorderProjects} recoverySurface="sidebar" />}
                 <ActionButton className="linkbtn small new-project" onClick={() => setCreateOpen(true)}>+ 프로젝트 만들기</ActionButton>
@@ -293,6 +304,7 @@ function Workbench({ session, onLogout }: { session: Session; onLogout: () => vo
                 })}</SideNav>
             </div><div className="sidebar-bottom"><span className="avatar" aria-hidden="true">{session.user.username.slice(0, 2).toUpperCase()}</span><strong>{session.user.username}</strong><p className="muted small">개인 모드</p><RouteLink className="button small preferences-link" patch={{view: "settings", item: "", run: ""}}>설정·환경설정</RouteLink><ActionButton className="small" disabled={logoutBusy} onClick={() => { void logout(); }}>{logoutBusy ? "처리 중…" : "로그아웃"}</ActionButton></div>
         </AppSidebar>
+        {!mobile && <SidebarResizeHandle {...sidebar.handle} label="프로젝트 탐색 너비" controls={sidebarId} className="workspace-sidebar-divider" />}
         <div className="workspace-main"><AppHeader className="topbar"><div className="crumb"><RouteLink patch={{ view: "projects", item: "", run: "", baseline: "" }}>프로젝트</RouteLink>{selected && route.view !== "projects" && <><span>/</span><strong>{selected.name}</strong><span>/</span><span>{title}</span></>}</div><div className="mobile-topbar"><Button variant="ghost" className="mobile-project-button" aria-label="프로젝트 목록 열기" aria-haspopup="dialog" aria-expanded={mobileProjectsOpen} onClick={() => setMobileProjectsOpen(true)}><span className="mobile-project-name">{projectLabel}</span><span aria-hidden="true">⌄</span></Button><strong>{title}</strong>{route.view !== "settings" && <RouteLink className="mobile-settings-link" patch={{view: "settings", item: "", run: ""}}>설정</RouteLink>}</div><div className="actions desktop-topbar-actions">
             <RouteLink className="button small preferences-link" patch={{view: "settings", item: "", run: ""}}>설정</RouteLink>
             <ActionButton className="mobile-logout small" disabled={logoutBusy} onClick={() => { void logout(); }}>로그아웃</ActionButton>

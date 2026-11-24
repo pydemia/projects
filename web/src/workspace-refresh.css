@@ -1,7 +1,25 @@
 /* Product layout around source-owned pydemia UI components. */
 .projects-theme .shell { display: block; min-height: 100dvh; overflow: visible; background: var(--background); }
-.projects-theme .workspace-body { display: grid; grid-template-columns: 252px minmax(0, 1fr); min-height: 100dvh; }
+.projects-theme .workspace-body { display: grid; grid-template-columns: var(--sidebar-width, 252px) 10px minmax(0, 1fr); min-height: 100dvh; }
 .projects-theme .sidebar { position: sticky; top: 0; display: flex; width: auto; height: 100dvh; padding: 22px 16px; gap: 25px; border: 0; border-right: 1px solid var(--border); background: var(--surface-subtle); }
+.projects-theme .workspace-sidebar-divider {
+  position: sticky;
+  top: 0;
+  height: 100dvh;
+  width: auto;
+  cursor: col-resize;
+  touch-action: none;
+  user-select: none;
+}
+.projects-theme .workspace-sidebar-divider::before {
+  position: absolute;
+  inset: 0;
+  width: auto;
+  background: transparent;
+  content: "";
+}
+.projects-theme .workspace-sidebar-divider:is(:hover, :focus-visible, [data-dragging="true"])::before { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+.projects-theme .workspace-sidebar-divider:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
 .projects-theme .sidebar .brand { font-size: 20px; }
 .projects-theme .sidebar .workspace { letter-spacing: .01em; }
 .projects-theme .sidebar .nav { display: grid; gap: 5px; margin-top: 24px; }
@@ -66,7 +84,6 @@
 .projects-theme .theme-controls > div:first-of-type { min-width: 145px; }
 .projects-theme .theme-controls select { max-width: none; padding-right: 32px; }
 @media (max-width: 1180px) {
-  .projects-theme .workspace-body { grid-template-columns: 208px minmax(0, 1fr); }
   .projects-theme .task-tools { grid-template-columns: repeat(3, minmax(150px, 1fr)); }
   .projects-theme .task-tools [data-ui="search-input"] { grid-column: span 2; }
 }

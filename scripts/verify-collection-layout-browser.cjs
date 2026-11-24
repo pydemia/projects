@@ -39,6 +39,8 @@ async function main() {
         const divider = page.getByRole("separator", { name: "목록 너비", exact: true });
         const rows = collection.locator(".doc-item");
         const detail = page.locator(".workspace-detail");
+        const sidebar = page.getByRole("complementary", { name: "프로젝트 탐색", exact: true });
+        const sidebarDivider = page.getByRole("separator", { name: "프로젝트 탐색 너비", exact: true });
         for (const width of [1440, 820, 390]) {
             await page.setViewportSize({ width, height: 900 });
             for (const [view, records] of fixtures) {
@@ -56,7 +58,23 @@ async function main() {
                 assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
                 if (width > 760) await expect(divider).toBeVisible();
                 else await expect(divider).toHaveCount(0);
+                if (width > 760) await expect(sidebarDivider).toBeVisible();
+                else await expect(sidebarDivider).toHaveCount(0);
                 if (width === 1440 && view === "tests") {
+                    const sidebarStart = (await sidebar.boundingBox()).width;
+                    const sidebarHandle = await sidebarDivider.boundingBox();
+                    const sidebarX = sidebarHandle.x + sidebarHandle.width / 2;
+                    await page.mouse.move(sidebarX, 120);
+                    await page.mouse.down();
+                    await page.mouse.move(sidebarX + 84, 120, { steps: 5 });
+                    await page.mouse.up();
+                    const sidebarExpanded = (await sidebar.boundingBox()).width;
+                    assert(sidebarExpanded > sidebarStart + 60);
+                    await page.reload();
+                    await expect.poll(async () => (await sidebar.boundingBox())?.width).toBeCloseTo(sidebarExpanded, 0);
+                    await sidebarDivider.press("Home");
+                    await expect.poll(async () => (await sidebar.boundingBox())?.width).toBeLessThan(sidebarStart);
+
                     const start = (await collection.boundingBox()).width;
                     await divider.press("End");
                     const expanded = (await collection.boundingBox()).width;

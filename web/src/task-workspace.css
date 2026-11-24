@@ -29,7 +29,8 @@
 .task-board-toolbar select { width: auto; min-width: 220px; }
 .task-board-toolbar [role="status"] { margin-left: auto; }
 .projects-theme .task-kanban {
-  --task-kanban-column-width: 352px;
+  --task-kanban-column-max-width: 360px;
+  --task-kanban-column-width: var(--task-kanban-column-max-width);
   min-width: 0;
   max-width: 100%;
   overflow-x: auto;

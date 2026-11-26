@@ -41,6 +41,14 @@ class ProjectSchedule(Base):
     confirmed_date: Mapped[date | None] = mapped_column(Date)
     evidence: Mapped[str] = mapped_column(Text, default="")
     member_ids: Mapped[list[str]] = mapped_column(JSON, default=list)
+    predecessor_id: Mapped[str | None] = mapped_column(
+        ForeignKey("project_schedules.id"), index=True
+    )
+    started_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True)
+    )
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    phase_results: Mapped[list[dict] | None] = mapped_column(JSON)
     deleted: Mapped[bool] = mapped_column(default=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utcnow

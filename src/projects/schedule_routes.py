@@ -37,6 +37,7 @@ class ScheduleFields(BaseModel):
     end_date: CalendarDate | None = None
     due_date: CalendarDate | None = None
     confirmed_date: CalendarDate | None = None
+    predecessor_id: str | None = None
     evidence: str = Field(default="", max_length=10000)
 
     @model_validator(mode="after")
@@ -68,7 +69,25 @@ class ScheduleExpected(BaseModel):
 
 
 class ScheduleMembers(ScheduleExpected):
-    item_ids: list[str] = Field(max_length=2000)
+    item_ids: list[str] = Field(max_length=schedules.MAX_SCHEDULE_MEMBERS)
+
+
+class Carryover(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    task_id: str
+    target_phase_id: str
+
+
+class PhaseClose(ScheduleExpected):
+    carryovers: list[Carryover] = Field(
+        default_factory=list, max_length=schedules.MAX_SCHEDULE_MEMBERS
+    )
+
+
+class TaskPhases(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    phase_ids: list[str] = Field(max_length=2000)
+    expected_revisions: dict[str, int]
 
 
 class IterationAssignment(BaseModel):
@@ -175,6 +194,78 @@ def install_schedule_routes(
         user: Account = user_dependency,
     ) -> list[dict]:
         return schedules.schedule_history(db, project_id, schedule_id, user.id)
+
+    @app.post(base + "/schedules/{schedule_id}/start")
+    def start_phase(
+        project_id: str,
+        schedule_id: str,
+        body: ScheduleExpected,
+        db: Session = database_dependency,
+        user: Account = user_dependency,
+    ) -> dict:
+        return schedules.transition_phase(
+            db,
+            project_id,
+            schedule_id,
+            user.id,
+            body.expected_revision,
+            "start",
+        )
+
+    @app.post(base + "/schedules/{schedule_id}/reopen")
+    def reopen_phase(
+        project_id: str,
+        schedule_id: str,
+        body: ScheduleExpected,
+        db: Session = database_dependency,
+        user: Account = user_dependency,
+    ) -> dict:
+        return schedules.transition_phase(
+            db,
+            project_id,
+            schedule_id,
+            user.id,
+            body.expected_revision,
+            "reopen",
+        )
+
+    @app.post(base + "/schedules/{schedule_id}/close")
+    def close_phase(
+        project_id: str,
+        schedule_id: str,
+        body: PhaseClose,
+        db: Session = database_dependency,
+        user: Account = user_dependency,
+    ) -> dict:
+        return schedules.transition_phase(
+            db,
+            project_id,
+            schedule_id,
+            user.id,
+            body.expected_revision,
+            "close",
+            [
+                (entry.task_id, entry.target_phase_id)
+                for entry in body.carryovers
+            ],
+        )
+
+    @app.put(base + "/task-phases/{task_id}")
+    def put_task_phases(
+        project_id: str,
+        task_id: str,
+        body: TaskPhases,
+        db: Session = database_dependency,
+        user: Account = user_dependency,
+    ) -> dict:
+        return schedules.set_task_phases(
+            db,
+            project_id,
+            task_id,
+            user.id,
+            body.phase_ids,
+            body.expected_revisions,
+        )
 
     @app.get(base + "/task-iterations/{task_id}")
     def get_assignment(

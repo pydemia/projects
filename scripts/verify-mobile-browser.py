@@ -60,6 +60,7 @@ def main() -> None:
         "verify-project-access-browser.cjs",
         "verify-startup-browser.cjs",
         "verify-login-layout-browser.cjs",
+        "verify-phase-lifecycle-browser.cjs",
     }:
         raise ValueError("Unknown browser verification scenario")
     api_port = free_port()

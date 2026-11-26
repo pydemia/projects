@@ -23,7 +23,7 @@ import { TaskStoryChips, useTaskRelations } from "./StoryChips";
 import { TaskListStatus } from "./TaskListStatus";
 import { AgentTrackActivity, AgentTrackSummary } from "./AgentTrackSummary";
 import type { ContextSummary } from "./agent-track-shared/context/contracts";
-import { dataSchemas, statusLabels } from "./models";
+import { dataSchemas, statusLabels, taskStates } from "./models";
 import type { Catalog, Item, TaskFieldDefinition, TaskViewSettings } from "./models";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "./pydemia-ui/dropdown-menu";
 import { Input } from "./pydemia-ui/input";
@@ -44,7 +44,7 @@ import "./task-management.css";
 type Task = Extract<Item, { kind: "task" }>;
 type CancellationTarget = Pick<Task, "id" | "project_id" | "revision" | "title" | "body" | "data">;
 type Lens = "gtd" | "abc";
-const states = ["todo", "in_progress", "in_review", "done", "cancelled"] as const;
+const states = taskStates;
 const taskScopes = ["all", "today", "inbox", "upcoming"] as const;
 const complexViews = ["list", "board", "graph", "calendar", "insights"] as const;
 const deadlineLabels = ["기한 지남", "오늘 마감", "다음 마감", "마감일 없음", "종료"] as const;
@@ -85,7 +85,7 @@ function localDay(date = new Date()): string {
     return `${year}-${month}-${day}`;
 }
 function isOpen(task: Task): boolean {
-    return task.data.state !== "done" && task.data.state !== "cancelled";
+    return task.data.state !== "done" && task.data.state !== "closed";
 }
 function abcRank(task: Task): number {
     return { A: 0, B: 1, C: 2, none: 3 }[task.data.abc_priority];
@@ -233,7 +233,7 @@ export function TaskWorkspace({ projectId, userId, route, items, selectedItem, r
     }, [projectId, userId, creationProjects.status, creationProjects.data]);
     const query = route.qPresent || route.q || route.savedView ? route.q : remembered?.query ?? "";
     const setQuery = (q: string) => navigate({ q });
-    const status = route.taskStatus || remembered?.status || "open";
+    const status = route.taskStatus === "cancelled" ? "closed" : route.taskStatus || remembered?.status || "open";
     const setStatus = (taskStatus: string) => navigate({ taskStatus });
     const [lens, setLens] = useState<Lens>(remembered?.lens ?? "gtd");
     const [minutes, setMinutes] = useState(remembered?.minutes ?? 0);
@@ -480,7 +480,7 @@ export function TaskWorkspace({ projectId, userId, route, items, selectedItem, r
     }
     function chooseListState(task: Task, state: Task["data"]["state"]) {
         if (busyId || !can(task.project_id, "task.update") || state === task.data.state) return;
-        if (state === "cancelled") {
+        if (state === "closed") {
             setError(""); setCancellationReason(task.data.cancellation_reason); setCancellingTask(task);
         } else void saveListState(task, state);
     }
@@ -797,10 +797,10 @@ export function TaskWorkspace({ projectId, userId, route, items, selectedItem, r
             <Field label="상태"><NativeSelect value={bulkState} onChange={event => setBulkState(event.target.value as Task["data"]["state"])}>
                 {states.map(state => <option key={state} value={state}>{statusLabels[state]}</option>)}
             </NativeSelect></Field>
-            {bulkState === "cancelled" && <Field label="취소 사유"><Input value={bulkReason} onChange={event => setBulkReason(event.target.value)} /></Field>}
-            <ActionButton disabled={!selectedWritable || busyId === "bulk" || bulkState === "cancelled" && !bulkReason.trim()}
+            {bulkState === "closed" && <Field label="종료 사유"><Input value={bulkReason} onChange={event => setBulkReason(event.target.value)} /></Field>}
+            <ActionButton disabled={!selectedWritable || busyId === "bulk" || bulkState === "closed" && !bulkReason.trim()}
                 onClick={() => { void changeTasks([...selectedIds], { state: bulkState,
-                    ...(bulkState === "cancelled" ? { cancellation_reason: bulkReason.trim() } : {}) }); }}>상태 적용</ActionButton>
+                    ...(bulkState === "closed" ? { cancellation_reason: bulkReason.trim() } : {}) }); }}>상태 적용</ActionButton>
             <Field label="실행 예정일"><Input type="date" value={bulkDate} onChange={event => setBulkDate(event.target.value)} /></Field>
             <ActionButton disabled={!selectedWritable || busyId === "bulk" || !bulkDate} onClick={() => { void changeTasks([...selectedIds], { planned_date: bulkDate }); }}>날짜 적용</ActionButton>
             <ActionButton disabled={!selectedWritable || busyId === "bulk"} onClick={() => { void changeTasks([...selectedIds], { planned_date: "" }); }}>날짜 지우기</ActionButton>
@@ -837,16 +837,16 @@ export function TaskWorkspace({ projectId, userId, route, items, selectedItem, r
         </TaskDetailPanel>}
         {splitList && !selected && <aside className="task-split-placeholder" aria-label="작업 상세"><h2>작업 상세</h2><p>목록에서 작업을 선택하세요.</p></aside>}
         </div>
-        {cancellingTask && <Modal title="작업 취소" onClose={() => { if (!busyId) { setCancellingTask(null); cancellationRecovery.clear(); setError(""); } }}>
+        {cancellingTask && <Modal title="작업 종료" onClose={() => { if (!busyId) { setCancellingTask(null); cancellationRecovery.clear(); setError(""); } }}>
             <p>{cancellingTask.title}</p><form onSubmit={event => {
                 event.preventDefault();
                 if (!cancellationReason.trim()) return;
-                void saveListState(cancellingTask, "cancelled", cancellationReason.trim()).then(saved => { if (saved) {setCancellingTask(null); cancellationRecovery.clear();} });
+                void saveListState(cancellingTask, "closed", cancellationReason.trim()).then(saved => { if (saved) {setCancellingTask(null); cancellationRecovery.clear();} });
             }}>
-                <Field label="취소 사유"><Textarea disabled={!can(cancellingTask.project_id, "task.update")} value={cancellationReason} onChange={event => setCancellationReason(event.target.value)} required /></Field>
+                <Field label="종료 사유"><Textarea disabled={!can(cancellingTask.project_id, "task.update")} value={cancellationReason} onChange={event => setCancellationReason(event.target.value)} required /></Field>
                 {error && <ErrorNotice error={error} />}
                 <div className="actions"><ActionButton type="button" disabled={!!busyId} onClick={() => { setCancellingTask(null); cancellationRecovery.clear(); setError(""); }}>돌아가기</ActionButton>
-                    <ActionButton type="submit" className="primary" disabled={!!busyId || !can(cancellingTask.project_id, "task.update") || !cancellationReason.trim()}>{busyId ? "저장 중…" : "취소 확정"}</ActionButton></div>
+                    <ActionButton type="submit" className="primary" disabled={!!busyId || !can(cancellingTask.project_id, "task.update") || !cancellationReason.trim()}>{busyId ? "저장 중…" : "종료 확정"}</ActionButton></div>
             </form>
         </Modal>}
         {newDetailed && creationProject && <NewItem kind="task" projectId={creationProject} userId={userId} items={items} catalog={catalog}
@@ -884,8 +884,8 @@ export function TaskWorkspace({ projectId, userId, route, items, selectedItem, r
         {mobile && mobileBulkOpen && <Modal title={`${selectedIds.size}개 작업 일괄 변경`} className="mobile-task-dialog" onClose={() => { setMobileBulkOpen(false); window.requestAnimationFrame(() => mobileBulkTrigger.current?.focus()); }}><div className="mobile-task-sheet-fields"><ActionButton disabled={!selectedMovable} onClick={() => {setMobileBulkOpen(false); startTransfer([...selectedIds]);}}>프로젝트 이동</ActionButton>
             <p className="muted small">선택한 작업 전체에 적용합니다. 완료 조건을 충족하지 못하면 모두 거부됩니다.</p>
             <Field label="상태"><NativeSelect value={bulkState} onChange={event => setBulkState(event.target.value as Task["data"]["state"])}>{states.map(state => <option key={state} value={state}>{statusLabels[state]}</option>)}</NativeSelect></Field>
-            {bulkState === "cancelled" && <Field label="취소 사유"><Input value={bulkReason} onChange={event => setBulkReason(event.target.value)} /></Field>}
-            <ActionButton type="button" disabled={!selectedWritable || busyId === "bulk" || bulkState === "cancelled" && !bulkReason.trim()} onClick={() => { void changeTasks([...selectedIds], { state: bulkState, ...(bulkState === "cancelled" ? { cancellation_reason: bulkReason.trim() } : {}) }); }}>상태 적용</ActionButton>
+            {bulkState === "closed" && <Field label="종료 사유"><Input value={bulkReason} onChange={event => setBulkReason(event.target.value)} /></Field>}
+            <ActionButton type="button" disabled={!selectedWritable || busyId === "bulk" || bulkState === "closed" && !bulkReason.trim()} onClick={() => { void changeTasks([...selectedIds], { state: bulkState, ...(bulkState === "closed" ? { cancellation_reason: bulkReason.trim() } : {}) }); }}>상태 적용</ActionButton>
             <Field label="실행 예정일"><Input type="date" value={bulkDate} onChange={event => setBulkDate(event.target.value)} /></Field>
             <ActionButton type="button" disabled={!selectedWritable || busyId === "bulk" || !bulkDate} onClick={() => { void changeTasks([...selectedIds], { planned_date: bulkDate }); }}>날짜 적용</ActionButton>
             <Field label="목록"><Input value={bulkList} onChange={event => setBulkList(event.target.value)} maxLength={80} /></Field>

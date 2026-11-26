@@ -159,23 +159,55 @@ def test_project_order_is_persisted_and_scoped_to_owner(app, client, project):
         ]
 
 
-def test_task_cancellation_preserves_reason_and_summary_denominator(
-    client, project, create_item
+def test_task_close_and_legacy_cancellation_preserve_outcomes(
+    client, project, create_item, engine
 ):
-    task = create_item("task", "취소할 작업")
-    data = {**task["data"], "state": "cancelled"}
+    task = create_item("task", "종료할 작업")
+    data = {**task["data"], "state": "closed"}
     assert update(client, task, data=data).status_code == 422
     assert client.get(f"/api/items/{task['id']}").json()["revision"] == 1
-    cancelled = update(
+    closed = update(
         client,
         task,
         data={**data, "cancellation_reason": "중복 기능으로 범위 제외"},
     ).json()
-    assert (
-        cancelled["data"]["cancellation_reason"] == "중복 기능으로 범위 제외"
+    assert closed["data"]["state"] == "closed"
+    assert closed["data"]["cancellation_reason"] == "중복 기능으로 범위 제외"
+
+    legacy = create_item("task", "기존 취소 작업")
+    legacy_data = {
+        **legacy["data"],
+        "state": "cancelled",
+        "cancellation_reason": "이전 취소 사유",
+    }
+    with Session(engine) as db, db.begin():
+        db.get(Item, legacy["id"]).data = legacy_data
+        db.get(Revision, (legacy["id"], legacy["revision"])).data = legacy_data
+    reopened = client.get(f"/api/items/{legacy['id']}").json()
+    assert reopened["data"] == {**legacy_data, "state": "closed"}
+    assert reopened["revision"] == legacy["revision"]
+    revisions = client.get(f"/api/items/{legacy['id']}/revisions").json()
+    assert revisions[0]["data"] == legacy_data
+    completed = create_item("task", "완료 작업", data={"workflow": "personal"})
+    done = update(
+        client, completed, data={**completed["data"], "state": "done"}
     )
+    assert done.status_code == 200
+    for status in ("closed", "cancelled", "open"):
+        results = client.get(
+            "/api/tasks",
+            params={"project_id": project["id"], "status": status},
+        ).json()
+        expected = set() if status == "open" else {task["id"], legacy["id"]}
+        assert {row["id"] for row in results["items"]} == expected
+
     summary = client.get(f"/api/projects/{project['id']}/summary").json()
-    assert summary["tasks"] == {"done": 0, "total": 0, "cancelled": 1}
+    assert summary["tasks"] == {
+        "done": 1,
+        "total": 1,
+        "closed": 2,
+        "cancelled": 2,
+    }
     baseline = client.post(
         f"/api/projects/{project['id']}/baselines",
         json={"name": "범위 제외 기록"},

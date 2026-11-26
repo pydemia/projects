@@ -1,29 +1,32 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { api } from "./api";
 import { formatDateOnly } from "./date-time";
-import { useDateTimeSettings } from "./date-time-settings";
+import { DateTimeValue, useDateTimeSettings } from "./date-time-settings";
 import { useProjectPermissions } from "./ProjectPermissions";
 import type { Item, Link } from "./models";
 import { scheduleApi } from "./schedule-api";
 import type { Schedule, ScheduleDiff, ScheduleKind, ScheduleSnapshot } from "./schedule-models";
+import { RouteLink } from "./ui";
 import "./schedules.css";
 
 const names: Record<ScheduleKind, string> = {epic: "Epic", phase: "Phase", milestone: "Milestone", iteration: "Iteration"};
 const errorMessage = (error: unknown) => error instanceof Error ? error.message : "저장하지 못했습니다.";
+type Task = Extract<Item, {kind: "task"}>;
 
 function usePlanDate() {
     const settings = useDateTimeSettings();
     return (value: string | null) => formatDateOnly(value ?? "", settings.dateFormat, settings.timeZone);
 }
 
-function ScheduleEditor({row, pending, save, cancel}: {row: Schedule; pending: boolean; save: (body: unknown) => void; cancel: () => void}) {
+function ScheduleEditor({row, phases, pending, save, cancel}: {row: Schedule; phases: Schedule[]; pending: boolean; save: (body: unknown) => void; cancel: () => void}) {
     const submit = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         const data = new FormData(event.currentTarget);
         save({title: data.get("title"), expected_revision: row.revision,
             start_date: data.get("start_date") || null, end_date: data.get("end_date") || null,
             due_date: data.get("due_date") || null, confirmed_date: data.get("confirmed_date") || null,
-            evidence: data.get("evidence") || "", reason: data.get("reason") || ""});
+            evidence: data.get("evidence") || "", reason: data.get("reason") || "",
+            ...(row.phase?.status === "not_started" ? {predecessor_id: data.get("predecessor_id") || null} : {})});
     };
     return <form className="schedule-inline-editor" onSubmit={submit}>
         <label>제목<input name="title" defaultValue={row.title} required maxLength={300} /></label>
@@ -35,8 +38,83 @@ function ScheduleEditor({row, pending, save, cancel}: {row: Schedule; pending: b
         </div>
         <label>확인 근거<input name="evidence" defaultValue={row.evidence} maxLength={10000} /></label>
         <label>변경 사유<input name="reason" maxLength={10000} /></label>
+        {row.phase?.status === "not_started" && <label>선행 Phase<select name="predecessor_id" defaultValue={row.phase.predecessor_id ?? ""}><option value="">없음 (첫 Phase)</option>{phases.filter(phase => phase.id !== row.id).map(phase => <option key={phase.id} value={phase.id}>{phase.title}</option>)}</select></label>}
         <div className="schedule-actions"><button disabled={pending}>저장</button><button type="button" onClick={cancel} disabled={pending}>취소</button></div>
     </form>;
+}
+
+const phaseStatusLabels = {not_started: "시작 전", in_progress: "진행 중", closed: "종료"} as const;
+const phaseResultLabels = {completed: "Completed", closed: "Closed", carryover: "Carryover"} as const;
+
+function PhaseLifecycle({row, phases, tasks, editable, pending, run}: {
+    row: Schedule;
+    phases: Schedule[];
+    tasks: Task[];
+    editable: boolean;
+    pending: boolean;
+    run: (operation: () => Promise<unknown>) => void;
+}) {
+    const phase = row.phase;
+    const [carryovers, setCarryovers] = useState<Record<string, string>>({});
+    if (!phase) return null;
+    const members = tasks.filter(task => row.member_ids.includes(task.id));
+    const predecessor = phases.find(candidate => candidate.id === phase.predecessor_id);
+    const successors = phases.filter(candidate => candidate.phase?.predecessor_id === row.id);
+    const successorStarted = successors.some(candidate => candidate.phase?.status !== "not_started");
+    const targets = successors.filter(candidate => candidate.phase?.status === "not_started");
+    const openTasks = members.filter(task => task.data.state !== "done" && task.data.state !== "closed");
+    const resolutions = openTasks.flatMap(task => {
+        const target = targets.find(candidate => candidate.id === carryovers[task.id]);
+        return target ? [{task_id: task.id, target_phase_id: target.id}] : [];
+    });
+    const canClose = resolutions.length === openTasks.length;
+    return <section className="phase-lifecycle" aria-label={`${row.title} Phase 상태`}>
+        <p><strong>{phaseStatusLabels[phase.status]}</strong>
+            {phase.started_at && <> · 실제 시작 <DateTimeValue value={phase.started_at} /></>}
+            {phase.closed_at && <> · 실제 종료 <DateTimeValue value={phase.closed_at} /></>}
+        </p>
+        {predecessor && <p className="muted small">선행 Phase · {predecessor.title}
+            {predecessor.phase && ` · ${phaseStatusLabels[predecessor.phase.status]}`}
+        </p>}
+        {phase.status === "not_started" && editable && <button disabled={pending} onClick={() => run(() => scheduleApi.start(row.project_id, row.id, row.revision))}>시작</button>}
+        {phase.status === "in_progress" && <div className="phase-close">
+            <h4>Phase 종료</h4>
+            <p className="muted small">열린 Task마다 직접 완료·종료하거나 다음 Phase의 이월 대상을 선택하세요.</p>
+            {members.length === 0 && <p className="muted small">연결된 Task가 없습니다.</p>}
+            {members.map(task => {
+                const state = task.data.state;
+                if (state === "done") return <p key={task.id}>{task.title} · Completed</p>;
+                if (state === "closed") return <p key={task.id}>{task.title} · Closed</p>;
+                return <div className="phase-carryover" key={task.id}>
+                    <label>{task.title} · Carryover 대상
+                        <select value={carryovers[task.id] ?? ""} disabled={!editable || pending || !targets.length}
+                            onChange={event => setCarryovers({...carryovers, [task.id]: event.target.value})}>
+                            <option value="">다음 Phase 선택</option>
+                            {targets.map(target => <option key={target.id} value={target.id}>{target.title}</option>)}
+                        </select>
+                    </label>
+                    <RouteLink patch={{view: "tasks", item: task.id, taskScope: "all", taskStatus: "all", savedView: "", q: ""}}>Task 보기</RouteLink>
+                </div>;
+            })}
+            {editable && <button disabled={pending || !canClose}
+                onClick={() => run(() => scheduleApi.close(row.project_id, row.id, row.revision, resolutions))}>종료</button>}
+        </div>}
+        {phase.status === "closed" && <>
+            {editable && (successorStarted ? <p className="muted small">다음 Phase가 이미 시작되어 재개할 수 없습니다.</p> : <button disabled={pending} onClick={() => run(() => scheduleApi.reopen(row.project_id, row.id, row.revision))}>재개</button>)}
+            <PhaseResults results={phase.results} phases={phases} />
+        </>}
+    </section>;
+}
+
+function PhaseResults({results, phases}: {results: NonNullable<Schedule["phase"]>["results"]; phases: Schedule[]}) {
+    if (results.length === 0) return <p className="muted small">기록된 Task 종료 결과가 없습니다.</p>;
+    return <section aria-label="Task 종료 결과"><h4>Task 종료 결과</h4>
+        <ul className="phase-results">{results.map(result => <li key={result.task_id}>
+            {result.title} · {phaseResultLabels[result.result]}
+            {result.reason && ` · ${result.reason}`}
+            {result.target_phase_id && ` → ${phases.find(phase => phase.id === result.target_phase_id)?.title ?? "삭제된 Phase"}`}
+        </li>)}</ul>
+    </section>;
 }
 
 function MembershipEditor({row, items, pending, save, cancel}: {row: Schedule; items: Item[]; pending: boolean; save: (ids: string[]) => void; cancel: () => void}) {
@@ -103,6 +181,7 @@ function ProjectSchedules({projectId}: {projectId: string}) {
     const [items, setItems] = useState<Item[]>([]);
     const [links, setLinks] = useState<Link[]>([]);
     const [snapshots, setSnapshots] = useState<ScheduleSnapshot[]>([]);
+    const [newKind, setNewKind] = useState<string>("epic");
     const [editing, setEditing] = useState<string | null>(null);
     const [members, setMembers] = useState<string | null>(null);
     const [diff, setDiff] = useState<ScheduleDiff | null>(null);
@@ -128,17 +207,33 @@ function ProjectSchedules({projectId}: {projectId: string}) {
     };
     const run = (operation: () => Promise<unknown>) => {void change(operation).catch(() => undefined);};
     const tasks = items.filter(item => item.kind === "task");
+    const phases = schedules.filter(row => row.kind === "phase");
     const iterations = schedules.filter(row => row.kind === "iteration");
     const create = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault(); const form = event.currentTarget; const data = new FormData(form);
-        run(async () => {await scheduleApi.create(projectId, {title: data.get("title"), kind: data.get("kind")}); form.reset();});
+        run(async () => {
+            await scheduleApi.create(projectId, {title: data.get("title"), kind: newKind,
+                ...(newKind === "phase" ? {predecessor_id: data.get("predecessor_id") || null} : {})});
+            form.reset();
+            setNewKind("epic");
+        });
     };
     if (loading) return <p role="status">상위 일정을 불러오는 중…</p>;
     if (loadFailed) return <section aria-label="상위 일정 불러오기 실패"><p role="alert">{error}</p><button onClick={() => {setLoading(true); void load().then(() => {setLoadFailed(false); setError("");}).catch(error => setError(errorMessage(error))).finally(() => setLoading(false));}}>다시 불러오기</button></section>;
     return <section className="schedules-page" aria-label="선택적 상위 일정">
         <header><h2>상위 일정</h2><p className="muted">선택적으로 목표·일정을 묶습니다. Task·Story의 필수 부모나 완료 조건이 아닙니다.</p></header>
         {error && <p role="alert">{error}</p>}
-        {editable && <form className="schedule-create" onSubmit={create}><label>유형<select name="kind" defaultValue="epic">{Object.entries(names).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label>제목<input name="title" required maxLength={300} placeholder="일정 또는 목표 이름" /></label><button disabled={pending}>추가</button></form>}
+        {editable && <form className="schedule-create" onSubmit={create}>
+            <label>유형<select name="kind" value={newKind} onChange={event => setNewKind(event.target.value)}>
+                {Object.entries(names).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+            </select></label>
+            <label>제목<input name="title" required maxLength={300} placeholder="일정 또는 목표 이름" /></label>
+            {newKind === "phase" && <label>선행 Phase<select name="predecessor_id" defaultValue="">
+                <option value="">없음 (첫 Phase)</option>
+                {phases.map(row => <option key={row.id} value={row.id}>{row.title}</option>)}
+            </select></label>}
+            <button disabled={pending}>추가</button>
+        </form>}
         <p className="muted small">현재 접근 가능한 범위 · Story {items.filter(item => item.kind === "requirement").length}개 · Task {tasks.length}개 (중복 제외)</p>
         {schedules.length === 0 && <p>등록한 상위 일정이 없습니다. Story·Task는 일정 없이도 사용할 수 있습니다.</p>}
         <div className="schedule-list">{schedules.map(row => {
@@ -148,8 +243,9 @@ function ProjectSchedules({projectId}: {projectId: string}) {
             return <article className="schedule-row" key={row.id}>
                 <div className="schedule-row-heading"><span className="muted">{names[row.kind]}</span><strong>{row.title}</strong><span className="muted small">Story {storyIds.size} · Task {taskIds.size}</span>{editable && <div className="schedule-actions"><button onClick={() => {setEditing(row.id); setMembers(null);}}>일정 편집</button>{row.kind !== "iteration" && <button onClick={() => {setMembers(row.id); setEditing(null);}}>연결 편집</button>}<button disabled={pending} onClick={() => run(() => scheduleApi.remove(projectId, row.id, row.revision))}>일정 삭제</button></div>}</div>
                 <p className="schedule-dates">시작 예정 {dateLabel(row.start_date)} · 종료 예정 {dateLabel(row.end_date)} · 마감·목표 {dateLabel(row.due_date)}{row.confirmed_date && <> · 실제 확인 {dateLabel(row.confirmed_date)} · {row.evidence}</>}</p>
+                {row.kind === "phase" && <PhaseLifecycle row={row} phases={phases} tasks={tasks} editable={editable} pending={pending} run={run} />}
                 {row.kind === "iteration" && storyIds.size > 0 && <p className="muted small">관련 Task가 기여하는 Story: {items.filter(item => storyIds.has(item.id)).map(item => item.title).join(", ")}</p>}
-                {editing === row.id && <ScheduleEditor row={row} pending={pending} cancel={() => setEditing(null)} save={body => run(() => scheduleApi.update(projectId, row.id, body))} />}
+                {editing === row.id && <ScheduleEditor row={row} phases={phases} pending={pending} cancel={() => setEditing(null)} save={body => run(() => scheduleApi.update(projectId, row.id, body))} />}
                 {members === row.id && <MembershipEditor row={row} items={items} pending={pending} cancel={() => setMembers(null)} save={ids => run(() => scheduleApi.members(projectId, row.id, row.revision, ids))} />}
             </article>;
         })}</div>

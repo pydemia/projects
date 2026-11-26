@@ -20,6 +20,7 @@ from projects.database import (
     utcnow,
 )
 from projects.domain import (
+    TASK_CLOSED_STATES,
     Problem,
     check_dependency_cycle,
     check_task_parent,
@@ -35,12 +36,16 @@ from projects.task_fields import validate_custom_values
 
 def serialize(row: object) -> dict:
     columns = row.__table__.columns  # type: ignore[attr-defined]
-    return {
+    data = {
         column.name: getattr(row, column.name).isoformat()
         if hasattr(getattr(row, column.name), "isoformat")
         else copy.deepcopy(getattr(row, column.name))
         for column in columns
     }
+    if isinstance(row, Item) and row.kind == "task":
+        if data["data"].get("state") == "cancelled":
+            data["data"]["state"] = "closed"
+    return data
 
 
 def project_for_user(
@@ -595,21 +600,18 @@ def project_summary(
     db: Session, project_id: str, *, actor_id: str | None = None
 ) -> dict:
     items = project_items(db, project_id)
-    tasks = [
-        x for x in items if x.kind == "task" and x.data["state"] != "cancelled"
-    ]
+    tasks = Counter(x.data["state"] for x in items if x.kind == "task")
+    closed_tasks = sum(tasks[state] for state in TASK_CLOSED_STATES)
     artifacts = [x for x in items if x.kind == "artifact"]
     cases = [x for x in items if x.kind == "test_case"]
     latest = [latest_case_run(db, x) for x in cases]
     return {
         "items_by_kind": dict(Counter(x.kind for x in items)),
         "tasks": {
-            "done": sum(x.data["state"] == "done" for x in tasks),
-            "total": len(tasks),
-            "cancelled": sum(
-                x.kind == "task" and x.data["state"] == "cancelled"
-                for x in items
-            ),
+            "done": tasks["done"],
+            "total": tasks.total() - closed_tasks,
+            "closed": closed_tasks,
+            "cancelled": closed_tasks,  # Compatibility for existing clients.
         },
         "artifacts": {
             "confirmed": sum(x.status == "confirmed" for x in artifacts),

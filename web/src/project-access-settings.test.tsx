@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ApiError } from "./api";
+import { api, ApiError } from "./api";
 import { AuthRecoveryProvider } from "./auth-drafts";
 import { projectId, userId } from "./fixtures.test-data";
 import type { Project } from "./models";
@@ -40,6 +40,55 @@ function mount() {
 afterEach(() => {sessionStorage.clear();});
 
 describe("project member and role settings", () => {
+    it("advises on this project's unfinished Tasks before allowing direct archive", async () => {
+        mockOwner();
+        const tasks = vi.spyOn(api, "tasks").mockResolvedValue({items: [], total: 2,
+            scope_counts: {all: 2, today: 0, inbox: 0, upcoming: 0}, next_cursor: null, as_of: "2026-11-26T00:00:00Z"});
+        const archive = vi.spyOn(accessApi, "archive").mockResolvedValue({access_revision: 8});
+        mount();
+        fireEvent.click(await screen.findByRole("button", {name: "프로젝트 보관"}));
+        const dialog = await screen.findByRole("dialog");
+        expect(await within(dialog).findByText(/열린 Task가 2개/)).toBeTruthy();
+        expect(tasks).toHaveBeenCalledWith({project_id: projectId, status: "open", limit: "1"});
+        fireEvent.click(within(dialog).getByRole("button", {name: "미완료 Task 보기"}));
+        expect(archive).not.toHaveBeenCalled();
+        expect(new URLSearchParams(window.location.search).get("project")).toBe(projectId);
+        expect(new URLSearchParams(window.location.search).get("view")).toBe("tasks");
+        expect(new URLSearchParams(window.location.search).get("taskStatus")).toBe("open");
+
+        window.history.replaceState(null, "", window.location.pathname);
+        fireEvent.click(screen.getByRole("button", {name: "프로젝트 보관"}));
+        const directDialog = await screen.findByRole("dialog");
+        await within(directDialog).findByText(/열린 Task가 2개/);
+        fireEvent.click(within(directDialog).getByRole("button", {name: "그대로 보관"}));
+        await waitFor(() => expect(archive).toHaveBeenCalledWith(projectId, expect.objectContaining({archived: true, expected_revision: 7})));
+    });
+
+    it("uses the existing confirmation for no unfinished Tasks and does not check Tasks when restoring", async () => {
+        mockOwner();
+        const tasks = vi.spyOn(api, "tasks").mockResolvedValue({items: [], total: 0,
+            scope_counts: {all: 0, today: 0, inbox: 0, upcoming: 0}, next_cursor: null, as_of: "2026-11-26T00:00:00Z"});
+        const archive = vi.spyOn(accessApi, "archive").mockResolvedValue({access_revision: 8});
+        const first = mount();
+        fireEvent.click(await screen.findByRole("button", {name: "프로젝트 보관"}));
+        const dialog = await screen.findByRole("dialog");
+        expect(await within(dialog).findByText(/모든 멤버가 업무 자료를 읽기 전용/)).toBeTruthy();
+        expect(within(dialog).queryByRole("button", {name: "미완료 Task 보기"})).toBeNull();
+        fireEvent.click(within(dialog).getByRole("button", {name: "변경 확인"}));
+        await waitFor(() => expect(archive).toHaveBeenCalledWith(projectId, expect.objectContaining({archived: true})));
+
+        first.unmount();
+        vi.mocked(accessApi.access).mockResolvedValue({...ownerAccess, archived: true});
+        const restored = mount();
+        fireEvent.click(await screen.findByRole("button", {name: "프로젝트 복원"}));
+        const restoreDialog = await screen.findByRole("dialog");
+        expect(restoreDialog.textContent).toContain("역할에 따라 업무 자료를 다시 편집할 수 있습니다.");
+        fireEvent.click(within(restoreDialog).getByRole("button", {name: "변경 확인"}));
+        await waitFor(() => expect(archive).toHaveBeenLastCalledWith(projectId, expect.objectContaining({archived: false, expected_revision: 7})));
+        expect(tasks).toHaveBeenCalledTimes(1);
+        restored.unmount();
+    });
+
     it("shows a viewer's own access without loading or exposing administrator controls", async () => {
         vi.spyOn(accessApi, "access").mockResolvedValue({...ownerAccess, role: viewer, capabilities: viewer.permissions});
         vi.spyOn(accessApi, "roles").mockResolvedValue([{...viewer, member_count: undefined}]);

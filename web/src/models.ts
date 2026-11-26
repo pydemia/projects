@@ -4,6 +4,9 @@ import { projectAccessSchema } from "./project-permission-models";
 const id = z.string().uuid();
 const text = z.string();
 const textList = z.array(text);
+export const taskStates = ["todo", "in_progress", "in_review", "done", "closed"] as const;
+export const taskStateSchema = z.enum([...taskStates, "cancelled"])
+    .transform(state => state === "cancelled" ? "closed" : state);
 export const kindSchema = z.enum([
     "idea", "feature", "requirement", "artifact", "task", "test_case",
     "decision",
@@ -39,9 +42,7 @@ export const dataSchemas = {
     task: z.object({
         custom_fields: z.record(id, z.union([z.string(), z.number().finite(), z.boolean(), z.null()])).default({}),
         workflow: z.enum(["delivery", "personal"]).default("delivery"),
-        state: z.enum([
-            "todo", "in_progress", "in_review", "done", "cancelled",
-        ]).default("todo"),
+        state: taskStateSchema.default("todo"),
         list_name: text.default("Inbox"),
         planned_date: text.default(""), due_date: text.default(""),
         estimated_minutes: z.number().int().nonnegative().default(0),
@@ -94,7 +95,9 @@ export const taskViewSettingsSchema = z.object({
     calendar_date_field: z.enum(["planned", "due"]).optional(),
     mode: z.enum(["simple", "complex"]),
     view: z.enum(["today", "inbox", "upcoming", "list", "board", "graph", "calendar", "insights"]),
-    query: text, status: text, lens: z.enum(["gtd", "abc"]),
+    query: text,
+    status: text.transform(status => status === "cancelled" ? "closed" : status),
+    lens: z.enum(["gtd", "abc"]),
     minutes: z.number().int().nonnegative(), context: text,
     energy: z.enum(["any", "low", "medium", "high"]),
     grouping: z.enum(["state", "list", "none"]),
@@ -160,7 +163,11 @@ export type GitZipPreview = z.infer<typeof gitZipPreviewSchema>;
 const countPair = z.object({ total: z.number().nonnegative() });
 export const summarySchema = z.object({
     items_by_kind: z.record(text, z.number().nonnegative()),
-    tasks: countPair.extend({ done: z.number().nonnegative(), cancelled: z.number().nonnegative().default(0) }),
+    tasks: countPair.extend({
+        done: z.number().nonnegative(),
+        closed: z.number().nonnegative().optional(),
+        cancelled: z.number().nonnegative().optional(),
+    }).transform(({ cancelled, closed, ...counts }) => ({ ...counts, closed: closed ?? cancelled ?? 0 })),
     artifacts: countPair.extend({ confirmed: z.number().nonnegative() }),
     tests: countPair.extend({ passed: z.number().nonnegative() }),
     needs_review: z.number().nonnegative(),
@@ -278,7 +285,7 @@ export const kindLabels: Record<Kind, string> = {
 export const statusLabels: Record<string, string> = {
     draft: "초안", confirmed: "확정", archived: "보관",
     todo: "할 일", in_progress: "진행 중", in_review: "검토 중",
-    done: "완료", cancelled: "취소", queued: "대기 중",
+    done: "완료", closed: "Closed", cancelled: "취소", queued: "대기 중",
     running: "실행 중", review_ready: "결과 검토", failed: "실패",
     applied: "적용됨", passed: "통과", aborted: "중단",
     new: "신규", extend: "확장", change: "변경", merge: "통합",

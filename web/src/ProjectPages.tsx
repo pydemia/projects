@@ -28,7 +28,7 @@ export function Overview({ project, items, revision, onProjectRenamed }: {
     const can = useProjectPermissions();
     const summary = useResource(`summary:${project.id}:${revision}`, signal => api.summary(project.id, signal));
     const hasTests = summary.status === "ready" && summary.data.tests.total > 0;
-    const activeTasks = items.filter(item => item.kind === "task" && item.data.state !== "done" && item.data.state !== "cancelled");
+    const activeTasks = items.filter(item => item.kind === "task" && item.data.state !== "done" && item.data.state !== "closed");
     const recent = [...items].sort((a, b) => b.updated_at.localeCompare(a.updated_at)).slice(0, 6);
     return <>
         <PageHead title={<ProjectNameEdit key={project.id} project={project} onSaved={onProjectRenamed} />} titleLabel={project.name} description={project.goal || "목표를 정리하며 프로젝트를 시작해 보세요."} eyebrow="PROJECT OVERVIEW">
@@ -51,7 +51,7 @@ export function Overview({ project, items, revision, onProjectRenamed }: {
         {summary.status === "error" && <ErrorNotice error={summary.error} retry={summary.reload} />}
         {summary.status === "ready" && <>
             <div className="metrics overview-metrics">
-                <Metric label="작업 완료" done={summary.data.tasks.done} total={summary.data.tasks.total} note={`취소 ${summary.data.tasks.cancelled}건 제외 · 서버 집계`} />
+                <Metric label="작업 완료" done={summary.data.tasks.done} total={summary.data.tasks.total} note={`Closed ${summary.data.tasks.closed}건 제외 · 서버 집계`} />
                 <MetricCard label="임시 문서" value={summary.data.artifacts.total} detail="Note 연계 예정 · 확정률 집계 제외" />
                 {hasTests && <Metric label="테스트 통과" done={summary.data.tests.passed} total={summary.data.tests.total} note="현재 케이스 기준 · 미실행은 통과 제외" />}
             </div>

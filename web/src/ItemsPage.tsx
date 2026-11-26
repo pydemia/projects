@@ -22,6 +22,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "./pydemia-ui/tabs";
 import { Textarea } from "./pydemia-ui/textarea";
 import { InlineBodyEdit, InlineTextEdit } from "./InlineEdit";
 import { TaskQuickProperties } from "./TaskQuickProperties";
+import { TaskPhaseField } from "./TaskPhaseField";
 import { AgentTrackSummary } from "./AgentTrackSummary";
 import {
     ActionButton, Badge, Empty, ErrorNotice, ExternalLink, Field, Loading, Markdown, Modal,
@@ -322,6 +323,7 @@ export function RecordEditor({ item, items, catalog, userId, onChanged }: Editor
                 {taskFields.status === "error" && <ErrorNotice error={taskFields.error} retry={taskFields.reload} />}
                 <StoryTaskLinks item={serverItem} items={items} onChanged={onChanged} /><TaskQuickProperties task={serverItem} definitions={taskFields.data ?? []}
                     disabled={!writable || busy || dirty || !!inlineField} onSaved={acceptInlineProperties} />
+                <TaskPhaseField key={serverItem.id} projectId={serverItem.project_id} taskId={serverItem.id} disabled={busy || dirty || !!inlineField} />
             </> : <ItemDetails item={serverItem} catalog={catalog} />}
             </div>
             <aside className="doc-aside"><h3>문서 기준</h3><p>현재 서버 revision {serverItem.revision}</p><p>{item.kind === "artifact" ? "임시 문서 저장소 · Note 연계 예정. revision 숫자는 저장 충돌 검사에 사용합니다." : serverItem.status === "confirmed" ? "이 revision은 확정되어 있습니다. 편집 후 저장하면 새 초안을 만듭니다." : "초안 저장과 확정은 별개입니다."}</p><h3>연결 근거</h3><p>관계·근거 탭에서 요구사항·작업·테스트와 revision을 연결할 수 있습니다.</p><ActionButton disabled={busy || !!inlineField} onClick={() => setTab("links")}>관계 확인</ActionButton></aside>

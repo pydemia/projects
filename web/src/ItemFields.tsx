@@ -135,8 +135,8 @@ export function ItemDataFields({ kind, data, onChange, catalog, items, existingI
                         <option value="personal">개인 할 일</option><option value="delivery">구현 작업</option>
                     </NativeSelect>
                 </Field>
-                <Field label="작업 상태"><NativeSelect value={textValue(data, "state")} onChange={event => set("state", event.target.value)}>
-                    <option value="todo">할 일</option><option value="in_progress">진행 중</option><option value="in_review">검토 중</option><option value="done">완료</option><option value="cancelled">취소</option>
+                <Field label="작업 상태"><NativeSelect value={data.state === "cancelled" ? "closed" : textValue(data, "state")} onChange={event => set("state", event.target.value)}>
+                    <option value="todo">할 일</option><option value="in_progress">진행 중</option><option value="in_review">검토 중</option><option value="done">완료</option><option value="closed">Closed</option>
                 </NativeSelect></Field>
             </div>
             <div className="form-grid">
@@ -161,7 +161,7 @@ export function ItemDataFields({ kind, data, onChange, catalog, items, existingI
                 <Input type="url" value={textValue(data, "github_issue_url")} onChange={event => set("github_issue_url", event.target.value)} placeholder="https://github.com/owner/repo/issues/123" />
             </Field>
             {textValue(data, "workflow") !== "personal" && listField("acceptance_criteria", "완료·수용 조건")}
-            {(data.state === "cancelled" || textValue(data, "cancellation_reason")) && areaField("cancellation_reason", "작업 취소 사유")}
+            {(data.state === "closed" || data.state === "cancelled" || textValue(data, "cancellation_reason")) && areaField("cancellation_reason", "작업 종료 사유")}
             {textValue(data, "workflow") !== "personal" && <><div className="form-grid">{textField("result_url", "결과물·PR·문서 URL")}{textField("target_sha", "검증 대상 commit SHA")}</div>
                 <Checkbox className="check-row" variant="card" label="이 작업의 완료에 테스트 근거가 필요함" checked={data.requires_test !== false} onCheckedChange={checked => set("requires_test", checked === true)} />
                 <p className="hint">구현 작업 완료 전환 시 서버가 결과물·수용 조건·연결된 현행 테스트를 검사합니다.</p></>}

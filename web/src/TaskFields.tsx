@@ -26,7 +26,7 @@ export const taskFieldLabels: Record<string, string> = {
     context: "맥락", goal: "목표", github_issue_url: "GitHub 이슈",
     energy: "에너지", next_action: "다음 행동", abc_order: "우선순위 내 순서",
     acceptance_criteria: "수용 기준", result_url: "결과 URL", target_sha: "대상 SHA",
-    requires_test: "테스트 필수", cancellation_reason: "취소 사유",
+    requires_test: "테스트 필수", cancellation_reason: "종료 사유",
 };
 export const defaultListFields = ["due_date", "abc_priority"];
 const viewFieldKeys = ["list_name", "planned_date", "due_date", "estimated_minutes", "abc_priority", "context", "goal", "github_issue_url"];
@@ -224,7 +224,7 @@ function TaskFieldCell({ task, fieldKey, definitions, onChanged, onError, disabl
         : fieldKey === "acceptance_criteria" || fieldKey === "cancellation_reason" ? "multiline" : "text");
     const options = definition?.options ?? (fieldKey === "abc_priority" ? ["A", "B", "C"]
         : fieldKey === "energy" ? ["any", "low", "medium", "high"] : []);
-    const openTask = task.data.state !== "done" && task.data.state !== "cancelled";
+    const openTask = task.data.state !== "done" && task.data.state !== "closed";
     const dueState = surface === "list" && fieldKey === "due_date" && openTask && validDate(task.data.due_date)
         ? task.data.due_date < referenceDay ? "overdue" : task.data.due_date === referenceDay ? "today" : undefined
         : undefined;

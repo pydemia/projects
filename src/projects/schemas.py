@@ -9,7 +9,13 @@ from pydantic import (
     model_validator,
 )
 
-from projects.domain import ItemKind, Relation, StrictData
+from projects.domain import (
+    ItemKind,
+    Relation,
+    StrictData,
+    TaskStateInput,
+    TaskStatusInput,
+)
 
 TASK_PROPERTY_KEYS = {
     "list_name",
@@ -156,19 +162,15 @@ class TaskTypeUpdate(StrictData):
 
 class TaskMove(RequestModel):
     expected_revision: int = Field(ge=1)
-    source_state: Literal[
-        "todo", "in_progress", "in_review", "done", "cancelled"
-    ]
-    target_state: Literal[
-        "todo", "in_progress", "in_review", "done", "cancelled"
-    ]
+    source_state: TaskStateInput
+    target_state: TaskStateInput
     before_id: str | None = None
     after_id: str | None = None
 
 
 class TaskQuickCreate(RequestModel):
     title: str = Field(min_length=1, max_length=300)
-    state: Literal["todo", "in_progress", "in_review", "done", "cancelled"]
+    state: TaskStateInput
     cancellation_reason: str = Field(default="", max_length=2000)
 
 
@@ -189,9 +191,7 @@ class TaskRevision(RequestModel):
 
 class TaskBulkChange(RequestModel):
     tasks: list[TaskRevision] = Field(min_length=1, max_length=100)
-    state: (
-        Literal["todo", "in_progress", "in_review", "done", "cancelled"] | None
-    ) = None
+    state: TaskStateInput | None = None
     planned_date: str | None = None
     list_name: str | None = Field(default=None, max_length=80)
     cancellation_reason: str | None = Field(default=None, max_length=2000)
@@ -219,9 +219,7 @@ class TaskViewSettings(RequestModel):
         "graph",
     ]
     query: str = Field(default="", max_length=1000)
-    status: Literal[
-        "all", "open", "todo", "in_progress", "in_review", "done", "cancelled"
-    ] = "all"
+    status: TaskStatusInput = "all"
     lens: Literal["gtd", "abc"] = "gtd"
     minutes: int = Field(default=0, ge=0, le=100000)
     context: str = Field(default="", max_length=80)

@@ -1,12 +1,12 @@
 import { Check, ChevronDown } from "lucide-react";
 import type { Item } from "./models";
-import { statusLabels } from "./models";
+import { statusLabels, taskStates } from "./models";
 import { Button } from "./pydemia-ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "./pydemia-ui/dropdown-menu";
 import "./task-list-status.css";
 
 type State = Extract<Item, {kind: "task"}>["data"]["state"];
-const states: readonly State[] = ["todo", "in_progress", "in_review", "done", "cancelled"];
+const states = taskStates;
 
 export function TaskListStatus({title, state, disabled, onChange}: {
     title: string; state: State; disabled: boolean; onChange: (state: State) => void;

@@ -247,7 +247,7 @@ const previewFieldLabels: Record<string, string> = {
     scope: "범위", exclusions: "제외 범위", processing_state: "Story 처리 상태", list_name: "목록", estimated_minutes: "예상 소요 · 분",
     context: "상황", energy: "필요 에너지", next_action: "다음 행동", abc_priority: "ABC 우선순위", abc_order: "ABC 순서",
     goal: "목표", github_issue_url: "GitHub 이슈", result_url: "결과 근거", target_sha: "검증한 코드 버전", requires_test: "테스트 필요",
-    cancellation_reason: "취소 사유", feature_ids: "참고 Feature", source_id: "출발 항목", target_id: "도착 항목", relation: "연결 의미",
+    cancellation_reason: "종료 사유", feature_ids: "참고 Feature", source_id: "출발 항목", target_id: "도착 항목", relation: "연결 의미",
     source_revision: "출발 항목 revision", target_revision: "도착 항목 revision", custom_fields: "사용자 정의 속성", reason: "판단 이유",
     alternatives: "검토한 대안", excluded_reason: "제외 이유", source_url: "원문 링크", notes: "비고", steps: "검증 절차", expected: "기대 결과",
 };

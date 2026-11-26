@@ -27,6 +27,7 @@ from projects.schedule_models import (
     TaskIteration,
     TaskIterationChange,
 )
+from projects.schedules import transition_phase
 from projects.stories import project_stories, story_verifications
 from projects.story_models import StoryVerification
 
@@ -340,3 +341,196 @@ def test_forged_valid_hash_proof_never_creates_current_authority(
             == "forged source claim"
         )
         assert "planning" not in reexported["external_references"]
+
+
+def closed_phase_pair(client, project, create_item):
+    _, task, first = populated(client, project, create_item)
+    base = f"/api/projects/{project['id']}"
+    schedules = base + "/schedules"
+    response = client.post(
+        schedules,
+        json={
+            "kind": "phase",
+            "title": "successor",
+            "predecessor_id": first["id"],
+        },
+    )
+    assert response.status_code == 201
+    second = response.json()
+    assert (
+        client.post(
+            f"{schedules}/{first['id']}/start", json={"expected_revision": 2}
+        ).status_code
+        == 200
+    )
+    assert (
+        client.post(
+            f"{schedules}/{first['id']}/close",
+            json={
+                "expected_revision": 3,
+                "carryovers": [
+                    {"task_id": task["id"], "target_phase_id": second["id"]}
+                ],
+            },
+        ).status_code
+        == 200
+    )
+    assert (
+        client.post(
+            f"{schedules}/{second['id']}/start", json={"expected_revision": 2}
+        ).status_code
+        == 200
+    )
+    assert (
+        client.post(
+            base + "/schedule-snapshots",
+            json={"title": "Phase results", "reason": "after closure"},
+        ).status_code
+        == 201
+    )
+    return first, second, task
+
+
+def test_phase_carryover_restores_graph_and_immutable_history(
+    client, project, create_item, restore_engine
+):
+    first, second, task = closed_phase_pair(client, project, create_item)
+    data = archive(client, project)
+    # A successor can precede its parent in the ZIP.
+    data["planning"]["schedules"].sort(
+        key=lambda row: row["id"] != second["id"]
+    )
+    with Session(restore_engine) as db, db.begin():
+        user, restored = restore(db, data)
+        with pytest.raises(Problem) as rejected:
+            transition_phase(
+                db, restored.id, first["id"], user.id, 4, "reopen"
+            )
+        assert rejected.value.status == 409
+        phase = db.get(ProjectSchedule, first["id"])
+        assert phase.phase_results == [
+            {
+                "task_id": task["id"],
+                "title": task["title"],
+                "reason": "",
+                "result": "carryover",
+                "target_phase_id": second["id"],
+            }
+        ]
+        reexport = read_archive(
+            base64.b64encode(
+                export_project(db, restored, actor_id=user.id)
+            ).decode()
+        )
+        for name, rows in data["planning"].items():
+            returned = reexport["planning"][name]
+            if isinstance(rows, list):
+                assert sorted(rows, key=json_bytes) == sorted(
+                    returned, key=json_bytes
+                )
+            else:
+                assert rows == returned
+
+
+def test_legacy_schedule_columns_and_snapshots_round_trip(
+    client, project, create_item, restore_engine
+):
+    _, _, first = populated(client, project, create_item)
+    data = archive(client, project)
+    planning = data["planning"]
+    for row in planning["schedules"]:
+        for key in (
+            "predecessor_id",
+            "started_at",
+            "closed_at",
+            "phase_results",
+        ):
+            del row[key]
+    for change in planning["schedule_changes"]:
+        for side in ("before", "after"):
+            change[side].pop("phase", None)
+    for snapshot in planning["schedule_snapshots"]:
+        for row in snapshot["schedules"]:
+            row.pop("phase", None)
+    with Session(restore_engine) as db, db.begin():
+        user, restored = restore(db, data)
+        restored_phase = db.get(ProjectSchedule, first["id"])
+        assert restored_phase.started_at is None
+        reexport = read_archive(
+            base64.b64encode(
+                export_project(db, restored, actor_id=user.id)
+            ).decode()
+        )
+        assert reexport["planning"] == planning
+        assert (
+            transition_phase(
+                db, restored.id, first["id"], user.id, 2, "start"
+            )["phase"]["status"]
+            == "in_progress"
+        )
+
+
+def test_phase_archive_prunes_transferred_tasks_from_all_results(
+    client, project, create_item, engine
+):
+    _, _, task = closed_phase_pair(client, project, create_item)
+    other = client.post("/api/projects", json={"name": "destination"}).json()
+    with Session(engine) as db, db.begin():
+        db.get(Item, task["id"]).project_id = other["id"]
+    data = archive(client, project)
+    assert task["id"] not in json_bytes(data["planning"]).decode()
+    assert task["title"] not in json_bytes(data["planning"]).decode()
+
+
+def test_phase_archive_rejects_invalid_dependencies_and_results(
+    client, project, create_item, restore_engine
+):
+    first, second, _ = closed_phase_pair(client, project, create_item)
+    original = archive(client, project)
+    cases = (
+        "cycle",
+        "foreign_target",
+        "bad_clock",
+        "bad_status",
+        "foreign_task",
+        "duplicate_task",
+        "partial_columns",
+    )
+    with Session(restore_engine) as db, db.begin():
+        user = Account(username="restore-actor", password_hash="unused")
+        db.add(user)
+        db.flush()
+        for case in cases:
+            data = copy.deepcopy(original)
+            plans = data["planning"]
+            source = next(
+                row for row in plans["schedules"] if row["id"] == first["id"]
+            )
+            snapshot = next(
+                row
+                for row in plans["schedule_snapshots"]
+                if row["title"] == "Phase results"
+            )
+            recorded = next(
+                row
+                for row in snapshot["schedules"]
+                if row["id"] == first["id"]
+            )["phase"]
+            if case == "cycle":
+                source["predecessor_id"] = second["id"]
+            elif case == "foreign_target":
+                source["phase_results"][0]["target_phase_id"] = str(uuid4())
+            elif case == "bad_clock":
+                source["closed_at"] = "2000-01-01T00:00:00+00:00"
+            elif case == "bad_status":
+                recorded["status"] = "in_progress"
+            elif case == "foreign_task":
+                recorded["results"][0]["task_id"] = str(uuid4())
+            elif case == "duplicate_task":
+                recorded["results"] *= 2
+            else:
+                del source["closed_at"]
+            with pytest.raises(Problem) as rejected:
+                import_project(db, user.id, encoded(data))
+            assert rejected.value.status == 422, case
+            assert db.scalar(select(func.count()).select_from(Project)) == 0

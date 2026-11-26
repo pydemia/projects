@@ -1,5 +1,18 @@
 # Projects 구현 goal
 
+## 2026-11-26 · 프로젝트 보관과 Phase 시작·종료
+
+[기획 22](../planning/22-project-archive-and-phase-lifecycle.md)의
+APP-REQ-073~077과 AC-161~173을 구현한다. 기존 Archive·Restore에 보관 전 열린
+Task 안내를 붙이고, 상위 일정에서 Phase 기간·선행 관계·시작/종료와 Task 멀티셀렉트를
+관리한다. 기존 Task 종료 사유와 과거 revision을 보존해 `Closed`로 통일한다.
+
+기준 커밋 `43add50f7a1f`에서 `codex/project-archive-phase-lifecycle` worktree로
+구현했다. 상세 기획의 Task별 종료 결과 확인 절차를 적용한다. 종료 Phase의 재개는 후속
+Phase가 처음 시작하기 전까지 허용하며, 재개할 때 이전 종료 기록과 Task 연결을 보존한다.
+Phase 작업은 기존 일정 편집 권한 `project.update`를 적용한다.
+확인 결과는 [검증 기록](verification.md#2026-11-26-프로젝트-보관과-phase-시작종료)에 연결한다.
+
 ## 2026-11-24 · 작업 보기와 하위 작업
 
 ClickUp 공개 List view를 REA로 관찰하고 사용자가 승인한 세 시안을

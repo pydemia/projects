@@ -32,7 +32,7 @@
 .task-graph-state-in_progress { color: var(--accent); }
 .task-graph-state-in_review { color: var(--amber); }
 .task-graph-state-done { color: var(--green); }
-.task-graph-state-cancelled { text-decoration: line-through; }
+.task-graph-state-closed { text-decoration: line-through; }
 .task-graph-state-in_progress::before, .task-graph-state-done::before { background: currentColor; }
 .task-graph-selected { color: var(--accent); font-weight: 600; }
 .task-graph-relations { margin-top: 13px; font-size: 12px; }

@@ -20,7 +20,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.sql.elements import ColumnElement
 
 from projects.database import Item, Project, TaskPosition
-from projects.domain import Problem
+from projects.domain import TASK_CLOSED_STATES, Problem, TaskStatusInput
 from projects.project_access import access_fingerprint, accessible_project_ids
 from projects.records import project_for_user, serialize
 
@@ -31,9 +31,7 @@ class TaskQuery(BaseModel):
     project_id: str | None = None
     project_ids: str | None = Field(default=None, max_length=4000)
     task_scope: Literal["all", "today", "inbox", "upcoming"] = "all"
-    status: Literal[
-        "all", "open", "todo", "in_progress", "in_review", "done", "cancelled"
-    ] = "open"
+    status: TaskStatusInput = "open"
     query: str = Field(default="", max_length=1000)
     sort: Literal["manual", "due_date", "deadline", "gtd", "abc"] = "due_date"
     context: str = Field(default="", max_length=80)
@@ -101,7 +99,7 @@ def query_tasks(db: Session, user_id: str, request: TaskQuery) -> dict:
     state = Item.data["state"].as_string()
     planned = func.coalesce(Item.data["planned_date"].as_string(), "")
     due = func.coalesce(Item.data["due_date"].as_string(), "")
-    opened = state.not_in(("done", "cancelled"))
+    opened = state.not_in(("done", *TASK_CLOSED_STATES))
     scopes = {
         "all": opened,
         "today": and_(
@@ -167,6 +165,8 @@ def query_tasks(db: Session, user_id: str, request: TaskQuery) -> dict:
         filters.append(scopes[request.task_scope])
     if request.status == "open":
         filters.append(opened)
+    elif request.status == "closed":
+        filters.append(state.in_(TASK_CLOSED_STATES))
     elif request.status != "all":
         filters.append(state == request.status)
     if request.query:

@@ -23,4 +23,11 @@
 .schedule-snapshots li { display: flex; gap: .6rem; justify-content: space-between; align-items: center; padding: .5rem 0; }
 .schedule-diff { padding-left: 1.3rem; }
 .schedule-diff li { margin: .7rem 0; overflow-wrap: anywhere; }
+.phase-lifecycle { margin-top: .7rem; padding: .7rem; background: var(--surface-subtle, #f4f6f8); border-radius: .4rem; }
+.phase-lifecycle h4 { margin: .3rem 0; }
+.phase-close { display: grid; gap: .5rem; margin-top: .6rem; }
+.phase-carryover { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+.phase-carryover select { min-width: 12rem; }
+.phase-results { margin: .4rem 0; padding-left: 1.3rem; }
+.task-phase-field { display: grid; gap: .35rem; border: 0; padding: 0; margin: 0; }
 @media (max-width: 650px) { .schedule-row-heading .schedule-actions { flex-basis: 100%; } .schedule-snapshots li { align-items: start; flex-wrap: wrap; } }

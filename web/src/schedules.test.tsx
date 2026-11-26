@@ -9,7 +9,7 @@ import { itemSchema } from "./models";
 const permissions = vi.hoisted(() => ({write: true}));
 vi.mock("./ProjectPermissions", () => ({useProjectPermissions: () => (_pid: string, capability: string) => capability === "project.read" || permissions.write}));
 vi.mock("./api", () => ({api: {items: vi.fn(), links: vi.fn()}}));
-vi.mock("./schedule-api", () => ({scheduleApi: {list: vi.fn(), create: vi.fn(), update: vi.fn(), remove: vi.fn(), members: vi.fn(), assignment: vi.fn(), assign: vi.fn(), assignmentHistory: vi.fn(), snapshots: vi.fn(), snapshot: vi.fn(), diff: vi.fn()}}));
+vi.mock("./schedule-api", () => ({scheduleApi: {list: vi.fn(), create: vi.fn(), update: vi.fn(), start: vi.fn(), close: vi.fn(), reopen: vi.fn(), remove: vi.fn(), members: vi.fn(), assignment: vi.fn(), assign: vi.fn(), assignmentHistory: vi.fn(), taskPhases: vi.fn(), snapshots: vi.fn(), snapshot: vi.fn(), diff: vi.fn()}}));
 const pid = "27c433b4-df57-44c2-a679-4a5063cb99c0";
 const tid = "27c433b4-df57-44c2-a679-4a5063cb99c1";
 const sid = "27c433b4-df57-44c2-a679-4a5063cb99c2";
@@ -91,5 +91,19 @@ describe("optional project schedules", () => {
         expect(screen.queryByRole("button", {name: "일정 편집"})).toBeNull();
         expect(screen.queryByRole("button", {name: "일정 기준선 저장"})).toBeNull();
         expect(screen.queryByRole("button", {name: "추가"})).toBeNull();
+    });
+
+    it("requires an explicit Carryover target and records Phase lifecycle actions", async () => {
+        const phaseOne: Schedule = {...iteration, id: "phase-one", kind: "phase", title: "Phase 1", member_ids: [tid], phase: {status: "in_progress", predecessor_id: null, started_at: "2026-11-10T00:00:00Z", closed_at: null, results: []}};
+        const phaseTwo: Schedule = {...iteration, id: "phase-two", kind: "phase", title: "Phase 2", phase: {status: "not_started", predecessor_id: "phase-one", started_at: null, closed_at: null, results: []}};
+        vi.mocked(api.items).mockResolvedValue([itemSchema.parse({...task, data: {...task.data, state: "in_progress"}})]);
+        vi.mocked(scheduleApi.list).mockResolvedValue([phaseOne, phaseTwo]);
+        vi.mocked(scheduleApi.close).mockResolvedValue({...phaseOne, revision: 2, phase: {...phaseOne.phase!, status: "closed", closed_at: "2026-11-12T00:00:00Z", results: [{task_id: tid, title: task.title, result: "carryover", reason: "", target_phase_id: "phase-two"}]}});
+        render(<SchedulesPage projectId={pid} />);
+        const close = await screen.findByRole("button", {name: "종료"});
+        expect((close as HTMLButtonElement).disabled).toBe(true);
+        fireEvent.change(screen.getByLabelText(/기존 Task · Carryover 대상/), {target: {value: "phase-two"}});
+        fireEvent.click(close);
+        await waitFor(() => expect(scheduleApi.close).toHaveBeenCalledWith(pid, "phase-one", 1, [{task_id: tid, target_phase_id: "phase-two"}]));
     });
 });

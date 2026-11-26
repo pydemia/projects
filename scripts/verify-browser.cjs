@@ -102,15 +102,16 @@ async function main() {
         checks.push("실제 409·내 초안 보존·명시 병합");
         await page.goto(`${base}/?project=${projectId}&view=tasks&item=${task.id}`);
         await page.getByRole("button", { name: "편집", exact: true }).click();
-        await page.getByLabel("작업 상태", { exact: true }).selectOption("cancelled");
-        await page.getByLabel("작업 취소 사유", { exact: true }).fill("중복 작업으로 이번 범위에서 제외");
+        await page.getByLabel("작업 상태", { exact: true }).selectOption("closed");
+        await page.getByLabel("작업 종료 사유", { exact: true }).fill("중복 작업으로 이번 범위에서 제외");
         await page.getByRole("button", { name: "초안 저장", exact: true }).click();
         await expect(page.getByText("revision 2", { exact: true })).toBeVisible();
-        const cancelledTask = await (await context.request.get(`${base}/api/items/${task.id}`)).json();
-        expect(cancelledTask.data.cancellation_reason).toBe("중복 작업으로 이번 범위에서 제외");
+        const closedTask = await (await context.request.get(`${base}/api/items/${task.id}`)).json();
+        expect(closedTask.data.state).toBe("closed");
+        expect(closedTask.data.cancellation_reason).toBe("중복 작업으로 이번 범위에서 제외");
         const summary = await (await context.request.get(`${base}/api/projects/${projectId}/summary`)).json();
-        expect(summary.tasks).toEqual({ done: 0, total: 0, cancelled: 1 });
-        checks.push("작업 취소 사유 저장·취소 건수와 분모 제외");
+        expect(summary.tasks).toMatchObject({ done: 0, total: 0, closed: 1 });
+        checks.push("작업 종료 사유 저장·Closed 집계와 완료 분모 제외");
         for (const [width, height, name] of [[1440, 1080, "desktop"], [390, 844, "mobile"]]) {
             await page.setViewportSize({ width, height });
             for (const [view, item] of [["overview", ""], ["planning", idea.id], ["documents", document.id], ["tasks", task.id], ["tests", testCase.id], ["trace", ""], ["runs", ""]]) {

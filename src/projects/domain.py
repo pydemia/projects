@@ -5,11 +5,12 @@ import json
 import re
 from collections import defaultdict
 from datetime import date
-from typing import Literal
+from typing import Annotated, Literal
 from uuid import UUID
 
 from pydantic import (
     BaseModel,
+    BeforeValidator,
     ConfigDict,
     Field,
     ValidationError,
@@ -18,6 +19,22 @@ from pydantic import (
 
 from projects.assistant_result import AssistantResult
 from projects.note_reference_data import NoteReference
+
+
+def canonical_task_state[T](value: T) -> T | Literal["closed"]:
+    """Read existing Cancelled records and requests as Closed."""
+    return "closed" if value == "cancelled" else value
+
+
+TASK_CLOSED_STATES = ("closed", "cancelled")
+type TaskState = Literal["todo", "in_progress", "in_review", "done", "closed"]
+type TaskStateInput = Annotated[
+    TaskState, BeforeValidator(canonical_task_state)
+]
+type TaskStatusInput = Annotated[
+    Literal["all", "open"] | TaskState, BeforeValidator(canonical_task_state)
+]
+
 
 type ItemKind = Literal[
     "idea",
@@ -128,9 +145,7 @@ class TaskData(StrictData):
         default_factory=list, max_length=100
     )
     workflow: Literal["delivery", "personal"] = "delivery"
-    state: Literal["todo", "in_progress", "in_review", "done", "cancelled"] = (
-        "todo"
-    )
+    state: TaskStateInput = "todo"
     list_name: str = Field(default="Inbox", max_length=80)
     planned_date: str = ""
     due_date: str = ""
@@ -206,9 +221,9 @@ def validate_item_data(kind: str, data: dict) -> dict:
         validated = model.model_validate(data).model_dump()
     except ValidationError as exc:
         raise Problem(422, "종류별 데이터 형식이 올바르지 않습니다.") from exc
-    if kind == "task" and validated["state"] == "cancelled":
+    if kind == "task" and validated["state"] == "closed":
         if not validated["cancellation_reason"].strip():
-            raise Problem(422, "작업을 취소한 사유를 기록해 주세요.")
+            raise Problem(422, "작업을 종료한 사유를 기록해 주세요.")
     return validated
 
 

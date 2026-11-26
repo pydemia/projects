@@ -5,7 +5,7 @@ import copy
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from projects.database import Item
+from projects.database import Item, utcnow
 from projects.domain import Problem
 from projects.records import item_for_user, project_for_user, serialize
 from projects.schedule_models import (
@@ -15,6 +15,8 @@ from projects.schedule_models import (
     TaskIteration,
     TaskIterationChange,
 )
+
+MAX_SCHEDULE_MEMBERS = 2000
 
 
 def _items(db: Session, project_id: str) -> dict[str, Item]:
@@ -62,11 +64,45 @@ def check_revision(revision: int, expected: int) -> None:
         )
 
 
+def _visible_schedule(data: dict, visible: dict[str, Item]) -> dict:
+    data["member_ids"] = [iid for iid in data["member_ids"] if iid in visible]
+    if data["kind"] == "phase":
+        phase = data.setdefault(
+            "phase",
+            {
+                "status": "not_started",
+                "predecessor_id": None,
+                "started_at": None,
+                "closed_at": None,
+                "results": [],
+            },
+        )
+        phase["results"] = [
+            entry for entry in phase["results"] if entry["task_id"] in visible
+        ]
+    return data
+
+
 def public_schedule(db: Session, row: ProjectSchedule) -> dict:
     result = serialize(row)
     result.pop("deleted")
     visible = _items(db, row.project_id)
-    result["member_ids"] = [iid for iid in row.member_ids if iid in visible]
+    phase = {
+        key: result.pop(key)
+        for key in ("predecessor_id", "started_at", "closed_at")
+    }
+    results = result.pop("phase_results")
+    if row.kind == "phase":
+        phase["status"] = (
+            "closed"
+            if row.closed_at
+            else "in_progress"
+            if row.started_at
+            else "not_started"
+        )
+        phase["results"] = results or []
+        result["phase"] = phase
+    _visible_schedule(result, visible)
     if row.kind == "iteration":
         result["member_ids"] = list(
             db.scalars(
@@ -131,6 +167,7 @@ def create_schedule(
 ) -> dict:
     project_for_user(db, project_id, user_id, "project.update", lock=True)
     row = ProjectSchedule(project_id=project_id, **values)
+    _validate_predecessor(db, row, row.predecessor_id)
     db.add(row)
     return _change(db, row, user_id, {}, "일정 생성")
 
@@ -149,6 +186,8 @@ def update_schedule(
     )
     check_revision(row.revision, expected_revision)
     before = public_schedule(db, row)
+    if "predecessor_id" in values:
+        _validate_predecessor(db, row, values["predecessor_id"])
     for name, value in values.items():
         setattr(row, name, value)
     if row.start_date and row.end_date and row.end_date < row.start_date:
@@ -199,6 +238,17 @@ def delete_schedule(
         db, project_id, schedule_id, user_id, "project.update"
     )
     check_revision(row.revision, expected_revision)
+    if row.kind == "phase" and db.scalar(
+        select(ProjectSchedule.id)
+        .where(
+            ProjectSchedule.predecessor_id == row.id,
+            ProjectSchedule.deleted.is_(False),
+        )
+        .limit(1)
+    ):
+        raise Problem(
+            409, "후속 Phase가 참조하는 선행 Phase는 삭제할 수 없습니다."
+        )
     if row.kind == "iteration" and public_schedule(db, row)["member_ids"]:
         raise Problem(
             409, "현재 배정 Task를 명시적으로 해제한 후 일정을 삭제해 주세요."
@@ -208,6 +258,201 @@ def delete_schedule(
     row.revision += 1
     _change(db, row, user_id, before, reason)
     return {"ok": True}
+
+
+def _phases(db: Session, project_id: str) -> dict[str, ProjectSchedule]:
+    return {
+        row.id: row
+        for row in db.scalars(
+            select(ProjectSchedule).where(
+                ProjectSchedule.project_id == project_id,
+                ProjectSchedule.kind == "phase",
+                ProjectSchedule.deleted.is_(False),
+            )
+        )
+    }
+
+
+def _validate_predecessor(
+    db: Session, row: ProjectSchedule, predecessor_id: str | None
+) -> None:
+    if row.started_at and predecessor_id != row.predecessor_id:
+        raise Problem(409, "시작한 Phase의 선행 Phase는 변경할 수 없습니다.")
+    if predecessor_id is None:
+        return
+    if row.kind != "phase":
+        raise Problem(422, "선행 Phase는 Phase 일정에만 지정할 수 있습니다.")
+    phases = _phases(db, row.project_id)
+    seen = {row.id}
+    while predecessor_id is not None:
+        if predecessor_id in seen:
+            raise Problem(422, "Phase 선후 관계에 순환이 있습니다.")
+        if predecessor_id not in phases:
+            raise Problem(422, "같은 프로젝트의 선행 Phase를 선택해 주세요.")
+        seen.add(predecessor_id)
+        predecessor_id = phases[predecessor_id].predecessor_id
+
+
+def set_task_phases(
+    db: Session,
+    project_id: str,
+    task_id: str,
+    user_id: str,
+    phase_ids: list[str],
+    expected_revisions: dict[str, int],
+) -> dict:
+    project_for_user(db, project_id, user_id, "project.update", lock=True)
+    _task(db, project_id, task_id, user_id)
+    phases = _phases(db, project_id)
+    desired = set(phase_ids)
+    if len(desired) != len(phase_ids) or not desired <= phases.keys():
+        raise Problem(422, "같은 프로젝트의 Phase를 중복 없이 선택해 주세요.")
+    current = {pid for pid, row in phases.items() if task_id in row.member_ids}
+    changed = current ^ desired
+    if not changed <= expected_revisions.keys():
+        raise Problem(409, "변경된 Phase의 최신 계획을 확인해 주세요.")
+    for pid, revision in expected_revisions.items():
+        if pid not in phases:
+            raise Problem(409, "변경된 Phase의 최신 계획을 확인해 주세요.")
+        check_revision(phases[pid].revision, revision)
+    if any(
+        len(phases[pid].member_ids) >= MAX_SCHEDULE_MEMBERS
+        for pid in desired - current
+    ):
+        raise Problem(422, "Phase에 연결할 수 있는 항목 수를 초과했습니다.")
+    for pid in sorted(changed):
+        row = phases[pid]
+        before = public_schedule(db, row)
+        row.member_ids = (
+            [*row.member_ids, task_id]
+            if pid in desired
+            else [iid for iid in row.member_ids if iid != task_id]
+        )
+        row.revision += 1
+        _change(db, row, user_id, before, "Task Phase 연결 변경")
+    return {"phase_ids": phase_ids}
+
+
+def _close_phase(
+    db: Session,
+    row: ProjectSchedule,
+    user_id: str,
+    carryovers: list[tuple[str, str]],
+) -> None:
+    if not row.started_at or row.closed_at:
+        raise Problem(409, "진행 중인 Phase만 종료할 수 있습니다.")
+    tasks = _items(db, row.project_id)
+    members = [
+        tasks[iid]
+        for iid in row.member_ids
+        if iid in tasks and tasks[iid].kind == "task"
+    ]
+    targets = dict(carryovers)
+    if len(targets) != len(carryovers):
+        raise Problem(422, "Task별 이월 대상은 하나만 지정해 주세요.")
+    open_ids = {
+        task.id
+        for task in members
+        if task.data.get("state") not in ("done", "closed", "cancelled")
+    }
+    if targets.keys() != open_ids:
+        raise Problem(
+            422,
+            "모든 미완료 Task의 이월 대상을 지정하거나 Task를 먼저 완료 또는 종료해 주세요.",
+        )
+    phases = _phases(db, row.project_id)
+    for pid in set(targets.values()):
+        if (
+            pid not in phases
+            or phases[pid].predecessor_id != row.id
+            or phases[pid].started_at
+        ):
+            raise Problem(
+                422, "이월 대상으로 연결된 후속 Phase를 선택해 주세요."
+            )
+    results = []
+    additions: dict[str, list[str]] = {}
+    for task in members:
+        target = targets.get(task.id)
+        outcome = (
+            "carryover"
+            if target
+            else "completed"
+            if task.data.get("state") == "done"
+            else "closed"
+        )
+        results.append(
+            {
+                "task_id": task.id,
+                "title": task.title,
+                "result": outcome,
+                "reason": task.data.get("cancellation_reason", "")
+                if outcome == "closed"
+                else "",
+                "target_phase_id": target,
+            }
+        )
+        if target and task.id not in phases[target].member_ids:
+            additions.setdefault(target, []).append(task.id)
+    if any(
+        len(phases[pid].member_ids) + len(ids) > MAX_SCHEDULE_MEMBERS
+        for pid, ids in additions.items()
+    ):
+        raise Problem(422, "대상 Phase의 연결 항목 수를 초과했습니다.")
+    for pid, ids in additions.items():
+        successor = phases[pid]
+        before = public_schedule(db, successor)
+        successor.member_ids = [*successor.member_ids, *ids]
+        successor.revision += 1
+        _change(db, successor, user_id, before, "Phase 이월 Task 연결")
+    row.phase_results = results
+    row.closed_at = utcnow()
+
+
+def transition_phase(
+    db: Session,
+    project_id: str,
+    schedule_id: str,
+    user_id: str,
+    expected_revision: int,
+    action: str,
+    carryovers: list[tuple[str, str]] | None = None,
+) -> dict:
+    row = schedule_for_user(
+        db, project_id, schedule_id, user_id, "project.update"
+    )
+    check_revision(row.revision, expected_revision)
+    if row.kind != "phase":
+        raise Problem(422, "Phase 일정을 선택해 주세요.")
+    before = public_schedule(db, row)
+    if action == "start":
+        if row.started_at:
+            raise Problem(409, "이미 시작한 Phase입니다.")
+        if row.predecessor_id:
+            predecessor = db.get(ProjectSchedule, row.predecessor_id)
+            if not predecessor or not predecessor.closed_at:
+                raise Problem(409, "선행 Phase를 먼저 종료해 주세요.")
+        row.started_at = utcnow()
+    elif action == "close":
+        _close_phase(db, row, user_id, carryovers or [])
+    elif action == "reopen":
+        if not row.closed_at:
+            raise Problem(409, "종료된 Phase만 다시 열 수 있습니다.")
+        if db.scalar(
+            select(ProjectSchedule.id)
+            .where(
+                ProjectSchedule.predecessor_id == row.id,
+                ProjectSchedule.started_at.is_not(None),
+            )
+            .limit(1)
+        ):
+            raise Problem(409, "후속 Phase가 시작되어 다시 열 수 없습니다.")
+        row.closed_at = None
+        row.phase_results = []
+    else:
+        raise ValueError(action)
+    row.revision += 1
+    return _change(db, row, user_id, before, "phase_" + action)
 
 
 def _task(db: Session, project_id: str, task_id: str, user_id: str) -> Item:
@@ -315,9 +560,7 @@ def schedule_history(
         entry = serialize(row)
         for side in ("before", "after"):
             if entry[side]:
-                entry[side]["member_ids"] = [
-                    iid for iid in entry[side]["member_ids"] if iid in visible
-                ]
+                _visible_schedule(entry[side], visible)
         result.append(entry)
     return result
 
@@ -391,9 +634,7 @@ def public_snapshot(db: Session, row: ScheduleSnapshot) -> dict:
         item for item in result["items"] if item["id"] in visible
     ]
     for schedule in result["schedules"]:
-        schedule["member_ids"] = [
-            iid for iid in schedule["member_ids"] if iid in visible
-        ]
+        _visible_schedule(schedule, visible)
     return result
 
 

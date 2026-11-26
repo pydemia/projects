@@ -1,5 +1,9 @@
 # Projects 기획 초안 v0.3
 
+2026-11-26 [프로젝트 보관과 Phase 시작·종료](22-project-archive-and-phase-lifecycle.md):
+보관 전 미완료 Task 안내, Phase 멀티셀렉트, Task 종료 결과와 다음 Phase의 시작 조건을
+정리한 기획안이다. [요구사항 기준](09-requirements.md#2026-11-26-프로젝트-보관과-phase-시작종료)과 함께 확인한다.
+
 2026-11-09 [기획 기능과 Story·Task 개선안](21-planning-story-task-improvement.md):
 최초 기획/진행 중 변경 기획, Story–Task 다대다·독립 Task, 관계/검증·선택 일정과
 기존 자료 보존을 구체화했다. [조작 가능한 시안](prototype/planning-story-task.html)을

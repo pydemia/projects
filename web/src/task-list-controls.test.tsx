@@ -68,15 +68,15 @@ it("requires a cancellation reason before saving and preserves it on conflict", 
     const save = vi.spyOn(api, "saveItem").mockRejectedValue(new ApiError("다른 창에서 변경됐습니다.", 409));
     mount();
     await userEvent.click(screen.getByRole("button", {name: "구현 목록 작업 상태: 검토 중 · 변경"}));
-    await userEvent.click(screen.getByRole("menuitem", {name: "취소"}));
+    await userEvent.click(screen.getByRole("menuitem", {name: "Closed"}));
     expect(save).not.toHaveBeenCalled();
-    const submit = screen.getByRole("button", {name: "취소 확정"});
+    const submit = screen.getByRole("button", {name: "종료 확정"});
     expect(submit).toHaveProperty("disabled", true);
-    await userEvent.type(screen.getByRole("textbox", {name: "취소 사유"}), "범위에서 제외");
+    await userEvent.type(screen.getByRole("textbox", {name: "종료 사유"}), "범위에서 제외");
     await userEvent.click(submit);
-    await waitFor(() => expect(save).toHaveBeenCalledWith(delivery.id, expect.objectContaining({expected_revision: delivery.revision, data: expect.objectContaining({state: "cancelled", cancellation_reason: "범위에서 제외"})})));
-    await within(screen.getByRole("dialog", {name: "작업 취소"})).findByText(/다른 창에서 변경/);
-    expect(screen.getByRole("textbox", {name: "취소 사유"})).toHaveProperty("value", "범위에서 제외");
+    await waitFor(() => expect(save).toHaveBeenCalledWith(delivery.id, expect.objectContaining({expected_revision: delivery.revision, data: expect.objectContaining({state: "closed", cancellation_reason: "범위에서 제외"})})));
+    await within(screen.getByRole("dialog", {name: "작업 종료"})).findByText(/다른 창에서 변경/);
+    expect(screen.getByRole("textbox", {name: "종료 사유"})).toHaveProperty("value", "범위에서 제외");
 });
 
 it("keeps compact mobile state menus usable after a remembered bulk selection", () => {

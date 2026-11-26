@@ -15,20 +15,20 @@ const task = parsed;
 
 describe("quick task properties", () => {
     it("saves all status values through property patches and requires a cancellation reason", async () => {
-        const updated = { ...task, revision: 2, data: { ...task.data, state: "cancelled" as const, cancellation_reason: "범위 제외" } };
+        const updated = { ...task, revision: 2, data: { ...task.data, state: "closed" as const, cancellation_reason: "범위 제외" } };
         const update = vi.spyOn(api, "updateTaskProperties").mockResolvedValue(updated);
         const saved = vi.fn();
         const user = userEvent.setup();
         render(<TaskQuickProperties task={task} definitions={[]} onSaved={saved} />);
         await user.click(screen.getByRole("button", { name: "빠른 작업 상태 편집" }));
         expect(screen.getByRole("combobox", { name: "상태" }).querySelectorAll("option")).toHaveLength(5);
-        await user.selectOptions(screen.getByRole("combobox", { name: "상태" }), "cancelled");
+        await user.selectOptions(screen.getByRole("combobox", { name: "상태" }), "closed");
         await user.click(screen.getByRole("button", { name: "저장" }));
-        expect(screen.getByRole("alert").textContent).toContain("취소 사유");
+        expect(screen.getByRole("alert").textContent).toContain("종료 사유");
         expect(update).not.toHaveBeenCalled();
-        await user.type(screen.getByRole("textbox", { name: "취소 사유" }), "범위 제외");
+        await user.type(screen.getByRole("textbox", { name: "종료 사유" }), "범위 제외");
         await user.click(screen.getByRole("button", { name: "저장" }));
-        await waitFor(() => expect(update).toHaveBeenCalledWith(task.id, { expected_revision: 1, values: { state: "cancelled", cancellation_reason: "범위 제외" } }));
+        await waitFor(() => expect(update).toHaveBeenCalledWith(task.id, { expected_revision: 1, values: { state: "closed", cancellation_reason: "범위 제외" } }));
         expect(saved).toHaveBeenCalledWith(updated);
     });
 

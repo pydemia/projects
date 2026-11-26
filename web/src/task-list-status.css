@@ -10,7 +10,7 @@
 .task-status-dot[data-state="in_progress"] { background: var(--accent); border-color: var(--accent); }
 .task-status-dot[data-state="in_review"] { background: var(--warning); border-color: var(--warning); }
 .task-status-dot[data-state="done"] { background: var(--success); border-color: var(--success); }
-.task-status-dot[data-state="cancelled"] { background: var(--muted); }
+.task-status-dot[data-state="closed"] { background: var(--muted); }
 .task-status-chevron { flex: 0 0 12px; }
 .task-list-status[data-state="open"] .task-status-chevron { transform: rotate(180deg); }
 .task-status-option { min-height: 44px; gap: 10px; }

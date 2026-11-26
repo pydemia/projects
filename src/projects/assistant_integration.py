@@ -29,7 +29,7 @@ from projects.assistant_result import (
     AssistantRuntimeResult,
 )
 from projects.database import Account, AssistantOperation, Item, Project
-from projects.domain import Problem
+from projects.domain import Problem, TaskState
 from projects.project_access import accessible_project_ids, lock_project_access
 from projects.records import (
     create_item,
@@ -287,9 +287,8 @@ class CreateTask(OperationInput):
 class UpdateValues(StrictModel):
     title: str | None = Field(default=None, min_length=1, max_length=300)
     body: str | None = Field(default=None, max_length=500000)
-    state: (
-        Literal["todo", "in_progress", "in_review", "done", "cancelled"] | None
-    ) = None
+    # Keep the request spelling in persisted operation hashes for legacy retries.
+    state: TaskState | Literal["cancelled"] | None = None
     acceptance_criteria: list[str] | None = Field(default=None, max_length=100)
     result_url: str | None = Field(default=None, max_length=2000)
     cancellation_reason: str | None = Field(default=None, max_length=10000)

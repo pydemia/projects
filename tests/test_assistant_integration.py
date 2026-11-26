@@ -12,6 +12,7 @@ import pytest
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from projects.assistant_integration import UpdateTask, operation_hash
 from projects.database import AssistantOperation, Item
 from projects.note_references import list_note_refs
 
@@ -130,6 +131,28 @@ def test_operations_replay_once_and_recheck_current_grants(
     assert first.status_code == 200, first.text
     receipt = first.json()
     assert send("POST", path, payload).json() == receipt
+    task_id = receipt["task"]["id"]
+    legacy = UpdateTask.model_validate(
+        {
+            "operation_id": str(uuid4()),
+            "expected_revision": 1,
+            "values": {
+                "state": "cancelled",
+                "cancellation_reason": "duplicate",
+            },
+        }
+    )
+    wire = legacy.model_dump()
+    wire["values"]["state"] = "cancelled"
+    expected_hash = hashlib.sha256(
+        json.dumps(
+            [1, "update_task", task_id, wire],
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+        ).encode()
+    ).hexdigest()
+    assert operation_hash("update_task", task_id, legacy) == expected_hash
     assert (
         send("POST", path, {**payload, "title": "Changed payload"}).status_code
         == 409

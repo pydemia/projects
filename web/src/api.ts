@@ -3,7 +3,7 @@ import {
     baselineSchema, catalogSchema, gitPreviewSchema, gitZipPreviewSchema, itemSchema, linkSchema, projectSchema,
     repositoryActivitySchema,
     reconnectSchema, resolveSchema, revisionSchema, runSchema, runtimeSchema,
-    sessionSchema, summarySchema, taskFieldDefinitionSchema, taskViewSchema, testRunSchema, traceSchema,
+    sessionSchema, summarySchema, taskFieldDefinitionSchema, taskStateSchema, taskViewSchema, testRunSchema, traceSchema,
 } from "./models";
 
 let csrfToken = "";
@@ -76,8 +76,8 @@ const itemPath = (itemId: string) => `/api/items/${encodeURIComponent(itemId)}`;
 const runPath = (runId: string) => `/api/runs/${encodeURIComponent(runId)}`;
 const okSchema = z.object({ ok: z.literal(true) });
 const taskMoveResponseSchema = itemSchema.and(z.object({ undo_move: z.object({
-    source_state: z.enum(["todo", "in_progress", "in_review", "done", "cancelled"]),
-    target_state: z.enum(["todo", "in_progress", "in_review", "done", "cancelled"]),
+    source_state: taskStateSchema,
+    target_state: taskStateSchema,
     before_id: z.string().nullable(), after_id: z.string().nullable(),
 }) }));
 

@@ -16,8 +16,9 @@
 - `GET /api/projects`, `POST /api/projects` 입력 `{name, goal, profile}`
   → Project `{id, name, goal, profile, version, created_at}`
 - `GET /api/projects/{id}` → Project
-- `GET /api/projects/{id}/summary` → `{items_by_kind, tasks: {done, total, cancelled},
+- `GET /api/projects/{id}/summary` → `{items_by_kind, tasks: {done, total, closed, cancelled},
   artifacts: {confirmed, total}, tests: {passed, total}, needs_review}`
+  `cancelled`는 기존 클라이언트를 위한 `closed`의 호환 필드다.
 
 ## 업무 객체·revision
 
@@ -47,10 +48,32 @@ kind별 data는 다음과 같다. 생략 시 기본값을 적용한다.
 | test_case | `{steps: [], expected: ""}` |
 | decision | `{reason: "", alternatives: []}` |
 
-task.state는 `todo|in_progress|in_review|done|cancelled`이며 done 전환은
-결과·수용 조건·연결된 현행 테스트를 확인한다. 데이터 필드는 종류별로 검증한다.
-cancelled 전환에는 취소 사유가 필요하며 작업 완료율의 분모에서 제외한 건수를
-별도로 반환한다. 기준선의 revision으로 당시 사유를 조회할 수 있다.
+Task의 `data.state`는 `todo|in_progress|in_review|done|closed`다. `done` 전환에는
+작업 유형별 완료 조건을 적용한다. `closed` 전환에는 `cancellation_reason`으로 종료 사유를
+받고, 완료율의 분모에서 제외한 건수를 `closed`로 반환한다. 기존 `cancelled` 상태의
+Task 및 요청은 `closed`로 해석하며, 과거 revision에는 당시 상태와 사유를 보존한다.
+`GET /api/tasks?project_id={id}&status=open`의 `total`로 보관 전 열린 Task를 확인한다.
+보관 확정과 복원은 기존 프로젝트 권한 API에서 처리한다. [프로젝트 권한 API](../planning/20-tenancy-and-project-permissions.md#화면과-api)
+
+## Phase 일정과 Task 연결
+
+아래 경로의 접두사는 `/api/projects/{project_id}`다. 기존 일정 편집 권한인
+`project.update`로 Phase와 연결을 수정한다.
+
+- `GET /schedules`와 기존 일정 생성·수정 응답에 Phase의 `phase` 필드가 포함된다.
+  필드는 `{status, predecessor_id, started_at, closed_at, results}`이며,
+  상태는 `not_started|in_progress|closed`다. Phase의 생성·수정 요청에 `predecessor_id`를
+  지정할 수 있다. Phase 시작 이후에는 선행 관계를 확정한다.
+- `POST /schedules/{schedule_id}/start`와 `/reopen`은 `{expected_revision}`을 받는다.
+  시작은 지정한 선행 Phase가 닫혀 있어야 하고, 재개는 후속 Phase가 시작되기 전까지 허용한다.
+- `POST /schedules/{schedule_id}/close`는 `{expected_revision, carryovers:
+  [{task_id, target_phase_id}]}`를 받는다. 연결된 열린 Task의 이월 대상을 준비된 후속
+  Phase로 지정한다. 종료 기록의 `results`는 `{task_id, title, result, reason,
+  target_phase_id}` 목록이며 `result`는 `completed|closed|carryover`다. 각 전환은
+  갱신된 일정을 반환한다.
+- `PUT /task-phases/{task_id}`는 `{phase_ids, expected_revisions}`를 받고 `{phase_ids}`를
+  반환한다. `expected_revisions`는 변경할 Phase ID별 기준 revision이다. 연결 목록의
+  변경과 변경 이력을 한 트랜잭션에서 저장한다.
 
 ## 관계·테스트·기준선·영향
 

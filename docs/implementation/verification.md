@@ -1,5 +1,39 @@
 # 구현·배포 검증 기록
 
+## 2026-11-26 프로젝트 보관과 Phase 시작·종료
+
+[기획 22](../planning/22-project-archive-and-phase-lifecycle.md)의 APP-REQ-073~077을
+기준 커밋 `43add50f7a1f` 위 `codex/project-archive-phase-lifecycle` worktree에서 검증했다.
+수용 조건 13개를 로컬 구현에서 확인했다.
+
+| 수용 조건 | 확인한 결과 | 근거 |
+|---|---|---|
+| AC-161~164 | 오너 보관·복원과 역할별 쓰기 제한, 열린 Task 집계, 검토 이동과 그대로 보관, 0건 확인 | PostgreSQL 권한·Task 검색 검사, 웹 설정 검사, 실제 Edge |
+| AC-165~166 | 동일 Task를 두 Phase에 연결하고 재조회. 시작 전 Phase에 속한 Task도 일반 완료 처리. Phase 없이 Task 생성·완료 | PostgreSQL 일정·Phase 검사, 웹 연결 검사, 실제 Edge |
+| AC-167~168 | 종료 사유 필수, 완료·종료 집계 구분. 저장된 `Cancelled`를 `Closed`로 조회하고 이전 사유·revision과 요청 호환성 보존 | PostgreSQL API·Task 목록·Assistant receipt 검사, 웹 상태 조작 검사 |
+| AC-169~170 | 모든 열린 Task의 처리 확인, 원래 Task ID·상태·연결과 과거 종료 결과 보존. 재개 후 재종료와 ZIP 복원 검사 | PostgreSQL Phase·ZIP 검사, 실제 Edge |
+| AC-171~173 | 예정일·명시 시작 구분, 미종료 선행 Phase에 대한 시작 거절, 후속 Phase 시작 후 선행 종료 확정 | PostgreSQL Phase 검사, 실제 Edge |
+
+- 초기 구현 검증에서는 PostgreSQL의 무작위 전용 스키마에 기존 Phase를 넣고
+  `uv run projects migrate`로 새 필드를 추가했다. 기존 제목·revision·예정일과
+  새 필드의 초기 상태를 확인하고 전용 스키마를 정리했다.
+  운영 인증 이관 `0017`·`0018`을 반영한 뒤 Phase 이관 번호는 `0019`로 조정했다.
+- `uv run pytest`의 전체 PostgreSQL 검사 450개가 통과했다. 전체 실행 시작 후 달라진
+  Phase 재개 이력·Task 집계·Assistant receipt 호환 경로는 관련 검사 17개로 다시 확인했다.
+  `ruff check`, `ruff format --check`, `mypy`도 통과했다.
+- 웹 검사 `npm --prefix web run check -- --maxWorkers=3`는 41개 파일의 308개 테스트를 통과했다.
+  기본 동시 실행에서 기존 전체 작업 페이지네이션 검사 한 건의 시간 초과가 발생했다.
+  실행 제한 시간과 테스트의 판정 기준을 그대로 적용했다. 다른 검사가 끝난 뒤
+  기본 명령 `npm --prefix web run check`도 308개 테스트를 통과했다.
+  웹 build와 favicon 검사도 통과했다.
+- `uv run python scripts/verify-mobile-browser.py verify-phase-lifecycle-browser.cjs`는
+  실제 Edge 데스크톱, 로컬 FastAPI, 합성 비밀번호 계정, 무작위 전용 PostgreSQL 스키마를 사용했다.
+  Task 상세 멀티셀렉트, 보관 전 검토·그대로 보관·복원, 선행 Phase 종료 전 시작 거절,
+  Carryover·후속 Phase 시작·선행 Phase 재개 불가의 네 묶음을 확인했다.
+
+검증 범위는 로컬 앱과 실제 PostgreSQL·Edge다. 외부 Hub, LLM, Note 및 운영 배포는
+이 변경의 실행 검증 범위 밖이다.
+
 ## 2026-11-09 작업 목록의 선택 체크박스와 상태점 메뉴
 
 완료 checkbox를 제거하고 선택 checkbox와 구분되는 14px 원형 상태점·펼침 화살표를

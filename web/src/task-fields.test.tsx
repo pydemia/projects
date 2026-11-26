@@ -35,7 +35,7 @@ describe("task field scanning", () => {
         {state: "todo" as const, due: "", cue: null},
         {state: "todo" as const, due: "2026-02-30", cue: null},
         {state: "done" as const, due: "2026-11-23", cue: null},
-        {state: "cancelled" as const, due: "2026-11-24", cue: null},
+        {state: "closed" as const, due: "2026-11-24", cue: null},
     ])("shows the appropriate due cue for $state with $due", ({state, due, cue}) => {
         const current = {...task, data: {...task.data, state, due_date: due}};
         render(<TaskFieldCells task={current} fields={["due_date"]} definitions={[]} referenceDay="2026-11-24" onChanged={vi.fn()} />);

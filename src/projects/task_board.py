@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from projects.database import Item, Project, TaskPosition
-from projects.domain import Problem, validate_item_data
+from projects.domain import Problem, canonical_task_state, validate_item_data
 from projects.records import (
     check_task_completion,
     create_item,
@@ -30,7 +30,7 @@ def board_orders(db: Session, tasks: list[Item]) -> dict[str, int]:
     }
     groups: dict[str, list[Item]] = defaultdict(list)
     for task in tasks:
-        groups[task.data["state"]].append(task)
+        groups[canonical_task_state(task.data["state"])].append(task)
     orders: dict[str, int] = {}
     for group in groups.values():
         group.sort(
@@ -80,16 +80,15 @@ def quick_create_task(
     db.scalar(
         select(Project).where(Project.id == project_id).with_for_update()
     )
-    if (
-        payload.state == "cancelled"
-        and not payload.cancellation_reason.strip()
-    ):
-        raise Problem(422, "취소 열에 추가할 때는 취소 사유를 입력해 주세요.")
+    if payload.state == "closed" and not payload.cancellation_reason.strip():
+        raise Problem(
+            422, "Closed 열에 추가할 때는 종료 사유를 입력해 주세요."
+        )
     tasks = _project_tasks(db, project_id)
     orders = board_orders(db, tasks)
     groups: dict[str, list[Item]] = defaultdict(list)
     for task in tasks:
-        groups[task.data["state"]].append(task)
+        groups[canonical_task_state(task.data["state"])].append(task)
     for group in groups.values():
         group.sort(key=lambda task: orders[task.id])
     created = create_item(
@@ -156,7 +155,9 @@ def bulk_change_tasks(
             if value is not None:
                 data[field] = value
         updated_data[task.id] = validate_item_data("task", data)
-    states = {task.id: task.data["state"] for task in tasks}
+    states = {
+        task.id: canonical_task_state(task.data["state"]) for task in tasks
+    }
     states.update(
         {task_id: data["state"] for task_id, data in updated_data.items()}
     )
@@ -168,16 +169,19 @@ def bulk_change_tasks(
     orders = board_orders(db, tasks)
     groups: dict[str, list[Item]] = defaultdict(list)
     for task in tasks:
-        groups[task.data["state"]].append(task)
+        groups[canonical_task_state(task.data["state"])].append(task)
     for group in groups.values():
         group.sort(key=lambda task: orders[task.id])
     moving = [
         by_id[entry.id]
         for entry in payload.tasks
-        if (updated_data[entry.id]["state"] != by_id[entry.id].data["state"])
+        if (
+            updated_data[entry.id]["state"]
+            != canonical_task_state(by_id[entry.id].data["state"])
+        )
     ]
     for task in moving:
-        groups[task.data["state"]].remove(task)
+        groups[canonical_task_state(task.data["state"])].remove(task)
     for task in moving:
         groups[updated_data[task.id]["state"]].append(task)
     changed = []
@@ -211,7 +215,7 @@ def move_task(
     )
     db.refresh(task, with_for_update=True)
     require_revision(task, move.expected_revision)
-    if task.data["state"] != move.source_state:
+    if canonical_task_state(task.data["state"]) != move.source_state:
         raise Problem(
             409, "작업 상태가 변경되었습니다. 새로고침 후 다시 이동해 주세요."
         )
@@ -225,7 +229,7 @@ def move_task(
     orders = board_orders(db, tasks)
     groups: dict[str, list[Item]] = defaultdict(list)
     for candidate in tasks:
-        groups[candidate.data["state"]].append(candidate)
+        groups[canonical_task_state(candidate.data["state"])].append(candidate)
     for group in groups.values():
         group.sort(key=lambda candidate: orders[candidate.id])
     source = groups[move.source_state]

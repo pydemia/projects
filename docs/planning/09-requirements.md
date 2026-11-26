@@ -1,5 +1,20 @@
 # 앱 요구사항 현황
 
+## 2026-11-26 프로젝트 보관과 Phase 시작·종료
+
+[기획 22](22-project-archive-and-phase-lifecycle.md)에 프로젝트 보관 전 미완료 Task
+안내, Task의 Phase 멀티셀렉트 및 다음 Phase 시작 조건을 정리했다.
+[로컬 구현 검증](../implementation/verification.md#2026-11-26-프로젝트-보관과-phase-시작종료)에서
+수용 조건과 검사 결과를 확인한다.
+
+| 요구 ID | 목적·범위 | 출처 | 연결 AC | 현재 판정 |
+|---|---|---|---|---|
+| APP-REQ-073 | 기존 Archive/Restore와 보관 전 미완료 Task 안내 | 프로젝트 종료 상담, APP-REQ-061 | AC-161~164 | 구현·로컬 검증 |
+| APP-REQ-074 | Phase 기간과 하나의 Task에 여러 Phase 연결 | Phase 멀티셀렉트 결정, APP-REQ-071 | AC-165~166 | 구현·로컬 검증 |
+| APP-REQ-075 | Completed·Closed 구분, 기존 Cancelled 통일과 이력 보존 | Task 종료 용어 결정 | AC-167~168 | 구현·로컬 검증 |
+| APP-REQ-076 | Phase 종료 결과와 Carryover 이력 | Phase 종료 처리와 Carryover 결정 | AC-169~170 | 구현·로컬 검증 |
+| APP-REQ-077 | 다음 Phase 시작 조건과 선행 Phase 종료 확정 | 선행 Phase 처리 및 재개 제한 결정 | AC-171~173 | 구현·로컬 검증 |
+
 ## 2026-11-09 목록의 선택·상태 조작 구분
 
 후속 사용자 결정으로 APP-REQ-023·051의 목록 조작을 보완한다. 제목 앞 네모는

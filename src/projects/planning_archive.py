@@ -36,12 +36,25 @@ TABLES: dict[str, Any] = {
 DATES = {"start_date", "end_date", "due_date", "confirmed_date"}
 
 
+PHASE_COLUMNS = {"predecessor_id", "started_at", "closed_at", "phase_results"}
+
+
 def _filter_members(row: dict, item_ids: set[str]) -> dict:
     result = copy.deepcopy(row)
     if "member_ids" in result:
         result["member_ids"] = [
             item_id for item_id in result["member_ids"] if item_id in item_ids
         ]
+    for payload, field in (
+        (result, "phase_results"),
+        (result.get("phase", {}), "results"),
+    ):
+        if payload.get(field) is not None:
+            payload[field] = [
+                entry
+                for entry in payload[field]
+                if entry["task_id"] in item_ids
+            ]
     return result
 
 
@@ -51,15 +64,28 @@ def export_planning(db: Session, project_id: str, item_ids: set[str]) -> dict:
     result: dict = {"schema_version": 1}
     schedules = list(
         db.scalars(
-            select(ProjectSchedule).where(
+            select(ProjectSchedule)
+            .where(
                 ProjectSchedule.project_id == project_id,
             )
+            .order_by(ProjectSchedule.id)
         )
     )
     schedule_ids = {row.id for row in schedules}
     result["schedules"] = [
         _filter_members(serialize(row), item_ids) for row in schedules
     ]
+    legacy_ids = {
+        row["id"]
+        for row in archived.get("schedules", [])
+        if not (row.keys() & PHASE_COLUMNS)
+    }
+    for row in result["schedules"]:
+        if row["id"] in legacy_ids and all(
+            row[key] is None for key in PHASE_COLUMNS
+        ):
+            for key in PHASE_COLUMNS:
+                del row[key]
     for name, model in TABLES.items():
         if name == "schedules":
             continue
@@ -148,14 +174,141 @@ def _members(value: object, items: dict) -> None:
         raise ValueError("planning member endpoint")
 
 
-def _schedule(
-    row: dict, project_id: str, items: dict, *, snapshot: bool = False
+def _validate_phase(
+    row: dict, phase: dict, schedules: dict, items: dict
 ) -> None:
-    expected = set(ProjectSchedule.__table__.columns.keys())
+    if set(phase) != {
+        "predecessor_id",
+        "started_at",
+        "closed_at",
+        "status",
+        "results",
+    }:
+        raise ValueError("planning Phase fields")
+    started, closed = phase["started_at"], phase["closed_at"]
+    for stamp in (started, closed):
+        if stamp is not None:
+            _timestamp(stamp)
+    if closed is not None and (
+        started is None
+        or datetime.fromisoformat(started) > datetime.fromisoformat(closed)
+    ):
+        raise ValueError("planning Phase chronology")
+    status = (
+        "closed" if closed else "in_progress" if started else "not_started"
+    )
+    if phase["status"] != status:
+        raise ValueError("planning Phase status")
+    predecessor = phase["predecessor_id"]
+    if predecessor is not None and (
+        predecessor == row["id"]
+        or schedules.get(predecessor, {}).get("kind") != "phase"
+    ):
+        raise ValueError("planning Phase predecessor")
+    results = phase["results"]
+    if not isinstance(results, list) or (not closed and results):
+        raise ValueError("planning Phase results")
+    seen = set()
+    for result in results:
+        if not isinstance(result, dict) or set(result) != {
+            "task_id",
+            "title",
+            "result",
+            "reason",
+            "target_phase_id",
+        }:
+            raise ValueError("planning Phase result")
+        task_id = result["task_id"]
+        if task_id in seen or items.get(task_id, {}).get("kind") != "task":
+            raise ValueError("planning Phase result Task")
+        seen.add(task_id)
+        _text(result["title"], 300, required=True)
+        outcome = result["result"]
+        if outcome not in ("completed", "closed", "carryover"):
+            raise ValueError("planning Phase outcome")
+        _text(result["reason"], 500000, required=outcome == "closed")
+        target = result["target_phase_id"]
+        if outcome == "carryover":
+            if (
+                target == row["id"]
+                or schedules.get(target, {}).get("kind") != "phase"
+            ):
+                raise ValueError("planning Phase carryover target")
+        elif target is not None:
+            raise ValueError("planning Phase result target")
+        if outcome != "closed" and result["reason"]:
+            raise ValueError("planning Phase result reason")
+
+
+def _validate_phase_graph(schedules: dict) -> None:
+    visited: set[str] = set()
+    for row in schedules.values():
+        pid = row["id"]
+        path: set[str] = set()
+        while pid is not None and pid not in visited:
+            if pid in path:
+                raise ValueError("planning Phase cycle")
+            path.add(pid)
+            node = schedules[pid]
+            pid = node.get("predecessor_id")
+            if pid is not None:
+                parent = schedules[pid]
+                if parent["deleted"] and not node["deleted"]:
+                    raise ValueError("planning deleted predecessor")
+                if node.get("started_at") and (
+                    not parent.get("closed_at")
+                    or datetime.fromisoformat(parent["closed_at"])
+                    > datetime.fromisoformat(node["started_at"])
+                ):
+                    raise ValueError(
+                        "planning successor started before closure"
+                    )
+        visited.update(path)
+
+
+def _schedule(
+    row: dict,
+    project_id: str,
+    items: dict,
+    schedules: dict,
+    *,
+    snapshot: bool = False,
+) -> None:
+    expected = set(ProjectSchedule.__table__.columns.keys()) - PHASE_COLUMNS
+    phase = None
     if snapshot:
         expected.remove("deleted")
+        if row.get("kind") == "phase" and "phase" in row:
+            expected.add("phase")
+            phase = row["phase"]
+            if not isinstance(phase, dict):
+                raise ValueError("planning Phase snapshot")
+    elif PHASE_COLUMNS & row.keys():
+        expected.update(PHASE_COLUMNS)
+        if set(row) == expected:
+            if row["kind"] == "phase":
+                phase = {
+                    key: row[key]
+                    for key in ("predecessor_id", "started_at", "closed_at")
+                }
+                phase["status"] = (
+                    "closed"
+                    if row["closed_at"]
+                    else "in_progress"
+                    if row["started_at"]
+                    else "not_started"
+                )
+                phase["results"] = row["phase_results"]
+                if phase["results"] is None and row["closed_at"] is None:
+                    phase["results"] = []
+            elif any(row[key] is not None for key in PHASE_COLUMNS):
+                raise ValueError("planning lifecycle on non-Phase")
     if set(row) != expected or row["project_id"] != project_id:
         raise ValueError("planning schedule")
+    if phase is not None:
+        _validate_phase(row, phase, schedules, items)
+    if schedules.get(row["id"], {}).get("kind") != row["kind"]:
+        raise ValueError("planning schedule kind")
     _uuid(row["id"])
     _integer(row["revision"])
     _timestamp(row["created_at"])
@@ -198,7 +351,9 @@ def validate_planning(
             else TABLES[name]
         )
         for row in rows:
-            if set(row) != set(model.__table__.columns.keys()):
+            if name != "schedules" and set(row) != set(
+                model.__table__.columns.keys()
+            ):
                 raise ValueError("planning columns")
             row_id = row["task_id"] if name == "task_iterations" else row["id"]
             _uuid(row_id)
@@ -222,7 +377,8 @@ def validate_planning(
                 _text(row["reason"], 10000)
     schedules = {row["id"]: row for row in value["schedules"]}
     for row in schedules.values():
-        _schedule(row, project_id, items)
+        _schedule(row, project_id, items, schedules)
+    _validate_phase_graph(schedules)
     seen_schedule_revisions: set[tuple] = set()
     for row in value["schedule_changes"]:
         schedule = schedules.get(row["schedule_id"])
@@ -238,7 +394,9 @@ def validate_planning(
             if not isinstance(row[side], dict):
                 raise ValueError("planning schedule history snapshot")
             if row[side]:
-                _schedule(row[side], project_id, items, snapshot=True)
+                _schedule(
+                    row[side], project_id, items, schedules, snapshot=True
+                )
                 if row[side]["id"] != schedule["id"]:
                     raise ValueError("planning schedule history endpoint")
     for name in ("task_iterations", "iteration_changes"):
@@ -268,7 +426,7 @@ def validate_planning(
             raise ValueError("planning snapshot")
         ids = set()
         for schedule in row["schedules"]:
-            _schedule(schedule, project_id, items, snapshot=True)
+            _schedule(schedule, project_id, items, schedules, snapshot=True)
             if schedule["id"] not in schedules or schedule["id"] in ids:
                 raise ValueError("planning snapshot schedule")
             ids.add(schedule["id"])
@@ -334,6 +492,7 @@ def import_planning(
     """Restore plans; external verifier identities remain provenance only."""
     if not value:
         return
+    pending_predecessors = []
     for name, model in TABLES.items():
         for source in value[name]:
             row = copy.deepcopy(source)
@@ -344,10 +503,21 @@ def import_planning(
             if "created_at" in row:
                 row["created_at"] = datetime.fromisoformat(row["created_at"])
             if name == "schedules":
+                for field in ("started_at", "closed_at"):
+                    if row.get(field) is not None:
+                        row[field] = datetime.fromisoformat(row[field])
+                predecessor = row.pop("predecessor_id", None)
                 for field in DATES:
                     if row[field] is not None:
                         row[field] = date.fromisoformat(row[field])
-            db.add(model(**row))
+            restored = model(**row)
+            db.add(restored)
+            if name == "schedules" and predecessor is not None:
+                pending_predecessors.append((restored, predecessor))
         db.flush()
+        if name == "schedules":
+            for restored, predecessor in pending_predecessors:
+                restored.predecessor_id = predecessor
+            db.flush()
     # Deliberately no StoryVerification insert: a hash supplied by the archive
     # authenticates neither its author nor a fulfilled assertion.

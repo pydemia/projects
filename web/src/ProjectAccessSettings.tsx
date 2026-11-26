@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
-import { ApiError, errorMessage } from "./api";
+import { ApiError, api, errorMessage } from "./api";
 import { useAuthenticationDraft, type AuthenticationDraft } from "./auth-drafts";
 import { DateTimeValue } from "./date-time-settings";
 import type { Project } from "./models";
@@ -9,6 +9,7 @@ import { Checkbox } from "./pydemia-ui/checkbox";
 import { Input } from "./pydemia-ui/input";
 import { NativeSelect } from "./pydemia-ui/native-select";
 import { ErrorNotice, Field, Loading, Modal } from "./ui";
+import { navigate } from "./hooks";
 import {
     accessApi, editablePermissions, invitationUrl, ownershipUrl, permissionGroups, permissionLabels,
     type AccessMutation, type InvitationPreview, type ProjectAccess, type ProjectInvitation, type ProjectMember, type ProjectRole,
@@ -24,7 +25,11 @@ type Draft = z.infer<typeof draftSchema>;
 const emptyDraft: Draft = {revision: null, roleId: null, roleOpen: false, roleName: "", permissions: [], copyId: "",
     inviteAccount: "", inviteRole: "", inviteHours: "72", ownershipAccount: ""};
 type SettingsData = {access: ProjectAccess; roles: ProjectRole[]; members: ProjectMember[]; invitations: ProjectInvitation[]};
-type Confirmation = {title: string; description: string; action: () => Promise<void>};
+type ArchiveConfirmation = {kind: "archive"; requestId: number; action: () => Promise<void>; openTaskCount?: number; checkError?: string};
+type Confirmation = {title: string; description: string; action: () => Promise<void>} | ArchiveConfirmation;
+function isArchiveConfirmation(confirmation: Confirmation | null): confirmation is ArchiveConfirmation {
+    return !!confirmation && "kind" in confirmation;
+}
 const ownerPermissions: Readonly<Record<string, string>> = {"member.manage": "멤버 관리", "role.manage": "역할 관리", "ownership.transfer": "소유권 이전", "project.archive": "프로젝트 보관·복원 (오너 전용)"};
 const labelPermission = (code: string) => permissionLabels[code] ?? ownerPermissions[code] ?? code;
 
@@ -46,6 +51,7 @@ function ProjectAccessEditor({project, onChanged, userId}: {project: Project; on
     const [createdLink, setCreatedLink] = useState<{label: string; url: string} | null>(null);
     const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
     const requestNumber = useRef(0);
+    const archiveCheckNumber = useRef(0);
     const controller = useRef<AbortController | null>(null);
     const operation = useRef<{key: string; id: string} | null>(null);
 
@@ -121,6 +127,19 @@ function ProjectAccessEditor({project, onChanged, userId}: {project: Project; on
                         role ? "역할을 수정했습니다." : "사용자 지정 역할을 만들었습니다.", () => clearForm("role"));
         if (role) setConfirmation({title: "역할 변경 적용", description: `${role.name} 역할을 사용하는 멤버 ${role.member_count}명에게 적용됩니다. 변경 동작: ${changed.map(labelPermission).join(", ") || "권한 변경 없음 (이름만 수정)"}`, action});
         else void action();
+    }
+    function archive() {
+        if (!data) return;
+        const action = () => mutate(() => accessApi.archive(project.id, {archived: true, ...stamp("archive", true)}), "프로젝트를 보관했습니다.");
+        const requestId = ++archiveCheckNumber.current;
+        setConfirmation({kind: "archive", requestId, action});
+        void api.tasks({project_id: project.id, status: "open", limit: "1"}).then(result => {
+            setConfirmation(current => isArchiveConfirmation(current) && current.requestId === requestId
+                ? {...current, openTaskCount: result.total} : current);
+        }).catch(cause => {
+            setConfirmation(current => isArchiveConfirmation(current) && current.requestId === requestId
+                ? {...current, checkError: errorMessage(cause)} : current);
+        });
     }
 
     const access = project.access && (!data || project.access.access_revision >= data.access.access_revision) ? project.access : data?.access;
@@ -247,16 +266,29 @@ function ProjectAccessEditor({project, onChanged, userId}: {project: Project; on
                     <Button type="submit" variant="outline" disabled={busy || staleDraft || !draft.ownershipAccount}>이전 요청</Button></form>
             </section>}
             <section aria-label="프로젝트 참여 관리"><h2>프로젝트 참여</h2><div className="actions">
-                {access?.capabilities.includes("project.archive") && <Button variant="outline" disabled={busy} onClick={() => setConfirmation({title: data.access.archived ? "프로젝트 복원" : "프로젝트 보관",
-                    description: data.access.archived ? "역할에 따라 업무 자료를 다시 편집할 수 있습니다." : "모든 멤버가 업무 자료를 읽기 전용으로 보게 됩니다. 오너는 권한을 관리하거나 복원할 수 있습니다.",
-                    action: () => mutate(() => accessApi.archive(project.id, {archived: !data.access.archived, ...stamp("archive", !data.access.archived)}), data.access.archived ? "프로젝트를 복원했습니다." : "프로젝트를 보관했습니다.")})}>{data.access.archived ? "프로젝트 복원" : "프로젝트 보관"}</Button>}
+                {access?.capabilities.includes("project.archive") && <Button variant="outline" disabled={busy} onClick={() => data.access.archived
+                    ? setConfirmation({title: "프로젝트 복원", description: "역할에 따라 업무 자료를 다시 편집할 수 있습니다.",
+                        action: () => mutate(() => accessApi.archive(project.id, {archived: false, ...stamp("archive", false)}), "프로젝트를 복원했습니다.")})
+                    : archive()}>{data.access.archived ? "프로젝트 복원" : "프로젝트 보관"}</Button>}
                 <Button variant="outline" disabled={busy || (!!isOwner && ownerCount <= 1) || (data.access.archived && !isOwner)} onClick={() => setConfirmation({title: "프로젝트 탈퇴", description: "이 프로젝트의 자료에 접근할 수 없게 됩니다. 다시 참여하려면 새 초대가 필요합니다.",
                     action: () => mutate(() => accessApi.leave(project.id, stamp("leave", null)), "프로젝트에서 탈퇴했습니다.")})}>프로젝트 탈퇴</Button>
             </div>{isOwner && ownerCount <= 1 && <p className="muted">마지막 오너는 소유권 이전이 수락된 후 탈퇴할 수 있습니다.</p>}{data.access.archived && !isOwner && <p className="muted">보관된 프로젝트의 참여 변경은 오너에게 요청해 주세요.</p>}</section>
         </>}
-        {confirmation && <Modal title={confirmation.title} onClose={() => {if (!busy) setConfirmation(null);}}><div className="project-access-confirm"><p>{confirmation.description}</p>{error && <ErrorNotice error={error} />}<div className="actions">
-            <Button disabled={busy} onClick={() => void confirmation.action()}>{busy ? "적용 중…" : "변경 확인"}</Button>
-            <Button variant="ghost" disabled={busy} onClick={() => setConfirmation(null)}>취소</Button></div></div></Modal>}
+        {confirmation && <Modal title={isArchiveConfirmation(confirmation) ? "프로젝트 보관" : confirmation.title} onClose={() => {if (!busy) setConfirmation(null);}}><div className="project-access-confirm">
+            {isArchiveConfirmation(confirmation) ? <>
+                {confirmation.openTaskCount === undefined && !confirmation.checkError ? <Loading label="열린 Task를 확인하는 중…" />
+                    : confirmation.checkError ? <><p>열린 Task를 확인하지 못했습니다. 기존 보관 확인으로 계속할 수 있습니다.</p><ErrorNotice error={confirmation.checkError} /></>
+                    : (confirmation.openTaskCount ?? 0) > 0 ? <p>{project.name} 프로젝트에 열린 Task가 {confirmation.openTaskCount}개 있습니다. 보관해도 Task 상태와 Phase 연결·종료 기록은 유지됩니다.</p>
+                            : <p>모든 멤버가 업무 자료를 읽기 전용으로 보게 됩니다. 오너는 권한을 관리하거나 복원할 수 있습니다.</p>}
+                {error && <ErrorNotice error={error} />}<div className="actions">
+                    {(confirmation.openTaskCount ?? 0) > 0 ? <><Button variant="outline" disabled={busy} onClick={() => {setConfirmation(null); navigate({project: project.id, view: "tasks", item: "", taskScope: "all", taskStatus: "open"});}}>미완료 Task 보기</Button>
+                        <Button disabled={busy} onClick={() => void confirmation.action()}>{busy ? "보관 중…" : "그대로 보관"}</Button></>
+                        : <Button disabled={busy || confirmation.openTaskCount === undefined && !confirmation.checkError} onClick={() => void confirmation.action()}>{busy ? "적용 중…" : "변경 확인"}</Button>}
+                    <Button variant="ghost" disabled={busy} onClick={() => setConfirmation(null)}>취소</Button></div>
+            </> : <><p>{confirmation.description}</p>{error && <ErrorNotice error={error} />}<div className="actions">
+                <Button disabled={busy} onClick={() => void confirmation.action()}>{busy ? "적용 중…" : "변경 확인"}</Button>
+                <Button variant="ghost" disabled={busy} onClick={() => setConfirmation(null)}>취소</Button></div></>}
+        </div></Modal>}
     </div>;
 }
 

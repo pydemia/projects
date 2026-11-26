@@ -8,7 +8,7 @@ import { ApiError, api, errorMessage } from "./api";
 import { TaskTitleEdit } from "./TaskTitleEdit";
 import { TaskStoryChips } from "./StoryChips";
 import { navigate, useMobileViewport } from "./hooks";
-import { statusLabels } from "./models";
+import { statusLabels, taskStates, taskStateSchema } from "./models";
 import type { Item, TaskFieldDefinition } from "./models";
 import { formatTaskField, taskFieldLabel } from "./TaskFields";
 import { Button } from "./pydemia-ui/button";
@@ -20,26 +20,19 @@ import { NativeSelect } from "./pydemia-ui/native-select";
 
 type Task = Extract<Item, { kind: "task" }>;
 type TaskState = Task["data"]["state"];
-const states: TaskState[] = ["todo", "in_progress", "in_review", "done", "cancelled"];
-const quickCardDraftSchema = z.object({state: z.enum(["todo", "in_progress", "in_review", "done", "cancelled"]), title: z.string(), reason: z.string()}).strict();
-type UndoMove = {
-    taskId: string; title: string; expectedRevision: number;
-    source_state: TaskState; target_state: TaskState;
-    before_id: string | null; after_id: string | null;
-};
+const states = taskStates;
+const quickCardDraftSchema = z.object({state: taskStateSchema, title: z.string(), reason: z.string()}).strict();
+const undoMoveSchema = z.object({
+    taskId: z.string(), title: z.string(), expectedRevision: z.number(),
+    source_state: taskStateSchema, target_state: taskStateSchema,
+    before_id: z.string().nullable(), after_id: z.string().nullable(),
+});
+type UndoMove = z.infer<typeof undoMoveSchema>;
 
 function readUndo(key: string): UndoMove | null {
     try {
-        const value: unknown = JSON.parse(sessionStorage.getItem(key) ?? "null");
-        if (!value || typeof value !== "object") return null;
-        const undo = value as Record<string, unknown>;
-        return typeof undo.taskId === "string" && typeof undo.title === "string" &&
-            typeof undo.expectedRevision === "number" &&
-            states.includes(undo.source_state as TaskState) &&
-            states.includes(undo.target_state as TaskState) &&
-            (undo.before_id === null || typeof undo.before_id === "string") &&
-            (undo.after_id === null || typeof undo.after_id === "string")
-            ? undo as UndoMove : null;
+        const undo = undoMoveSchema.safeParse(JSON.parse(sessionStorage.getItem(key) ?? "null"));
+        return undo.success ? undo.data : null;
     } catch { return null; }
 }
 
@@ -76,8 +69,8 @@ export function TaskBoard({ projectId, tasks, lens, savedSort, onSortChange, sel
     const [quickTitle, setQuickTitle] = useState(recovery.restored?.title ?? "");
     const [quickReason, setQuickReason] = useState(recovery.restored?.reason ?? "");
     const [mobileState, setMobileState] = useState<TaskState>(() => {
-        const saved = sessionStorage.getItem(mobileStateKey) as TaskState | null;
-        return saved && states.includes(saved) ? saved : "todo";
+        const saved = taskStateSchema.safeParse(sessionStorage.getItem(mobileStateKey));
+        return saved.success ? saved.data : "todo";
     });
     const [undo, setUndo] = useState<UndoMove | null>(() => readUndo(undoKey));
     const taskById = useMemo(() => new Map(tasks.map(task => [task.id, task])), [tasks]);
@@ -217,7 +210,7 @@ export function TaskBoard({ projectId, tasks, lens, savedSort, onSortChange, sel
         try {
             await api.quickTask(projectId, {
                 title: quickTitle.trim(), state,
-                cancellation_reason: state === "cancelled" ? quickReason.trim() : "",
+                cancellation_reason: state === "closed" ? quickReason.trim() : "",
             });
             setQuickTitle(""); setQuickReason(""); setQuickState(null);
             recovery.clear();
@@ -273,9 +266,9 @@ export function TaskBoard({ projectId, tasks, lens, savedSort, onSortChange, sel
                 {quickState === column.id ? <form onSubmit={event => { void quickCreate(event, column.id as TaskState); }}>
                     <Input autoFocus aria-label={`${column.title} 새 작업 제목`} maxLength={300} value={quickTitle}
                         onChange={event => setQuickTitle(event.target.value)} placeholder="새 작업 제목" />
-                    {column.id === "cancelled" && <Input aria-label="취소 사유" value={quickReason}
-                        onChange={event => setQuickReason(event.target.value)} placeholder="취소 사유" />}
-                    <div><Button type="submit" disabled={busy || !quickTitle.trim() || column.id === "cancelled" && !quickReason.trim()}
+                    {column.id === "closed" && <Input aria-label="종료 사유" value={quickReason}
+                        onChange={event => setQuickReason(event.target.value)} placeholder="종료 사유" />}
+                    <div><Button type="submit" disabled={busy || !quickTitle.trim() || column.id === "closed" && !quickReason.trim()}
                         onClick={event => { event.preventDefault(); void quickCreate(event, column.id as TaskState); }}>추가</Button>
                         <Button type="button" variant="ghost" onClick={() => { setQuickState(null); setQuickTitle(""); setQuickReason(""); recovery.clear(); }}>취소</Button></div>
                 </form> : <Button variant="ghost" disabled={busy} onClick={() => { setQuickState(column.id as TaskState); setQuickTitle(""); }}>

@@ -108,20 +108,20 @@ describe("remaining form authentication checkpoints", () => {
         expect(screen.getAllByLabelText("프로젝트명")).toHaveLength(1);
     });
 
-    it("restores a board new-card title, selected column and cancellation reason without submitting", () => {
+    it("restores a board new-card title, Closed column and closure reason without submitting", () => {
         const create = vi.spyOn(api, "quickTask");
         const props = {projectId: project.id, tasks: [], lens: "gtd" as const, savedSort: "manual" as const, onSortChange: vi.fn(),
             selectedIds: new Set<string>(), onSelect: vi.fn(), cardFields: [], onChanged: vi.fn(), onError: vi.fn()};
         const mount = () => render(<AuthRecoveryProvider userId={userId}><TaskBoard {...props} /></AuthRecoveryProvider>);
         const first = mount();
-        fireEvent.click(screen.getByRole("button", {name: "+ 취소 작업"}));
-        fireEvent.change(screen.getByLabelText("취소 새 작업 제목"), {target: {value: "Unsubmitted card"}});
-        fireEvent.change(screen.getByLabelText("취소 사유"), {target: {value: "Keep reason"}});
+        fireEvent.click(screen.getByRole("button", {name: "+ Closed 작업"}));
+        fireEvent.change(screen.getByLabelText("Closed 새 작업 제목"), {target: {value: "Unsubmitted card"}});
+        fireEvent.change(screen.getByLabelText("종료 사유"), {target: {value: "Keep reason"}});
         expect(checkpoint()).toBe(true);
         first.unmount();
         mount();
-        expect(screen.getByLabelText("취소 새 작업 제목")).toHaveProperty("value", "Unsubmitted card");
-        expect(screen.getByLabelText("취소 사유")).toHaveProperty("value", "Keep reason");
+        expect(screen.getByLabelText("Closed 새 작업 제목")).toHaveProperty("value", "Unsubmitted card");
+        expect(screen.getByLabelText("종료 사유")).toHaveProperty("value", "Keep reason");
         expect(create).not.toHaveBeenCalled();
     });
 

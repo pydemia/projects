@@ -1,5 +1,23 @@
 # Projects 원격 배포와 Microsoft Entra 로그인
 
+## 2026-11-26 프로젝트 보관과 Phase 시작·종료 운영 반영
+
+[기획 22](../planning/22-project-archive-and-phase-lifecycle.md)의 보관 전 미완료 Task
+안내, Task의 Phase 멀티셀렉트, `Completed · Closed · Carryover`와 선행 Phase 종료 조건을 배포했다.
+
+| 항목 | 확인 결과 |
+|---|---|
+| main 소스 | `b7b2d5518cdd05cc5daf1d80c65e00b30c269d3f` |
+| 운영 앱 이미지 | `sha256:f1fd178c420f8f06cf9c8cc6e0b16043883ccea6b0adf41766a46a1a91a84fab` |
+| PostgreSQL | `0018 → 0019`. 운영 인증 이관 `0017`·`0018`을 Git에 반영하고 Phase 이관을 그 뒤에 연결 |
+| 보존 확인 | 인증 테이블을 포함한 기존 33개 테이블의 행 수와 데이터 해시 일치. DB·edge·OAuth2 Proxy는 기존 컨테이너 ID 확인 |
+| 배포본 | 운영 이미지에 38개 파일을 추가. 운영 전용 차이와 겹친 도메인·Assistant 모듈 2개는 3방향 병합으로 통합 |
+| 복구 준비 | 서버 전용 PostgreSQL custom dump를 만들고 `pg_restore --list`로 확인. 현재 스키마에서 기동할 수 있는 복구용 앱 이미지 확인 |
+
+- GitHub CI 백엔드·웹 통과. 로컬 PostgreSQL 450개와 웹 308개 검사, 실제 Edge Phase·Archive 4개 흐름, Linux 빌드·favicon 통과. [GitHub CI](https://github.com/pydemia/projects/actions/runs/45729283031) · [구현 검증](verification.md#2026-11-26-프로젝트-보관과-phase-시작종료)
+- 운영 HTTPS에서 공개 자산 16개의 SHA-256·MIME 및 CSP, health 200, Microsoft 로그인 진입과 비로그인 Phase·세션 요청 401을 확인했다. 실제 공개 Edge에서 로그인 화면을 열고, 운영 프로젝트 8개의 Phase·열린 Task 조회는 읽기 전용 트랜잭션으로 검사했다.
+- 서버의 `phase-lifecycle-b7b2d5518cdd` 릴리스에 배포 매니페스트와 앱 교체 결과를 보관했다. 데이터베이스 백업과 설정은 서버에서 관리한다.
+
 ## 2026-11-24 왼쪽 프로젝트 탐색 너비 조절
 
 - 데스크톱 왼쪽 탐색과 본문 사이의 경계선을 끌거나 키보드로 너비를 변경한다. 브라우저에 저장하며, 목록·상세의 너비 조절은 별도 설정을 사용한다.
